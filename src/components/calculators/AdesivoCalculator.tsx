@@ -12,7 +12,7 @@ const AdesivoCalculator: React.FC<Props> = ({ config, fullConfig }) => {
   const [largura, setLargura] = useState<string>('');
   const [altura, setAltura] = useState<string>('');
   const [quantidade, setQuantidade] = useState<number>(1);
-  const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
+  const [selectedOption, setSelectedOption] = useState<string>('');
   const [total, setTotal] = useState<number>(0);
 
   const larguraNum = parseFloat(largura) || 0;
@@ -59,34 +59,25 @@ const AdesivoCalculator: React.FC<Props> = ({ config, fullConfig }) => {
   const options = [...baseOptions, ...customOptions];
 
   useEffect(() => {
-    if (area > 0 && selectedOptions.length > 0 && quantidade > 0) {
-      const selectedPrices = selectedOptions.map(optionId => 
-        options.find(opt => opt.id === optionId)?.price || 0
-      );
-      const pricePerM2 = Math.max(...selectedPrices);
-      const subtotal = area * pricePerM2 * quantidade;
+    if (area > 0 && selectedOption && quantidade > 0) {
+      const selectedPrice = options.find(opt => opt.id === selectedOption)?.price || 0;
+      const subtotal = area * selectedPrice * quantidade;
       // Aplicar preço mínimo ao total final, não por unidade
       setTotal(calculateMinimumCharge(subtotal));
     } else {
       setTotal(0);
     }
-  }, [largura, altura, quantidade, selectedOptions, config]);
+  }, [largura, altura, quantidade, selectedOption, config]);
 
-  const handleOptionChange = (optionId: string, checked: boolean) => {
-    if (checked) {
-      setSelectedOptions([...selectedOptions, optionId]);
-    } else {
-      setSelectedOptions(selectedOptions.filter(id => id !== optionId));
-    }
+  const handleOptionChange = (optionId: string) => {
+    setSelectedOption(optionId);
   };
 
-  const hasValidData = area > 0 && selectedOptions.length > 0 && quantidade > 0;
+  const hasValidData = area > 0 && selectedOption && quantidade > 0;
 
-  // Gerar nome do produto baseado nas opções selecionadas
-  const productName = selectedOptions.length > 0
-    ? `Adesivo ${selectedOptions.map(optionId => 
-        options.find(opt => opt.id === optionId)?.label
-      ).join(', ')}`
+  // Gerar nome do produto baseado na opção selecionada
+  const productName = selectedOption
+    ? `Adesivo ${options.find(opt => opt.id === selectedOption)?.label}`
     : '';
 
   const productDetails = (
@@ -108,8 +99,8 @@ const AdesivoCalculator: React.FC<Props> = ({ config, fullConfig }) => {
         <span>{areaTotal.toFixed(2)} m²</span>
       </div>
       <div className="flex justify-between text-sm">
-        <span>Opções selecionadas:</span>
-        <span>{selectedOptions.length}</span>
+        <span>Opção selecionada:</span>
+        <span>{selectedOption ? options.find(opt => opt.id === selectedOption)?.label : 'Nenhuma'}</span>
       </div>
     </>
   );
@@ -118,7 +109,7 @@ const AdesivoCalculator: React.FC<Props> = ({ config, fullConfig }) => {
     <div className="p-6">
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Calculadora de Adesivos</h2>
-        <p className="text-gray-600">Selecione as opções desejadas e informe as dimensões.</p>
+        <p className="text-gray-600">Selecione uma opção e informe as dimensões.</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -180,11 +171,12 @@ const AdesivoCalculator: React.FC<Props> = ({ config, fullConfig }) => {
                 <div key={option.id} className="flex items-center justify-between p-3 border border-gray-200 hover:bg-gray-50 rounded-md">
                   <div className="flex items-center">
                     <input
-                      type="checkbox"
+                      type="radio"
+                      name="adesivoOption"
                       id={option.id}
-                      checked={selectedOptions.includes(option.id)}
-                      onChange={(e) => handleOptionChange(option.id, e.target.checked)}
-                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      checked={selectedOption === option.id}
+                      onChange={() => handleOptionChange(option.id)}
+                      className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
                     />
                     <label htmlFor={option.id} className="ml-3 text-sm font-medium text-gray-700">
                       {option.label}
@@ -204,7 +196,7 @@ const AdesivoCalculator: React.FC<Props> = ({ config, fullConfig }) => {
           config={fullConfig}
           productDetails={productDetails}
           hasValidData={hasValidData}
-          emptyMessage="Preencha as dimensões, quantidade e selecione pelo menos uma opção para ver o orçamento"
+          emptyMessage="Preencha as dimensões, quantidade e selecione uma opção para ver o orçamento"
           productName={productName}
           quantity={quantidade}
         />

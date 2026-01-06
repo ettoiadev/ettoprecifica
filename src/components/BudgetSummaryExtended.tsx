@@ -29,7 +29,7 @@ const BudgetSummaryExtended: React.FC<BudgetSummaryExtendedProps> = ({
   quantity = "1",
   productName
 }) => {
-  const [notaFiscal, setNotaFiscal] = useState<boolean>(false);
+  const [notaFiscal, setNotaFiscal] = useState<boolean>(true);
   const [cartaoCredito, setCartaoCredito] = useState<string>('none');
   const [instalacao, setInstalacao] = useState<string>('');
   const [prazoEntrega, setPrazoEntrega] = useState<string>('7');
