@@ -12,7 +12,30 @@ const PlacaPSCalculator: React.FC<Props> = ({ config, fullConfig }) => {
   const [altura, setAltura] = useState<string>('');
   const [quantidade, setQuantidade] = useState<number>(1);
   const [tipoSelecionado, setTipoSelecionado] = useState<string>('');
+  const [customSelecionadas, setCustomSelecionadas] = useState<string[]>([]);
   const [total, setTotal] = useState<number>(0);
+
+  const baseOptions = [
+    {
+      id: 'espessura1mm',
+      label: 'Espessura 1mm',
+      price: config.espessura1mm,
+    },
+    {
+      id: 'espessura2mm',
+      label: 'Espessura 2mm',
+      price: config.espessura2mm,
+    },
+  ];
+
+  const customOptions = (config.customVariations || []).map((variation) => ({
+    id: variation.id,
+    label: variation.label,
+    price: variation.price,
+  }));
+
+  const baseOptionsById = new Map(baseOptions.map((o) => [o.id, o] as const));
+  const customOptionsById = new Map(customOptions.map((o) => [o.id, o] as const));
 
   const larguraNum = parseFloat(largura) || 0;
   const alturaNum = parseFloat(altura) || 0;
@@ -21,20 +44,30 @@ const PlacaPSCalculator: React.FC<Props> = ({ config, fullConfig }) => {
 
   useEffect(() => {
     if (area > 0 && tipoSelecionado && quantidade > 0) {
-      const precoM2 = config[tipoSelecionado as keyof PlacaPSConfig];
-      const subtotal = area * precoM2 * quantidade;
+      const basePrice = baseOptionsById.get(tipoSelecionado)?.price || 0;
+      const extrasPrice = customSelecionadas.reduce((sum, id) => {
+        return sum + (customOptionsById.get(id)?.price || 0);
+      }, 0);
+
+      const pricePerM2 = basePrice + extrasPrice;
+      const subtotal = area * pricePerM2 * quantidade;
       // Aplicar preço mínimo ao total final, não por unidade
       setTotal(calculateMinimumCharge(subtotal));
     } else {
       setTotal(0);
     }
-  }, [largura, altura, quantidade, tipoSelecionado, config]);
+  }, [largura, altura, quantidade, tipoSelecionado, customSelecionadas, config, baseOptionsById, customOptionsById]);
 
   const hasValidData = area > 0 && tipoSelecionado && quantidade > 0;
 
   // Gerar nome do produto
-  const productName = tipoSelecionado
-    ? `Placa PS ${tipoSelecionado === 'espessura1mm' ? 'Espessura 1mm' : 'Espessura 2mm'}`
+  const selectedLabel = tipoSelecionado ? baseOptionsById.get(tipoSelecionado)?.label : undefined;
+  const selectedCustomLabels = customSelecionadas
+    .map((id) => customOptionsById.get(id)?.label)
+    .filter((v): v is string => Boolean(v));
+
+  const productName = selectedLabel
+    ? `Placa PS ${selectedLabel}${selectedCustomLabels.length > 0 ? ` + ${selectedCustomLabels.join(' + ')}` : ''}`
     : '';
 
   const productDetails = (
@@ -57,7 +90,10 @@ const PlacaPSCalculator: React.FC<Props> = ({ config, fullConfig }) => {
       </div>
       <div className="flex justify-between text-sm">
         <span>Tipo:</span>
-        <span>{tipoSelecionado === 'espessura1mm' ? 'Espessura 1mm' : 'Espessura 2mm'}</span>
+        <span>
+          {selectedLabel || 'Nenhum'}
+          {selectedCustomLabels.length > 0 ? ` + ${selectedCustomLabels.join(' + ')}` : ''}
+        </span>
       </div>
     </>
   );
@@ -124,46 +160,73 @@ const PlacaPSCalculator: React.FC<Props> = ({ config, fullConfig }) => {
               Espessura
             </label>
             <div className="space-y-2">
-              <div className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
-                <div className="flex items-center">
-                  <input
-                    type="radio"
-                    id="espessura1mm"
-                    name="tipo"
-                    value="espessura1mm"
-                    checked={tipoSelecionado === 'espessura1mm'}
-                    onChange={(e) => setTipoSelecionado(e.target.value)}
-                    className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
-                  />
-                  <label htmlFor="espessura1mm" className="ml-3 text-sm font-medium text-gray-700">
-                    Espessura 1mm
-                  </label>
+              {baseOptions.map((option) => (
+                <div
+                  key={option.id}
+                  className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50"
+                >
+                  <div className="flex items-center">
+                    <input
+                      type="radio"
+                      id={option.id}
+                      name="tipo"
+                      value={option.id}
+                      checked={tipoSelecionado === option.id}
+                      onChange={(e) => setTipoSelecionado(e.target.value)}
+                      className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                    />
+                    <label htmlFor={option.id} className="ml-3 text-sm font-medium text-gray-700">
+                      {option.label}
+                    </label>
+                  </div>
+                  <span className="text-sm text-gray-500">{formatCurrency(option.price)}/m²</span>
                 </div>
-                <span className="text-sm text-gray-500">
-                  {formatCurrency(config.espessura1mm)}/m²
-                </span>
-              </div>
-              <div className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
-                <div className="flex items-center">
-                  <input
-                    type="radio"
-                    id="espessura2mm"
-                    name="tipo"
-                    value="espessura2mm"
-                    checked={tipoSelecionado === 'espessura2mm'}
-                    onChange={(e) => setTipoSelecionado(e.target.value)}
-                    className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
-                  />
-                  <label htmlFor="espessura2mm" className="ml-3 text-sm font-medium text-gray-700">
-                    Espessura 2mm
-                  </label>
-                </div>
-                <span className="text-sm text-gray-500">
-                  {formatCurrency(config.espessura2mm)}/m²
-                </span>
-              </div>
+              ))}
             </div>
           </div>
+
+          {customOptions.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-4">
+                Variações
+              </label>
+              <div className="space-y-2">
+                {customOptions.map((option) => {
+                  const checked = customSelecionadas.includes(option.id);
+                  return (
+                    <div
+                      key={option.id}
+                      className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50"
+                    >
+                      <div className="flex items-center">
+                        <input
+                          type="checkbox"
+                          id={`custom_${option.id}`}
+                          checked={checked}
+                          onChange={(e) => {
+                            const isChecked = e.target.checked;
+                            setCustomSelecionadas((prev) =>
+                              isChecked
+                                ? [...prev, option.id]
+                                : prev.filter((id) => id !== option.id)
+                            );
+                          }}
+                          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        />
+                        <label
+                          htmlFor={`custom_${option.id}`}
+                          className="ml-3 text-sm font-medium text-gray-700"
+                        >
+                          {option.label}
+                        </label>
+                      </div>
+                      <span className="text-sm text-gray-500">{formatCurrency(option.price)}/m²</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
 
         <BudgetSummaryExtended
