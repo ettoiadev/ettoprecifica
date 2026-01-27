@@ -198,7 +198,7 @@ const BudgetSummaryExtended: React.FC<BudgetSummaryExtendedProps> = ({
           config={config}
         />
         
-        <BudgetTotal finalTotal={finalTotal} />
+        <BudgetTotal finalTotal={finalTotal} quantity={quantity} />
       </div>
     </div>
   );
