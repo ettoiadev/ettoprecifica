@@ -30,6 +30,7 @@ export const settingsConfig: ConfigSectionData[] = [
       { key: 'reforcoIlhos', label: 'Reforço e Ilhós', unit: 'm²' },
       { key: 'lonaBacklight', label: 'Lona Backlight', unit: 'm²' },
       { key: 'soRefile', label: 'Só Refile', unit: 'm²' },
+      { key: 'precoMinimo', label: 'Preço Mínimo', unit: 'unid' },
     ]
   },
   {

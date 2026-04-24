@@ -20,6 +20,7 @@ export interface LonaConfig {
   reforcoIlhos: number;
   lonaBacklight: number;
   soRefile: number;
+  precoMinimo: number;
   customVariations?: ProductVariation[];
 }
 
@@ -178,6 +179,7 @@ export const defaultConfig: PricingConfig = {
     reforcoIlhos: 25.0,
     lonaBacklight: 30.0,
     soRefile: 15.0,
+    precoMinimo: 25.0,
   },
   placaPS: {
     espessura1mm: 30.0,
@@ -293,4 +295,8 @@ export const formatCurrency = (value: number): string => {
 
 export const calculateMinimumCharge = (value: number): number => {
   return Math.max(value, 20.0);
+};
+
+export const calculateLonaMinimumCharge = (value: number, minPrice: number): number => {
+  return Math.max(value, minPrice);
 };

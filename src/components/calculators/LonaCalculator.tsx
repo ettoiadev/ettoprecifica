@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { LonaConfig, formatCurrency, calculateMinimumCharge, PricingConfig } from '../../types/pricing';
+import { LonaConfig, formatCurrency, calculateLonaMinimumCharge, PricingConfig } from '../../types/pricing';
 import BudgetSummaryExtended from '../BudgetSummaryExtended';
 
 interface Props {
@@ -30,9 +30,10 @@ const LonaCalculator: React.FC<Props> = ({ config, fullConfig }) => {
     if (area > 0 && selectedOption && quantidade > 0) {
       const option = options.find(opt => opt.id === selectedOption);
       if (option) {
-        const subtotal = area * option.price * quantidade;
-        // Aplicar preço mínimo ao total final, não por unidade
-        setTotal(calculateMinimumCharge(subtotal));
+        const precoUnitario = area * option.price;
+        const precoUnitarioMinimo = calculateLonaMinimumCharge(precoUnitario, config.precoMinimo);
+        const total = precoUnitarioMinimo * quantidade;
+        setTotal(total);
       }
     } else {
       setTotal(0);
