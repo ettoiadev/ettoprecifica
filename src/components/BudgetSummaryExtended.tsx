@@ -46,6 +46,7 @@ const BudgetSummaryExtended: React.FC<BudgetSummaryExtendedProps> = ({
     { value: 'guararemaSantaIsabel', label: 'Guararema/Sta Isabel', price: config?.instalacao?.guararemaSantaIsabel || 0 },
     { value: 'santaBranca', label: 'Sta Branca', price: config?.instalacao?.santaBranca || 0 },
     { value: 'saoPaulo', label: 'São Paulo', price: config?.instalacao?.saoPaulo || 0 },
+    { value: 'instalacaoLoja', label: 'Instalação em Loja', price: config?.instalacao?.instalacaoLoja || 0 },
   ], [config?.instalacao]);
 
   const cartaoOptions = useMemo(() => [
@@ -100,7 +101,8 @@ const BudgetSummaryExtended: React.FC<BudgetSummaryExtendedProps> = ({
                               instalacao === 'litoral' ? config.instalacao.litoral :
                               instalacao === 'guararemaSantaIsabel' ? config.instalacao.guararemaSantaIsabel :
                               instalacao === 'santaBranca' ? config.instalacao.santaBranca :
-                              instalacao === 'saoPaulo' ? config.instalacao.saoPaulo : 0;
+                              instalacao === 'saoPaulo' ? config.instalacao.saoPaulo :
+                              instalacao === 'instalacaoLoja' ? config.instalacao.instalacaoLoja : 0;
       
       if (instalacaoPrice) {
         total += instalacaoPrice;

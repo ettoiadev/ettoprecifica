@@ -35,6 +35,7 @@ const InstallationSection: React.FC<InstallationSectionProps> = ({
     { value: 'guararemaSantaIsabel', label: 'Guararema/Sta Isabel', price: config.instalacao.guararemaSantaIsabel || 0 },
     { value: 'santaBranca', label: 'Sta Branca', price: config.instalacao.santaBranca || 0 },
     { value: 'saoPaulo', label: 'São Paulo', price: config.instalacao.saoPaulo || 0 },
+    { value: 'instalacaoLoja', label: 'Instalação em Loja', price: config.instalacao.instalacaoLoja || 0 },
   ];
 
   return (

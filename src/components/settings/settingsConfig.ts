@@ -170,6 +170,7 @@ export const settingsConfig: ConfigSectionData[] = [
       { key: 'guararemaSantaIsabel', label: 'Guararema/Sta Isabel', unit: 'serviço' },
       { key: 'santaBranca', label: 'Sta Branca', unit: 'serviço' },
       { key: 'saoPaulo', label: 'São Paulo', unit: 'serviço' },
+      { key: 'instalacaoLoja', label: 'Instalação em Loja', unit: 'serviço' },
     ]
   }
 ];

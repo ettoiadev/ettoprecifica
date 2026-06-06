@@ -149,6 +149,7 @@ export interface InstalacaoConfig {
   guararemaSantaIsabel: number;
   santaBranca: number;
   saoPaulo: number;
+  instalacaoLoja: number;
 }
 
 export interface PricingConfig {
@@ -283,6 +284,7 @@ export const defaultConfig: PricingConfig = {
     guararemaSantaIsabel: 180.0,
     santaBranca: 160.0,
     saoPaulo: 250.0,
+    instalacaoLoja: 0.0,
   },
 };
 
