@@ -32,15 +32,17 @@ const SettingsHeader: React.FC<SettingsHeaderProps> = ({ onSave, onClose, search
                 value={search}
                 onChange={(e) => onSearchChange(e.target.value)}
                 placeholder="Buscar seção..."
+                aria-label="Buscar seção"
                 className="pl-9 bg-background/70"
               />
             </div>
-            <Button variant="outline" onClick={onClose} className="shrink-0">
+            <Button variant="outline" onClick={onClose} aria-label="Cancelar" className="shrink-0">
               <X className="w-4 h-4 md:mr-2" />
               <span className="hidden md:inline">Cancelar</span>
             </Button>
             <Button
               onClick={onSave}
+              aria-label="Salvar configurações"
               className="shrink-0 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg hover:shadow-xl"
             >
               <Save className="w-4 h-4 md:mr-2" />

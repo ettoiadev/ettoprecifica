@@ -153,6 +153,7 @@ const SettingsPanel: React.FC<Props> = ({ config, onSave, onClose }) => {
           <select
             value={effectiveActive}
             onChange={(e) => setActiveSection(e.target.value)}
+            aria-label="Selecionar seção"
             className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground input-enhanced"
           >
             {filteredGroups.map(group => (
@@ -167,10 +168,10 @@ const SettingsPanel: React.FC<Props> = ({ config, onSave, onClose }) => {
 
         <div className="flex flex-col md:flex-row gap-6">
           {/* Navegação lateral (desktop) */}
-          <nav className="hidden md:block md:w-56 md:shrink-0 md:sticky md:top-24 self-start space-y-4">
+          <nav aria-label="Seções de configuração" className="hidden md:block md:w-56 md:shrink-0 md:sticky md:top-24 self-start space-y-4">
             {filteredGroups.map(group => (
               <div key={group.label}>
-                <div className="px-3 mb-1 text-xs font-semibold uppercase tracking-wide text-gray-400">
+                <div className="px-3 mb-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
                   {group.label}
                 </div>
                 <div className="space-y-1">

@@ -100,10 +100,10 @@ const ConfigSection = React.memo<ConfigSectionProps>(({ title, section, fields, 
       <CardContent>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {fields.map(field => (
-            <div key={`${section}-${field.key}`} className="space-y-2">
-              <label className="block text-sm font-medium text-foreground">
+            <label key={`${section}-${field.key}`} className="space-y-2 block">
+              <span className="block text-sm font-medium text-foreground">
                 {field.label} {field.unit && `(${field.unit})`}
-              </label>
+              </span>
               {isPercentageField(section, field.key) ? (
                 <PercentageInput
                   value={getFieldValue(field.key)}
@@ -125,7 +125,7 @@ const ConfigSection = React.memo<ConfigSectionProps>(({ title, section, fields, 
                   className="hover:bg-background/70"
                 />
               )}
-            </div>
+            </label>
           ))}
         </div>
         
