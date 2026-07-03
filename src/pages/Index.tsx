@@ -14,6 +14,7 @@ import ModernHeader from '../components/ModernHeader';
 import ModernTabs from '../components/ModernTabs';
 import ModernCalculatorWrapper from '../components/ModernCalculatorWrapper';
 import { PricingConfig, defaultConfig } from '../types/pricing';
+import { migrateConfig } from '../utils/productOptions';
 import { useAuth } from '../contexts/AuthContext';
 import { configService } from '../services/supabase/configService';
 import { toast } from 'sonner';
@@ -22,7 +23,7 @@ const Index = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('adesivo');
   const [showSettings, setShowSettings] = useState(false);
-  const [config, setConfig] = useState<PricingConfig>(defaultConfig);
+  const [config, setConfig] = useState<PricingConfig>(migrateConfig(defaultConfig));
 
   useEffect(() => {
     const loadConfig = async () => {
@@ -49,17 +50,17 @@ const Index = () => {
 
       try {
         const supabaseConfig = await configService.getPricingConfig(user.id);
-        
+
         if (supabaseConfig) {
           // Deep merge com defaultConfig para garantir que novos campos sejam incluídos
-          const mergedConfig = deepMergeConfig(defaultConfig, supabaseConfig);
+          const mergedConfig = migrateConfig(deepMergeConfig(defaultConfig, supabaseConfig));
           setConfig(mergedConfig);
         } else {
           const savedConfig = localStorage.getItem('pricingConfig');
           if (savedConfig) {
             const localConfig = JSON.parse(savedConfig);
             // Deep merge com defaultConfig para garantir que novos campos sejam incluídos
-            const mergedConfig = deepMergeConfig(defaultConfig, localConfig);
+            const mergedConfig = migrateConfig(deepMergeConfig(defaultConfig, localConfig));
             setConfig(mergedConfig);
             await configService.savePricingConfig(user.id, mergedConfig);
           }
@@ -70,7 +71,7 @@ const Index = () => {
         if (savedConfig) {
           const localConfig = JSON.parse(savedConfig);
           // Deep merge com defaultConfig para garantir que novos campos sejam incluídos
-          const mergedConfig = deepMergeConfig(defaultConfig, localConfig);
+          const mergedConfig = migrateConfig(deepMergeConfig(defaultConfig, localConfig));
           setConfig(mergedConfig);
         }
       }

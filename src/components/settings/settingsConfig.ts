@@ -14,32 +14,19 @@ export const settingsConfig: ConfigSectionData[] = [
   {
     title: "Adesivo",
     section: "adesivo",
-    fields: [
-      { key: 'corteEspecial', label: 'Corte Especial', unit: 'm²' },
-      { key: 'soRefile', label: 'Só Refile', unit: 'm²' },
-      { key: 'laminado', label: 'Laminado', unit: 'm²' },
-      { key: 'adesivoPerfurado', label: 'Adesivo Perfurado', unit: 'm²' },
-      { key: 'imantado', label: 'Imantado', unit: 'm²' },
-    ]
+    fields: []
   },
   {
     title: "Lona",
     section: "lona",
     fields: [
-      { key: 'bannerFaixa', label: 'Banner/Faixa', unit: 'm²' },
-      { key: 'reforcoIlhos', label: 'Reforço e Ilhós', unit: 'm²' },
-      { key: 'lonaBacklight', label: 'Lona Backlight', unit: 'm²' },
-      { key: 'soRefile', label: 'Só Refile', unit: 'm²' },
       { key: 'precoMinimo', label: 'Preço Mínimo', unit: 'unid' },
     ]
   },
   {
     title: "Placa PS",
     section: "placaPS",
-    fields: [
-      { key: 'espessura1mm', label: 'Espessura 1mm', unit: 'm²' },
-      { key: 'espessura2mm', label: 'Espessura 2mm', unit: 'm²' },
-    ]
+    fields: []
   },
   {
     title: "Placa ACM",
@@ -64,9 +51,6 @@ export const settingsConfig: ConfigSectionData[] = [
     title: "Letra PVC",
     section: "letraCaixa",
     fields: [
-      { key: 'espessura10mm', label: 'Espessura 10mm', unit: 'm²' },
-      { key: 'espessura15mm', label: 'Espessura 15mm', unit: 'm²' },
-      { key: 'espessura20mm', label: 'Espessura 20mm', unit: 'm²' },
       { key: 'pinturaAutomotiva', label: 'Pintura Automotiva (Opcional)', unit: 'm²' },
       { key: 'fitaDuplaFace', label: 'Fita Dupla-Face (Opcional)', unit: 'm²' },
     ]
@@ -75,8 +59,6 @@ export const settingsConfig: ConfigSectionData[] = [
     title: "Vidro",
     section: "vidro",
     fields: [
-      { key: 'espessura6mm', label: 'Espessura 6mm', unit: 'm²' },
-      { key: 'espessura8mm', label: 'Espessura 8mm', unit: 'm²' },
       { key: 'prolongadores', label: 'Prolongadores', unit: 'unid' },
     ]
   },

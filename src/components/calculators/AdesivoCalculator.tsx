@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { AdesivoConfig, formatCurrency, calculateMinimumCharge, PricingConfig } from '../../types/pricing';
+import { getProductOptions } from '../../utils/productOptions';
 import BudgetSummaryExtended from '../BudgetSummaryExtended';
 
 interface Props {
@@ -20,43 +21,8 @@ const AdesivoCalculator: React.FC<Props> = ({ config, fullConfig }) => {
   const area = larguraNum * alturaNum;
   const areaTotal = area * quantidade;
 
-  // Reorganizado: "Só Refile" agora é a primeira opção
-  const baseOptions = [
-    {
-      id: 'soRefile',
-      label: 'Só Refile',
-      price: config.soRefile
-    },
-    {
-      id: 'corteEspecial',
-      label: 'Corte Especial',
-      price: config.corteEspecial
-    },
-    {
-      id: 'laminado',
-      label: 'Laminado',
-      price: config.laminado
-    },
-    {
-      id: 'adesivoPerfurado',
-      label: 'Adesivo Perfurado',
-      price: config.adesivoPerfurado
-    },
-    {
-      id: 'imantado',
-      label: 'Imantado',
-      price: config.imantado
-    }
-  ];
-
-  // Adicionar variações customizadas ao array de opções
-  const customOptions = (config.customVariations || []).map(variation => ({
-    id: variation.id,
-    label: variation.label,
-    price: variation.price
-  }));
-
-  const options = [...baseOptions, ...customOptions];
+  // Opções vêm do modelo unificado (editável via Configurações)
+  const options = getProductOptions('adesivo', fullConfig);
 
   useEffect(() => {
     if (area > 0 && selectedOption && quantidade > 0) {

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { PlacaPSConfig, formatCurrency, calculateMinimumCharge, PricingConfig } from '../../types/pricing';
+import { getProductOptions } from '../../utils/productOptions';
 import BudgetSummaryExtended from '../BudgetSummaryExtended';
 
 interface Props {
@@ -15,18 +16,8 @@ const PlacaPSCalculator: React.FC<Props> = ({ config, fullConfig }) => {
   const [customSelecionadas, setCustomSelecionadas] = useState<string[]>([]);
   const [total, setTotal] = useState<number>(0);
 
-  const baseOptions = [
-    {
-      id: 'espessura1mm',
-      label: 'Espessura 1mm',
-      price: config.espessura1mm,
-    },
-    {
-      id: 'espessura2mm',
-      label: 'Espessura 2mm',
-      price: config.espessura2mm,
-    },
-  ];
+  // Espessuras (radio) vêm do modelo unificado (editável via Configurações)
+  const baseOptions = getProductOptions('placaPS', fullConfig);
 
   const customOptions = (config.customVariations || []).map((variation) => ({
     id: variation.id,

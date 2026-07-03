@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { LetraCaixaConfig, formatCurrency, calculateMinimumCharge, PricingConfig } from '../../types/pricing';
+import { getProductOptions } from '../../utils/productOptions';
 import BudgetSummaryExtended from '../BudgetSummaryExtended';
 
 interface Props {
@@ -20,11 +21,8 @@ const LetraCaixaCalculator: React.FC<Props> = ({ config, fullConfig }) => {
   const area = larguraNum * alturaNum;
   const areaTotal = area * quantidade;
 
-  const espessuraOptions = [
-    { id: '10mm', label: '10mm', price: config.espessura10mm },
-    { id: '15mm', label: '15mm', price: config.espessura15mm },
-    { id: '20mm', label: '20mm', price: config.espessura20mm },
-  ];
+  // Espessuras (radio) vêm do modelo unificado (editável via Configurações)
+  const espessuraOptions = getProductOptions('letraCaixa', fullConfig);
 
   const addOnOptions = [
     { id: 'pinturaAutomotiva', label: 'Pintura Automotiva', price: config.pinturaAutomotiva },

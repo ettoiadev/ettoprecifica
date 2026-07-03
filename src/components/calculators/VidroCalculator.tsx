@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { VidroConfig, formatCurrency, calculateMinimumCharge, PricingConfig } from '../../types/pricing';
+import { getProductOptions } from '../../utils/productOptions';
 import BudgetSummaryExtended from '../BudgetSummaryExtended';
 
 interface Props {
@@ -20,10 +21,8 @@ const VidroCalculator: React.FC<Props> = ({ config, fullConfig }) => {
   const area = larguraNum * alturaNum;
   const areaTotal = area * quantidade;
 
-  const espessuraOptions = [
-    { id: '6mm', label: '6mm', price: config.espessura6mm },
-    { id: '8mm', label: '8mm', price: config.espessura8mm },
-  ];
+  // Espessuras (radio) vêm do modelo unificado (editável via Configurações)
+  const espessuraOptions = getProductOptions('vidro', fullConfig);
 
   useEffect(() => {
     if (area > 0 && espessura && quantidade > 0) {

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { LonaConfig, formatCurrency, calculateLonaMinimumCharge, PricingConfig } from '../../types/pricing';
+import { getProductOptions } from '../../utils/productOptions';
 import BudgetSummaryExtended from '../BudgetSummaryExtended';
 
 interface Props {
@@ -19,12 +20,8 @@ const LonaCalculator: React.FC<Props> = ({ config, fullConfig }) => {
   const area = larguraNum * alturaNum;
   const areaTotal = area * quantidade;
 
-  const options = [
-    { id: 'bannerFaixa', label: 'Banner/Faixa', price: config.bannerFaixa },
-    { id: 'reforcoIlhos', label: 'Reforço e Ilhós', price: config.reforcoIlhos },
-    { id: 'lonaBacklight', label: 'Lona Backlight', price: config.lonaBacklight },
-    { id: 'soRefile', label: 'Só Refile', price: config.soRefile },
-  ];
+  // Opções vêm do modelo unificado (editável via Configurações)
+  const options = getProductOptions('lona', fullConfig);
 
   useEffect(() => {
     if (area > 0 && selectedOption && quantidade > 0) {

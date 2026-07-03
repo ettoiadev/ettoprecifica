@@ -4,6 +4,7 @@ export interface ProductVariation {
   label: string;
   price: number;
   unit?: string;
+  category?: string;
 }
 
 export interface AdesivoConfig {
@@ -13,6 +14,7 @@ export interface AdesivoConfig {
   adesivoPerfurado: number;
   imantado: number;
   customVariations?: ProductVariation[];
+  variations?: ProductVariation[];
 }
 
 export interface LonaConfig {
@@ -22,12 +24,14 @@ export interface LonaConfig {
   soRefile: number;
   precoMinimo: number;
   customVariations?: ProductVariation[];
+  variations?: ProductVariation[];
 }
 
 export interface PlacaPSConfig {
   espessura1mm: number;
   espessura2mm: number;
   customVariations?: ProductVariation[];
+  variations?: ProductVariation[];
 }
 
 export interface PlacaACMConfig {
@@ -53,6 +57,7 @@ export interface LetraCaixaConfig {
   pinturaAutomotiva: number;
   fitaDuplaFace: number;
   customVariations?: ProductVariation[];
+  variations?: ProductVariation[];
 }
 
 export interface VidroConfig {
@@ -60,6 +65,7 @@ export interface VidroConfig {
   espessura8mm: number;
   prolongadores: number;
   customVariations?: ProductVariation[];
+  variations?: ProductVariation[];
 }
 
 export interface LuminosoConfig {

@@ -5,7 +5,28 @@ import { CurrencyInput } from '../ui/currency-input';
 import { PercentageInput } from '../ui/percentage-input';
 import { NumberInput } from '../ui/number-input';
 import CustomVariationsManager from './CustomVariationsManager';
-import { ProductVariation } from '../../types/pricing';
+
+interface ListManagerDef {
+  key: string;
+  label: string;
+  addLabel: string;
+  unitDefault?: string;
+}
+
+// Seções com listas editáveis (CRUD) e a quais chaves da config elas apontam.
+const LIST_MANAGERS: Record<string, ListManagerDef[]> = {
+  adesivo: [{ key: 'variations', label: 'Opções de Adesivo', addLabel: 'Adicionar Opção' }],
+  lona: [{ key: 'variations', label: 'Tipos de Lona', addLabel: 'Adicionar Tipo' }],
+  placaPS: [
+    { key: 'variations', label: 'Espessuras', addLabel: 'Adicionar Espessura' },
+    { key: 'customVariations', label: 'Variações Adicionais (somam ao m²)', addLabel: 'Adicionar Variação' },
+  ],
+  letraCaixa: [{ key: 'variations', label: 'Espessuras', addLabel: 'Adicionar Espessura' }],
+  vidro: [{ key: 'variations', label: 'Espessuras', addLabel: 'Adicionar Espessura' }],
+  arteFinal: [
+    { key: 'customVariations', label: 'Opções de Arte Final', addLabel: 'Adicionar Opção', unitDefault: 'serviço' },
+  ],
+};
 
 interface ConfigSectionProps {
   title: string;
@@ -59,20 +80,9 @@ const ConfigSection = React.memo<ConfigSectionProps>(({ title, section, fields, 
     return false;
   };
 
-  // Verifica se a seção suporta variações customizadas
-  const supportsCustomVariations = (sectionName: string) => {
-    // Seções que podem ter variações customizadas
-    const supportedSections = ['adesivo', 'lona', 'placaPS', 'letraCaixa', 'vidro', 'arteFinal'];
-    return supportedSections.includes(sectionName);
-  };
-
-  // Handler para mudanças nas variações customizadas
-  const handleCustomVariationsChange = (variations: ProductVariation[]) => {
-    updateConfig(section, 'customVariations', variations);
-  };
-
-  // Obter variações customizadas atuais
-  const currentCustomVariations = editConfig[section]?.customVariations || [];
+  // Gerenciadores de lista (CRUD) por seção. Cada item aponta para uma lista
+  // ProductVariation[] dentro da config da seção.
+  const sectionListManagers = LIST_MANAGERS[section] || [];
 
   return (
     <Card className="bg-card/80 backdrop-blur-xl border-border/50 shadow-lg hover:shadow-xl transition-all duration-300">
@@ -113,16 +123,17 @@ const ConfigSection = React.memo<ConfigSectionProps>(({ title, section, fields, 
           ))}
         </div>
         
-        {supportsCustomVariations(section) && (
+        {sectionListManagers.map((mgr) => (
           <CustomVariationsManager
-            variations={currentCustomVariations}
+            key={mgr.key}
+            variations={editConfig[section]?.[mgr.key] || []}
             sectionName={title}
-            onChange={handleCustomVariationsChange}
-            label={section === 'arteFinal' ? 'Opções de Arte Final' : undefined}
-            addLabel={section === 'arteFinal' ? 'Adicionar Opção' : undefined}
-            unitDefault={section === 'arteFinal' ? 'serviço' : undefined}
+            onChange={(list) => updateConfig(section, mgr.key, list)}
+            label={mgr.label}
+            addLabel={mgr.addLabel}
+            unitDefault={mgr.unitDefault}
           />
-        )}
+        ))}
       </CardContent>
     </Card>
   );
