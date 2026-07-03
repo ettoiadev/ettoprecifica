@@ -126,6 +126,10 @@ export interface NotaFiscalConfig {
   percentual: number;
 }
 
+export interface ArteFinalConfig {
+  valor: number;
+}
+
 export interface CartaoCreditoConfig {
   creditoVista: number;
   taxa2x: number;
@@ -163,6 +167,7 @@ export interface PricingConfig {
   luminoso: LuminosoConfig;
   laser: LaserConfig;
   notaFiscal: NotaFiscalConfig;
+  arteFinal: ArteFinalConfig;
   cartaoCredito: CartaoCreditoConfig;
   instalacao: InstalacaoConfig;
 }
@@ -261,6 +266,9 @@ export const defaultConfig: PricingConfig = {
   },
   notaFiscal: {
     percentual: 15.0,
+  },
+  arteFinal: {
+    valor: 0.0,
   },
   cartaoCredito: {
     creditoVista: 3.15,

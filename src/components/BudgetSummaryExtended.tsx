@@ -6,6 +6,7 @@ import { useToast } from '../hooks/use-toast';
 import BudgetHeader from './budget/BudgetHeader';
 import ProductDetails from './budget/ProductDetails';
 import NotaFiscalSection from './budget/NotaFiscalSection';
+import ArteFinalSection from './budget/ArteFinalSection';
 import PaymentAndDeliverySection from './budget/PaymentAndDeliverySection';
 import InstallationSection from './budget/InstallationSection';
 import BudgetTotal from './budget/BudgetTotal';
@@ -30,6 +31,7 @@ const BudgetSummaryExtended: React.FC<BudgetSummaryExtendedProps> = ({
   productName
 }) => {
   const [notaFiscal, setNotaFiscal] = useState<boolean>(false);
+  const [arteFinal, setArteFinal] = useState<boolean>(false);
   const [cartaoCredito, setCartaoCredito] = useState<string>('none');
   const [instalacao, setInstalacao] = useState<string>('');
   const [prazoEntrega, setPrazoEntrega] = useState<string>('7');
@@ -73,6 +75,11 @@ const BudgetSummaryExtended: React.FC<BudgetSummaryExtendedProps> = ({
       total += (baseTotal * config.notaFiscal.percentual) / 100;
     }
 
+    // Adicionar valor de arte final (valor fixo)
+    if (arteFinal && config?.arteFinal?.valor) {
+      total += config.arteFinal.valor;
+    }
+
     // Adicionar taxa de cartão de crédito
     if (cartaoCredito && cartaoCredito !== 'none' && config?.cartaoCredito) {
       const selectedTaxa = cartaoCredito === 'vista' ? config.cartaoCredito.creditoVista :
@@ -110,10 +117,14 @@ const BudgetSummaryExtended: React.FC<BudgetSummaryExtendedProps> = ({
     }
 
     setFinalTotal(total);
-  }, [baseTotal, notaFiscal, cartaoCredito, instalacao, config]);
+  }, [baseTotal, notaFiscal, arteFinal, cartaoCredito, instalacao, config]);
 
   const handleNotaFiscalChange = (checked: boolean | "indeterminate") => {
     setNotaFiscal(checked === true);
+  };
+
+  const handleArteFinalChange = (checked: boolean | "indeterminate") => {
+    setArteFinal(checked === true);
   };
 
   const handleCopyBudget = async () => {
@@ -183,6 +194,12 @@ const BudgetSummaryExtended: React.FC<BudgetSummaryExtendedProps> = ({
           onNotaFiscalChange={handleNotaFiscalChange}
           config={config}
           baseTotal={baseTotal}
+        />
+
+        <ArteFinalSection
+          arteFinal={arteFinal}
+          onArteFinalChange={handleArteFinalChange}
+          config={config}
         />
 
         <PaymentAndDeliverySection
