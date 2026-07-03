@@ -62,7 +62,7 @@ const ConfigSection = React.memo<ConfigSectionProps>(({ title, section, fields, 
   // Verifica se a seção suporta variações customizadas
   const supportsCustomVariations = (sectionName: string) => {
     // Seções que podem ter variações customizadas
-    const supportedSections = ['adesivo', 'lona', 'placaPS', 'letraCaixa', 'vidro'];
+    const supportedSections = ['adesivo', 'lona', 'placaPS', 'letraCaixa', 'vidro', 'arteFinal'];
     return supportedSections.includes(sectionName);
   };
 
@@ -118,6 +118,9 @@ const ConfigSection = React.memo<ConfigSectionProps>(({ title, section, fields, 
             variations={currentCustomVariations}
             sectionName={title}
             onChange={handleCustomVariationsChange}
+            label={section === 'arteFinal' ? 'Opções de Arte Final' : undefined}
+            addLabel={section === 'arteFinal' ? 'Adicionar Opção' : undefined}
+            unitDefault={section === 'arteFinal' ? 'serviço' : undefined}
           />
         )}
       </CardContent>

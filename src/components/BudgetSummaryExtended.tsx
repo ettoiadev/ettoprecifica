@@ -31,7 +31,7 @@ const BudgetSummaryExtended: React.FC<BudgetSummaryExtendedProps> = ({
   productName
 }) => {
   const [notaFiscal, setNotaFiscal] = useState<boolean>(false);
-  const [arteFinal, setArteFinal] = useState<boolean>(false);
+  const [arteFinalId, setArteFinalId] = useState<string>('');
   const [cartaoCredito, setCartaoCredito] = useState<string>('none');
   const [instalacao, setInstalacao] = useState<string>('');
   const [prazoEntrega, setPrazoEntrega] = useState<string>('7');
@@ -75,9 +75,12 @@ const BudgetSummaryExtended: React.FC<BudgetSummaryExtendedProps> = ({
       total += (baseTotal * config.notaFiscal.percentual) / 100;
     }
 
-    // Adicionar valor de arte final (valor fixo)
-    if (arteFinal && config?.arteFinal?.valor) {
-      total += config.arteFinal.valor;
+    // Adicionar valor de arte final (opção selecionada)
+    if (arteFinalId && config?.arteFinal?.customVariations) {
+      const arteFinalOption = config.arteFinal.customVariations.find((o) => o.id === arteFinalId);
+      if (arteFinalOption) {
+        total += arteFinalOption.price;
+      }
     }
 
     // Adicionar taxa de cartão de crédito
@@ -117,14 +120,10 @@ const BudgetSummaryExtended: React.FC<BudgetSummaryExtendedProps> = ({
     }
 
     setFinalTotal(total);
-  }, [baseTotal, notaFiscal, arteFinal, cartaoCredito, instalacao, config]);
+  }, [baseTotal, notaFiscal, arteFinalId, cartaoCredito, instalacao, config]);
 
   const handleNotaFiscalChange = (checked: boolean | "indeterminate") => {
     setNotaFiscal(checked === true);
-  };
-
-  const handleArteFinalChange = (checked: boolean | "indeterminate") => {
-    setArteFinal(checked === true);
   };
 
   const handleCopyBudget = async () => {
@@ -197,8 +196,8 @@ const BudgetSummaryExtended: React.FC<BudgetSummaryExtendedProps> = ({
         />
 
         <ArteFinalSection
-          arteFinal={arteFinal}
-          onArteFinalChange={handleArteFinalChange}
+          arteFinalId={arteFinalId}
+          onArteFinalChange={setArteFinalId}
           config={config}
         />
 

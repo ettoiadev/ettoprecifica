@@ -144,9 +144,7 @@ export const settingsConfig: ConfigSectionData[] = [
   {
     title: "Arte Final",
     section: "arteFinal",
-    fields: [
-      { key: 'valor', label: 'Valor da Arte Final', unit: 'serviço' },
-    ]
+    fields: []
   },
   {
     title: "Cartão de Crédito",

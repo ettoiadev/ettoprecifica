@@ -127,7 +127,7 @@ export interface NotaFiscalConfig {
 }
 
 export interface ArteFinalConfig {
-  valor: number;
+  customVariations: ProductVariation[];
 }
 
 export interface CartaoCreditoConfig {
@@ -268,7 +268,10 @@ export const defaultConfig: PricingConfig = {
     percentual: 15.0,
   },
   arteFinal: {
-    valor: 0.0,
+    customVariations: [
+      { id: 'arte_ia', label: 'Arte IA', price: 30.0, unit: 'serviço' },
+      { id: 'arte_personalizada', label: 'Arte Personalizada', price: 150.0, unit: 'serviço' },
+    ],
   },
   cartaoCredito: {
     creditoVista: 3.15,

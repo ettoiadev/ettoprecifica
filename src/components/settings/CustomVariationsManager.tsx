@@ -17,16 +17,22 @@ interface CustomVariationsManagerProps {
   variations: ProductVariation[];
   sectionName: string;
   onChange: (variations: ProductVariation[]) => void;
+  label?: string;
+  addLabel?: string;
+  unitDefault?: string;
 }
 
 const CustomVariationsManager: React.FC<CustomVariationsManagerProps> = ({
   variations = [],
   sectionName,
   onChange,
+  label = 'Variações Customizadas',
+  addLabel = 'Adicionar Variação',
+  unitDefault = 'm²',
 }) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingVariation, setEditingVariation] = useState<ProductVariation | null>(null);
-  const [formData, setFormData] = useState({ label: '', price: '', unit: 'm²' });
+  const [formData, setFormData] = useState({ label: '', price: '', unit: unitDefault });
 
   const handleOpenDialog = (variation?: ProductVariation) => {
     if (variation) {
@@ -34,11 +40,11 @@ const CustomVariationsManager: React.FC<CustomVariationsManagerProps> = ({
       setFormData({
         label: variation.label,
         price: variation.price.toString(),
-        unit: variation.unit || 'm²',
+        unit: variation.unit || unitDefault,
       });
     } else {
       setEditingVariation(null);
-      setFormData({ label: '', price: '', unit: 'm²' });
+      setFormData({ label: '', price: '', unit: unitDefault });
     }
     setIsDialogOpen(true);
   };
@@ -46,7 +52,7 @@ const CustomVariationsManager: React.FC<CustomVariationsManagerProps> = ({
   const handleCloseDialog = () => {
     setIsDialogOpen(false);
     setEditingVariation(null);
-    setFormData({ label: '', price: '', unit: 'm²' });
+    setFormData({ label: '', price: '', unit: unitDefault });
   };
 
   const handleSave = () => {
@@ -85,7 +91,7 @@ const CustomVariationsManager: React.FC<CustomVariationsManagerProps> = ({
     <div className="mt-4 pt-4 border-t border-gray-200">
       <div className="flex items-center justify-between mb-3">
         <Label className="text-sm font-semibold text-gray-700">
-          Variações Customizadas
+          {label}
         </Label>
         <Button
           type="button"
@@ -95,7 +101,7 @@ const CustomVariationsManager: React.FC<CustomVariationsManagerProps> = ({
           className="h-8 gap-1"
         >
           <Plus className="w-4 h-4" />
-          Adicionar Variação
+          {addLabel}
         </Button>
       </div>
 
