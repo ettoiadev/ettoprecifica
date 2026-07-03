@@ -31,9 +31,7 @@ export const settingsConfig: ConfigSectionData[] = [
   {
     title: "Placa ACM",
     section: "placaACM",
-    fields: [
-      { key: 'preco', label: 'Preço por m²', unit: 'm²' },
-    ]
+    fields: []
   },
   {
     title: "Fachada",
@@ -87,34 +85,7 @@ export const settingsConfig: ConfigSectionData[] = [
   {
     title: "Laser",
     section: "laser",
-    fields: [
-      { key: 'acrilicoCristal2mm', label: 'Acrílico Cristal 2mm', unit: 'm²' },
-      { key: 'acrilicoCristal3mm', label: 'Acrílico Cristal 3mm', unit: 'm²' },
-      { key: 'acrilicoCristal5mm', label: 'Acrílico Cristal 5mm', unit: 'm²' },
-      { key: 'acrilicoCristal8mm', label: 'Acrílico Cristal 8mm', unit: 'm²' },
-      { key: 'acrilicoCristal10mm', label: 'Acrílico Cristal 10mm', unit: 'm²' },
-      { key: 'acrilicoColorido3mm', label: 'Acrílico Colorido 3mm', unit: 'm²' },
-      { key: 'acrilicoColorido5mm', label: 'Acrílico Colorido 5mm', unit: 'm²' },
-      { key: 'acrilicoColorido8mm', label: 'Acrílico Colorido 8mm', unit: 'm²' },
-      { key: 'acrilicoColorido10mm', label: 'Acrílico Colorido 10mm', unit: 'm²' },
-      { key: 'acrilicoPretoFume3mm', label: 'Acrílico Preto/Fumê 3mm', unit: 'm²' },
-      { key: 'acrilicoPretoFume5mm', label: 'Acrílico Preto/Fumê 5mm', unit: 'm²' },
-      { key: 'acrilicoPretoFume8mm', label: 'Acrílico Preto/Fumê 8mm', unit: 'm²' },
-      { key: 'psCristal1mm', label: 'PS Cristal 1mm', unit: 'm²' },
-      { key: 'psCristal2mm', label: 'PS Cristal 2mm', unit: 'm²' },
-      { key: 'psCristal3mm', label: 'PS Cristal 3mm', unit: 'm²' },
-      { key: 'psaiBranco1mm', label: 'PSAI Branco 1mm/0mm', unit: 'm²' },
-      { key: 'psaiBranco2mm', label: 'PSAI Branco 2mm', unit: 'm²' },
-      { key: 'psaiBranco3mm', label: 'PSAI Branco 3mm', unit: 'm²' },
-      { key: 'psaiColorido2mm', label: 'PSAI Colorido 2mm', unit: 'm²' },
-      { key: 'mdf3mm', label: 'MDF 3mm', unit: 'm²' },
-      { key: 'mdf6mm', label: 'MDF 6mm', unit: 'm²' },
-      { key: 'mdf9mm', label: 'MDF 9mm', unit: 'm²' },
-      { key: 'pe3mm', label: 'PE 3mm', unit: 'm²' },
-      { key: 'petg3mm', label: 'PETG 3mm', unit: 'm²' },
-      { key: 'espelhadoPrata2mm', label: 'Espelhado Prata 2mm', unit: 'm²' },
-      { key: 'espelhadoPrataDourado3mm', label: 'Espelhado Prata/Dourado 3mm', unit: 'm²' },
-    ]
+    fields: []
   },
   {
     title: "Nota Fiscal",
@@ -149,15 +120,6 @@ export const settingsConfig: ConfigSectionData[] = [
   {
     title: "Instalação por Localidade",
     section: "instalacao",
-    fields: [
-      { key: 'jacarei', label: 'Jacareí', unit: 'serviço' },
-      { key: 'sjCampos', label: 'S.J.Campos', unit: 'serviço' },
-      { key: 'cacapavaTaubate', label: 'Caçapava/Taubaté', unit: 'serviço' },
-      { key: 'litoral', label: 'Litoral', unit: 'serviço' },
-      { key: 'guararemaSantaIsabel', label: 'Guararema/Sta Isabel', unit: 'serviço' },
-      { key: 'santaBranca', label: 'Sta Branca', unit: 'serviço' },
-      { key: 'saoPaulo', label: 'São Paulo', unit: 'serviço' },
-      { key: 'instalacaoLoja', label: 'Instalação em Loja', unit: 'serviço' },
-    ]
+    fields: []
   }
 ];

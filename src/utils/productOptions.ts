@@ -3,33 +3,44 @@ import { PricingConfig, ProductVariation } from '../types/pricing';
 /**
  * Modelo unificado de opções de produto.
  *
- * As calculadoras de "lista" (Adesivo, Lona, Placa PS, Letra PVC, Vidro) apresentam
- * uma lista de tipos/materiais selecionáveis. Historicamente essas opções eram
- * hardcoded dentro de cada calculadora. Aqui elas passam a viver em uma lista
- * editável `variations: ProductVariation[]` na config de cada seção, permitindo
- * CRUD total (inserir, editar, renomear, excluir) pelas Configurações.
+ * As calculadoras de "lista" apresentam uma lista de tipos/materiais selecionáveis.
+ * Historicamente essas opções eram hardcoded dentro de cada calculadora. Aqui elas
+ * passam a viver em uma lista editável `variations: ProductVariation[]` na config de
+ * cada seção, permitindo CRUD total (inserir, editar, renomear, excluir) pelas
+ * Configurações.
  *
  * Para não quebrar configs já salvas, os campos tipados originais continuam em
  * PricingConfig e `migrateConfig` semeia a lista a partir deles quando ausente.
  */
 
-export type OptionListSection = 'adesivo' | 'lona' | 'placaPS' | 'letraCaixa' | 'vidro';
+export type OptionListSection =
+  | 'adesivo'
+  | 'lona'
+  | 'placaPS'
+  | 'letraCaixa'
+  | 'vidro'
+  | 'laser'
+  | 'placaACM'
+  | 'instalacao';
 
 interface BaseOptionDef {
   id: string;
   label: string;
   priceKey: string;
+  category?: string;
 }
 
 interface SectionOptionsDef {
   baseOptions: BaseOptionDef[];
   /**
    * Se true, as `customVariations` legadas dessa seção também eram opções de tipo
-   * (radio) e devem ser incorporadas à lista unificada durante a migração.
+   * (radio) e devem ser incorporadas à lista unificada durante a migração
    * (Adesivo/Lona). Em placaPS as customVariations são adicionais (checkbox) e
    * NÃO devem ser incorporadas.
    */
   foldLegacyCustomVariations: boolean;
+  /** Unidade padrão das opções desta seção (default: 'm²'). */
+  unit?: string;
 }
 
 export const SECTION_OPTIONS: Record<OptionListSection, SectionOptionsDef> = {
@@ -74,6 +85,55 @@ export const SECTION_OPTIONS: Record<OptionListSection, SectionOptionsDef> = {
     ],
     foldLegacyCustomVariations: false,
   },
+  laser: {
+    baseOptions: [
+      { id: 'acrilicoCristal2mm', label: 'Acrílico Cristal 2mm', priceKey: 'acrilicoCristal2mm', category: 'Acrílico Cristal' },
+      { id: 'acrilicoCristal3mm', label: 'Acrílico Cristal 3mm', priceKey: 'acrilicoCristal3mm', category: 'Acrílico Cristal' },
+      { id: 'acrilicoCristal5mm', label: 'Acrílico Cristal 5mm', priceKey: 'acrilicoCristal5mm', category: 'Acrílico Cristal' },
+      { id: 'acrilicoCristal8mm', label: 'Acrílico Cristal 8mm', priceKey: 'acrilicoCristal8mm', category: 'Acrílico Cristal' },
+      { id: 'acrilicoCristal10mm', label: 'Acrílico Cristal 10mm', priceKey: 'acrilicoCristal10mm', category: 'Acrílico Cristal' },
+      { id: 'acrilicoColorido3mm', label: 'Acrílico Colorido 3mm', priceKey: 'acrilicoColorido3mm', category: 'Acrílico Colorido' },
+      { id: 'acrilicoColorido5mm', label: 'Acrílico Colorido 5mm', priceKey: 'acrilicoColorido5mm', category: 'Acrílico Colorido' },
+      { id: 'acrilicoColorido8mm', label: 'Acrílico Colorido 8mm', priceKey: 'acrilicoColorido8mm', category: 'Acrílico Colorido' },
+      { id: 'acrilicoColorido10mm', label: 'Acrílico Colorido 10mm', priceKey: 'acrilicoColorido10mm', category: 'Acrílico Colorido' },
+      { id: 'acrilicoPretoFume3mm', label: 'Acrílico Preto/Fumê 3mm', priceKey: 'acrilicoPretoFume3mm', category: 'Acrílico Preto/Fumê' },
+      { id: 'acrilicoPretoFume5mm', label: 'Acrílico Preto/Fumê 5mm', priceKey: 'acrilicoPretoFume5mm', category: 'Acrílico Preto/Fumê' },
+      { id: 'acrilicoPretoFume8mm', label: 'Acrílico Preto/Fumê 8mm', priceKey: 'acrilicoPretoFume8mm', category: 'Acrílico Preto/Fumê' },
+      { id: 'psCristal1mm', label: 'PS Cristal 1mm', priceKey: 'psCristal1mm', category: 'PS Cristal' },
+      { id: 'psCristal2mm', label: 'PS Cristal 2mm', priceKey: 'psCristal2mm', category: 'PS Cristal' },
+      { id: 'psCristal3mm', label: 'PS Cristal 3mm', priceKey: 'psCristal3mm', category: 'PS Cristal' },
+      { id: 'psaiBranco1mm', label: 'PSAI Branco 1mm/0mm', priceKey: 'psaiBranco1mm', category: 'PSAI Branco' },
+      { id: 'psaiBranco2mm', label: 'PSAI Branco 2mm', priceKey: 'psaiBranco2mm', category: 'PSAI Branco' },
+      { id: 'psaiBranco3mm', label: 'PSAI Branco 3mm', priceKey: 'psaiBranco3mm', category: 'PSAI Branco' },
+      { id: 'psaiColorido2mm', label: 'PSAI Colorido 2mm', priceKey: 'psaiColorido2mm', category: 'PSAI Colorido' },
+      { id: 'mdf3mm', label: 'MDF 3mm', priceKey: 'mdf3mm', category: 'MDF' },
+      { id: 'mdf6mm', label: 'MDF 6mm', priceKey: 'mdf6mm', category: 'MDF' },
+      { id: 'mdf9mm', label: 'MDF 9mm', priceKey: 'mdf9mm', category: 'MDF' },
+      { id: 'pe3mm', label: 'PE 3mm', priceKey: 'pe3mm', category: 'Outros Materiais' },
+      { id: 'petg3mm', label: 'PETG 3mm', priceKey: 'petg3mm', category: 'Outros Materiais' },
+      { id: 'espelhadoPrata2mm', label: 'Espelhado Prata 2mm', priceKey: 'espelhadoPrata2mm', category: 'Outros Materiais' },
+      { id: 'espelhadoPrataDourado3mm', label: 'Espelhado Prata/Dourado 3mm', priceKey: 'espelhadoPrataDourado3mm', category: 'Outros Materiais' },
+    ],
+    foldLegacyCustomVariations: false,
+  },
+  placaACM: {
+    baseOptions: [{ id: 'padrao', label: 'Placa ACM', priceKey: 'preco' }],
+    foldLegacyCustomVariations: false,
+  },
+  instalacao: {
+    baseOptions: [
+      { id: 'jacarei', label: 'Jacareí', priceKey: 'jacarei' },
+      { id: 'sjCampos', label: 'S.J.Campos', priceKey: 'sjCampos' },
+      { id: 'cacapavaTaubate', label: 'Caçapava/Taubaté', priceKey: 'cacapavaTaubate' },
+      { id: 'litoral', label: 'Litoral', priceKey: 'litoral' },
+      { id: 'guararemaSantaIsabel', label: 'Guararema/Sta Isabel', priceKey: 'guararemaSantaIsabel' },
+      { id: 'santaBranca', label: 'Sta Branca', priceKey: 'santaBranca' },
+      { id: 'saoPaulo', label: 'São Paulo', priceKey: 'saoPaulo' },
+      { id: 'instalacaoLoja', label: 'Instalação em Loja', priceKey: 'instalacaoLoja' },
+    ],
+    foldLegacyCustomVariations: false,
+    unit: 'serviço',
+  },
 };
 
 const OPTION_LIST_SECTIONS = Object.keys(SECTION_OPTIONS) as OptionListSection[];
@@ -84,11 +144,13 @@ const seedVariations = (
   sectionConfig: Record<string, unknown> | undefined,
 ): ProductVariation[] => {
   const def = SECTION_OPTIONS[section];
+  const unit = def.unit ?? 'm²';
   const base: ProductVariation[] = def.baseOptions.map((o) => ({
     id: o.id,
     label: o.label,
     price: Number(sectionConfig?.[o.priceKey]) || 0,
-    unit: 'm²',
+    unit,
+    ...(o.category ? { category: o.category } : {}),
   }));
 
   if (def.foldLegacyCustomVariations && Array.isArray(sectionConfig?.customVariations)) {

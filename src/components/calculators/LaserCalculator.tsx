@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { LaserConfig, formatCurrency, calculateMinimumCharge, PricingConfig } from '../../types/pricing';
+import { LaserConfig, formatCurrency, calculateMinimumCharge, PricingConfig, ProductVariation } from '../../types/pricing';
+import { getProductOptions } from '../../utils/productOptions';
 import BudgetSummaryExtended from '../BudgetSummaryExtended';
 
 interface Props {
@@ -14,20 +15,24 @@ const LaserCalculator: React.FC<Props> = ({ config, fullConfig }) => {
   const [materialSelecionado, setMaterialSelecionado] = useState<string>('');
   const [total, setTotal] = useState<number>(0);
 
+  // Materiais vêm do modelo unificado (editável via Configurações)
+  const materiais = getProductOptions('laser', fullConfig);
+
   const larguraNum = parseFloat(largura) || 0;
   const alturaNum = parseFloat(altura) || 0;
   const area = larguraNum * alturaNum;
   const areaTotal = area * quantidade;
 
+  const selected = materiais.find((m) => m.id === materialSelecionado);
+
   useEffect(() => {
-    if (config && area > 0 && materialSelecionado && quantidade > 0) {
-      const precoM2 = config[materialSelecionado as keyof LaserConfig];
-      const subtotal = area * precoM2 * quantidade;
+    if (area > 0 && selected && quantidade > 0) {
+      const subtotal = area * selected.price * quantidade;
       setTotal(calculateMinimumCharge(subtotal));
     } else {
       setTotal(0);
     }
-  }, [largura, altura, quantidade, materialSelecionado, config]);
+  }, [largura, altura, quantidade, materialSelecionado, fullConfig]);
 
   // Verificação de segurança após os hooks
   if (!config) {
@@ -40,39 +45,9 @@ const LaserCalculator: React.FC<Props> = ({ config, fullConfig }) => {
     );
   }
 
-  const hasValidData = area > 0 && materialSelecionado && quantidade > 0;
+  const hasValidData = area > 0 && !!selected && quantidade > 0;
 
-  // Mapear nomes dos materiais
-  const materialNames: Record<string, string> = {
-    'acrilicoCristal2mm': 'Acrílico Cristal 2mm',
-    'acrilicoCristal3mm': 'Acrílico Cristal 3mm',
-    'acrilicoCristal5mm': 'Acrílico Cristal 5mm',
-    'acrilicoCristal8mm': 'Acrílico Cristal 8mm',
-    'acrilicoCristal10mm': 'Acrílico Cristal 10mm',
-    'acrilicoColorido3mm': 'Acrílico Colorido 3mm',
-    'acrilicoColorido5mm': 'Acrílico Colorido 5mm',
-    'acrilicoColorido8mm': 'Acrílico Colorido 8mm',
-    'acrilicoColorido10mm': 'Acrílico Colorido 10mm',
-    'acrilicoPretoFume3mm': 'Acrílico Preto/Fumê 3mm',
-    'acrilicoPretoFume5mm': 'Acrílico Preto/Fumê 5mm',
-    'acrilicoPretoFume8mm': 'Acrílico Preto/Fumê 8mm',
-    'psCristal1mm': 'PS Cristal 1mm',
-    'psCristal2mm': 'PS Cristal 2mm',
-    'psCristal3mm': 'PS Cristal 3mm',
-    'psaiBranco1mm': 'PSAI Branco 1mm/0mm',
-    'psaiBranco2mm': 'PSAI Branco 2mm',
-    'psaiBranco3mm': 'PSAI Branco 3mm',
-    'psaiColorido2mm': 'PSAI Colorido 2mm',
-    'mdf3mm': 'MDF 3mm',
-    'mdf6mm': 'MDF 6mm',
-    'mdf9mm': 'MDF 9mm',
-    'pe3mm': 'PE 3mm',
-    'petg3mm': 'PETG 3mm',
-    'espelhadoPrata2mm': 'Espelhado Prata 2mm',
-    'espelhadoPrataDourado3mm': 'Espelhado Prata/Dourado 3mm',
-  };
-
-  const productName = materialSelecionado ? `Laser ${materialNames[materialSelecionado]}` : '';
+  const productName = selected ? `Laser ${selected.label}` : '';
 
   const productDetails = (
     <>
@@ -92,84 +67,30 @@ const LaserCalculator: React.FC<Props> = ({ config, fullConfig }) => {
         <span>Área total:</span>
         <span>{areaTotal.toFixed(2)} m²</span>
       </div>
-      {materialSelecionado && (
+      {selected && (
         <div className="flex justify-between text-sm">
           <span>Material:</span>
-          <span>{materialNames[materialSelecionado]}</span>
+          <span>{selected.label}</span>
         </div>
       )}
     </>
   );
 
-  // Organizar materiais por categoria
-  const materiaisPorCategoria = [
-    {
-      titulo: 'Acrílico Cristal',
-      materiais: [
-        { key: 'acrilicoCristal2mm', label: '2mm' },
-        { key: 'acrilicoCristal3mm', label: '3mm' },
-        { key: 'acrilicoCristal5mm', label: '5mm' },
-        { key: 'acrilicoCristal8mm', label: '8mm' },
-        { key: 'acrilicoCristal10mm', label: '10mm' },
-      ]
-    },
-    {
-      titulo: 'Acrílico Colorido',
-      materiais: [
-        { key: 'acrilicoColorido3mm', label: '3mm' },
-        { key: 'acrilicoColorido5mm', label: '5mm' },
-        { key: 'acrilicoColorido8mm', label: '8mm' },
-        { key: 'acrilicoColorido10mm', label: '10mm' },
-      ]
-    },
-    {
-      titulo: 'Acrílico Preto/Fumê',
-      materiais: [
-        { key: 'acrilicoPretoFume3mm', label: '3mm' },
-        { key: 'acrilicoPretoFume5mm', label: '5mm' },
-        { key: 'acrilicoPretoFume8mm', label: '8mm' },
-      ]
-    },
-    {
-      titulo: 'PS Cristal',
-      materiais: [
-        { key: 'psCristal1mm', label: '1mm' },
-        { key: 'psCristal2mm', label: '2mm' },
-        { key: 'psCristal3mm', label: '3mm' },
-      ]
-    },
-    {
-      titulo: 'PSAI Branco',
-      materiais: [
-        { key: 'psaiBranco1mm', label: '1mm/0mm' },
-        { key: 'psaiBranco2mm', label: '2mm' },
-        { key: 'psaiBranco3mm', label: '3mm' },
-      ]
-    },
-    {
-      titulo: 'PSAI Colorido',
-      materiais: [
-        { key: 'psaiColorido2mm', label: '2mm' },
-      ]
-    },
-    {
-      titulo: 'MDF',
-      materiais: [
-        { key: 'mdf3mm', label: '3mm' },
-        { key: 'mdf6mm', label: '6mm' },
-        { key: 'mdf9mm', label: '9mm' },
-      ]
-    },
-    {
-      titulo: 'Outros Materiais',
-      materiais: [
-        { key: 'pe3mm', label: 'PE 3mm' },
-        { key: 'petg3mm', label: 'PETG 3mm' },
-        { key: 'espelhadoPrata2mm', label: 'Espelhado Prata 2mm' },
-        { key: 'espelhadoPrataDourado3mm', label: 'Espelhado Prata/Dourado 3mm' },
-      ]
-    },
-  ];
+  // Agrupar materiais por categoria, preservando a ordem de inserção
+  const categorias: { titulo: string; itens: ProductVariation[] }[] = [];
+  const indexByTitulo = new Map<string, number>();
+  materiais.forEach((m) => {
+    const titulo = m.category || 'Outros Materiais';
+    if (!indexByTitulo.has(titulo)) {
+      indexByTitulo.set(titulo, categorias.length);
+      categorias.push({ titulo, itens: [] });
+    }
+    categorias[indexByTitulo.get(titulo)!].itens.push(m);
+  });
+
+  // Exibe rótulo curto quando começa com o nome da categoria (ex.: "Acrílico Cristal 2mm" -> "2mm")
+  const displayLabel = (m: ProductVariation) =>
+    m.category && m.label.startsWith(`${m.category} `) ? m.label.slice(m.category.length + 1) : m.label;
 
   return (
     <div className="p-6">
@@ -233,31 +154,31 @@ const LaserCalculator: React.FC<Props> = ({ config, fullConfig }) => {
               Material
             </label>
             <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
-              {materiaisPorCategoria.map((categoria) => (
+              {categorias.map((categoria) => (
                 <div key={categoria.titulo} className="border border-gray-200 rounded-lg p-3">
                   <h3 className="text-sm font-semibold text-gray-700 mb-2">{categoria.titulo}</h3>
                   <div className="space-y-2">
-                    {categoria.materiais.map((material) => (
+                    {categoria.itens.map((material) => (
                       <div
-                        key={material.key}
+                        key={material.id}
                         className="flex items-center justify-between p-2 border border-gray-200 rounded-lg hover:bg-gray-50"
                       >
                         <div className="flex items-center">
                           <input
                             type="radio"
-                            id={material.key}
+                            id={material.id}
                             name="material"
-                            value={material.key}
-                            checked={materialSelecionado === material.key}
+                            value={material.id}
+                            checked={materialSelecionado === material.id}
                             onChange={(e) => setMaterialSelecionado(e.target.value)}
                             className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
                           />
-                          <label htmlFor={material.key} className="ml-3 text-sm font-medium text-gray-700">
-                            {material.label}
+                          <label htmlFor={material.id} className="ml-3 text-sm font-medium text-gray-700">
+                            {displayLabel(material)}
                           </label>
                         </div>
                         <span className="text-sm text-gray-500">
-                          {formatCurrency(config[material.key as keyof LaserConfig])}/m²
+                          {formatCurrency(material.price)}/m²
                         </span>
                       </div>
                     ))}

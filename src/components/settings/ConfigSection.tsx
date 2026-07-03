@@ -11,6 +11,7 @@ interface ListManagerDef {
   label: string;
   addLabel: string;
   unitDefault?: string;
+  showCategory?: boolean;
 }
 
 // Seções com listas editáveis (CRUD) e a quais chaves da config elas apontam.
@@ -21,10 +22,15 @@ const LIST_MANAGERS: Record<string, ListManagerDef[]> = {
     { key: 'variations', label: 'Espessuras', addLabel: 'Adicionar Espessura' },
     { key: 'customVariations', label: 'Variações Adicionais (somam ao m²)', addLabel: 'Adicionar Variação' },
   ],
+  placaACM: [{ key: 'variations', label: 'Tipos de ACM', addLabel: 'Adicionar Tipo' }],
   letraCaixa: [{ key: 'variations', label: 'Espessuras', addLabel: 'Adicionar Espessura' }],
   vidro: [{ key: 'variations', label: 'Espessuras', addLabel: 'Adicionar Espessura' }],
+  laser: [{ key: 'variations', label: 'Materiais', addLabel: 'Adicionar Material', showCategory: true }],
   arteFinal: [
     { key: 'customVariations', label: 'Opções de Arte Final', addLabel: 'Adicionar Opção', unitDefault: 'serviço' },
+  ],
+  instalacao: [
+    { key: 'variations', label: 'Localidades', addLabel: 'Adicionar Localidade', unitDefault: 'serviço' },
   ],
 };
 
@@ -132,6 +138,7 @@ const ConfigSection = React.memo<ConfigSectionProps>(({ title, section, fields, 
             label={mgr.label}
             addLabel={mgr.addLabel}
             unitDefault={mgr.unitDefault}
+            showCategory={mgr.showCategory}
           />
         ))}
       </CardContent>

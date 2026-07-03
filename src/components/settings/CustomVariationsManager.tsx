@@ -20,6 +20,7 @@ interface CustomVariationsManagerProps {
   label?: string;
   addLabel?: string;
   unitDefault?: string;
+  showCategory?: boolean;
 }
 
 const CustomVariationsManager: React.FC<CustomVariationsManagerProps> = ({
@@ -29,10 +30,11 @@ const CustomVariationsManager: React.FC<CustomVariationsManagerProps> = ({
   label = 'Variações Customizadas',
   addLabel = 'Adicionar Variação',
   unitDefault = 'm²',
+  showCategory = false,
 }) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingVariation, setEditingVariation] = useState<ProductVariation | null>(null);
-  const [formData, setFormData] = useState({ label: '', price: '', unit: unitDefault });
+  const [formData, setFormData] = useState({ label: '', price: '', unit: unitDefault, category: '' });
 
   const handleOpenDialog = (variation?: ProductVariation) => {
     if (variation) {
@@ -41,10 +43,11 @@ const CustomVariationsManager: React.FC<CustomVariationsManagerProps> = ({
         label: variation.label,
         price: variation.price.toString(),
         unit: variation.unit || unitDefault,
+        category: variation.category || '',
       });
     } else {
       setEditingVariation(null);
-      setFormData({ label: '', price: '', unit: unitDefault });
+      setFormData({ label: '', price: '', unit: unitDefault, category: '' });
     }
     setIsDialogOpen(true);
   };
@@ -52,7 +55,7 @@ const CustomVariationsManager: React.FC<CustomVariationsManagerProps> = ({
   const handleCloseDialog = () => {
     setIsDialogOpen(false);
     setEditingVariation(null);
-    setFormData({ label: '', price: '', unit: unitDefault });
+    setFormData({ label: '', price: '', unit: unitDefault, category: '' });
   };
 
   const handleSave = () => {
@@ -65,6 +68,7 @@ const CustomVariationsManager: React.FC<CustomVariationsManagerProps> = ({
       label: formData.label,
       price: parseFloat(formData.price),
       unit: formData.unit,
+      ...(showCategory && formData.category ? { category: formData.category } : {}),
     };
 
     let updatedVariations: ProductVariation[];
@@ -113,6 +117,11 @@ const CustomVariationsManager: React.FC<CustomVariationsManagerProps> = ({
               className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
             >
               <div className="flex-1">
+                {showCategory && variation.category && (
+                  <div className="text-[10px] uppercase tracking-wide text-blue-600 font-semibold">
+                    {variation.category}
+                  </div>
+                )}
                 <div className="font-medium text-sm text-gray-900">
                   {variation.label}
                 </div>
@@ -158,6 +167,19 @@ const CustomVariationsManager: React.FC<CustomVariationsManagerProps> = ({
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
+            {showCategory && (
+              <div className="grid gap-2">
+                <Label htmlFor="category">Categoria</Label>
+                <Input
+                  id="category"
+                  placeholder="Ex: Acrílico Cristal"
+                  value={formData.category}
+                  onChange={(e) =>
+                    setFormData({ ...formData, category: e.target.value })
+                  }
+                />
+              </div>
+            )}
             <div className="grid gap-2">
               <Label htmlFor="label">Nome da Variação</Label>
               <Input

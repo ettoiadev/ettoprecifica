@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { formatCurrency, PricingConfig } from '../types/pricing';
+import { getProductOptions } from '../utils/productOptions';
 import { useBudgetSettings } from '../hooks/useBudgetSettings';
 import { useToast } from '../hooks/use-toast';
 import BudgetHeader from './budget/BudgetHeader';
@@ -38,18 +39,6 @@ const BudgetSummaryExtended: React.FC<BudgetSummaryExtendedProps> = ({
   const [finalTotal, setFinalTotal] = useState<number>(0);
   const { formatBudgetText } = useBudgetSettings();
   const { toast } = useToast();
-
-  // Safety checks for config properties
-  const instalacaoOptions = useMemo(() => [
-    { value: 'jacarei', label: 'Jacareí', price: config?.instalacao?.jacarei || 0 },
-    { value: 'sjCampos', label: 'S.J.Campos', price: config?.instalacao?.sjCampos || 0 },
-    { value: 'cacapavaTaubate', label: 'Caçapava/Taubaté', price: config?.instalacao?.cacapavaTaubate || 0 },
-    { value: 'litoral', label: 'Litoral', price: config?.instalacao?.litoral || 0 },
-    { value: 'guararemaSantaIsabel', label: 'Guararema/Sta Isabel', price: config?.instalacao?.guararemaSantaIsabel || 0 },
-    { value: 'santaBranca', label: 'Sta Branca', price: config?.instalacao?.santaBranca || 0 },
-    { value: 'saoPaulo', label: 'São Paulo', price: config?.instalacao?.saoPaulo || 0 },
-    { value: 'instalacaoLoja', label: 'Instalação em Loja', price: config?.instalacao?.instalacaoLoja || 0 },
-  ], [config?.instalacao]);
 
   const cartaoOptions = useMemo(() => [
     { value: 'none', label: 'Não aplicar', taxa: 0 },
@@ -103,19 +92,11 @@ const BudgetSummaryExtended: React.FC<BudgetSummaryExtendedProps> = ({
       }
     }
 
-    // Adicionar custo de instalação
+    // Adicionar custo de instalação (localidade selecionada na lista)
     if (instalacao && config?.instalacao) {
-      const instalacaoPrice = instalacao === 'jacarei' ? config.instalacao.jacarei :
-                              instalacao === 'sjCampos' ? config.instalacao.sjCampos :
-                              instalacao === 'cacapavaTaubate' ? config.instalacao.cacapavaTaubate :
-                              instalacao === 'litoral' ? config.instalacao.litoral :
-                              instalacao === 'guararemaSantaIsabel' ? config.instalacao.guararemaSantaIsabel :
-                              instalacao === 'santaBranca' ? config.instalacao.santaBranca :
-                              instalacao === 'saoPaulo' ? config.instalacao.saoPaulo :
-                              instalacao === 'instalacaoLoja' ? config.instalacao.instalacaoLoja : 0;
-      
-      if (instalacaoPrice) {
-        total += instalacaoPrice;
+      const instalacaoOption = getProductOptions('instalacao', config).find((o) => o.id === instalacao);
+      if (instalacaoOption) {
+        total += instalacaoOption.price;
       }
     }
 

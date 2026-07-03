@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { PlacaACMConfig, formatCurrency, calculateMinimumCharge, PricingConfig } from '../../types/pricing';
+import { getProductOptions } from '../../utils/productOptions';
 import BudgetSummaryExtended from '../BudgetSummaryExtended';
 
 interface Props {
@@ -11,7 +12,15 @@ const PlacaACMCalculator: React.FC<Props> = ({ config, fullConfig }) => {
   const [largura, setLargura] = useState<string>('');
   const [altura, setAltura] = useState<string>('');
   const [quantidade, setQuantidade] = useState<number>(1);
+  const [selectedId, setSelectedId] = useState<string>('');
   const [total, setTotal] = useState<number>(0);
+
+  // Tipos de ACM vêm do modelo unificado (editável via Configurações)
+  const options = getProductOptions('placaACM', fullConfig);
+  const effectiveId = selectedId || options[0]?.id || '';
+  const selected = options.find((o) => o.id === effectiveId);
+  const preco = selected?.price ?? 0;
+  const hasMultiple = options.length > 1;
 
   const larguraNum = parseFloat(largura) || 0;
   const alturaNum = parseFloat(altura) || 0;
@@ -19,19 +28,19 @@ const PlacaACMCalculator: React.FC<Props> = ({ config, fullConfig }) => {
   const areaTotal = area * quantidade;
 
   useEffect(() => {
-    if (area > 0 && quantidade > 0) {
-      const subtotal = area * config.preco * quantidade;
+    if (area > 0 && quantidade > 0 && selected) {
+      const subtotal = area * preco * quantidade;
       // Aplicar preço mínimo ao total final, não por unidade
       setTotal(calculateMinimumCharge(subtotal));
     } else {
       setTotal(0);
     }
-  }, [largura, altura, quantidade, config]);
+  }, [largura, altura, quantidade, effectiveId, fullConfig]);
 
-  const hasValidData = area > 0 && quantidade > 0;
+  const hasValidData = area > 0 && quantidade > 0 && !!selected;
 
   // Gerar nome do produto
-  const productName = 'Placa ACM';
+  const productName = hasMultiple && selected ? `Placa ACM ${selected.label}` : 'Placa ACM';
 
   const productDetails = (
     <>
@@ -51,9 +60,15 @@ const PlacaACMCalculator: React.FC<Props> = ({ config, fullConfig }) => {
         <span>Área total:</span>
         <span>{areaTotal.toFixed(2)} m²</span>
       </div>
+      {hasMultiple && selected && (
+        <div className="flex justify-between text-sm">
+          <span>Tipo:</span>
+          <span>{selected.label}</span>
+        </div>
+      )}
       <div className="flex justify-between text-sm">
         <span>Preço/m²:</span>
-        <span>{formatCurrency(config.preco)}</span>
+        <span>{formatCurrency(preco)}</span>
       </div>
     </>
   );
@@ -115,15 +130,46 @@ const PlacaACMCalculator: React.FC<Props> = ({ config, fullConfig }) => {
             )}
           </div>
 
-          <div className="bg-blue-50 p-4 rounded-lg">
-            <h4 className="font-medium text-blue-900 mb-2">Preço Atual</h4>
-            <p className="text-2xl font-bold text-blue-600">
-              {formatCurrency(config.preco)}/m²
-            </p>
-            <p className="text-sm text-blue-700 mt-1">
-              Valor configurável nas configurações do sistema
-            </p>
-          </div>
+          {hasMultiple ? (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-4">
+                Tipo de ACM
+              </label>
+              <div className="space-y-2">
+                {options.map((option) => (
+                  <div key={option.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
+                    <div className="flex items-center">
+                      <input
+                        type="radio"
+                        id={option.id}
+                        name="acmType"
+                        value={option.id}
+                        checked={effectiveId === option.id}
+                        onChange={(e) => setSelectedId(e.target.value)}
+                        className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                      />
+                      <label htmlFor={option.id} className="ml-3 text-sm font-medium text-gray-700">
+                        {option.label}
+                      </label>
+                    </div>
+                    <span className="text-sm text-gray-500">
+                      {formatCurrency(option.price)}/m²
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <h4 className="font-medium text-blue-900 mb-2">Preço Atual</h4>
+              <p className="text-2xl font-bold text-blue-600">
+                {formatCurrency(preco)}/m²
+              </p>
+              <p className="text-sm text-blue-700 mt-1">
+                Valor configurável nas configurações do sistema
+              </p>
+            </div>
+          )}
         </div>
 
         <BudgetSummaryExtended

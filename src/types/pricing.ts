@@ -36,6 +36,7 @@ export interface PlacaPSConfig {
 
 export interface PlacaACMConfig {
   preco: number;
+  variations?: ProductVariation[];
 }
 
 export interface FachadaConfig {
@@ -125,6 +126,7 @@ export interface LaserConfig {
   petg3mm: number;
   espelhadoPrata2mm: number;
   espelhadoPrataDourado3mm: number;
+  variations?: ProductVariation[];
 }
 
 // Novas configurações solicitadas
@@ -160,6 +162,7 @@ export interface InstalacaoConfig {
   santaBranca: number;
   saoPaulo: number;
   instalacaoLoja: number;
+  variations?: ProductVariation[];
 }
 
 export interface PricingConfig {

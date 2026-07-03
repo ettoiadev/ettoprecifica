@@ -2,6 +2,7 @@
 import React from 'react';
 import { Label } from '../ui/label';
 import { formatCurrency, PricingConfig } from '../../types/pricing';
+import { getProductOptions } from '../../utils/productOptions';
 
 interface InstallationSectionProps {
   instalacao: string;
@@ -18,7 +19,7 @@ const InstallationSection: React.FC<InstallationSectionProps> = ({
   if (!config?.instalacao) {
     console.error('Installation config is missing:', config);
     return (
-      <div className="space-y-3">
+      <div className="space-y-3 pt-4 border-t border-border/60">
         <Label htmlFor="instalacao" className="form-label">
           Custo de Instalação:
         </Label>
@@ -27,16 +28,9 @@ const InstallationSection: React.FC<InstallationSectionProps> = ({
     );
   }
 
-  const instalacaoOptions = [
-    { value: 'jacarei', label: 'Jacareí', price: config.instalacao.jacarei || 0 },
-    { value: 'sjCampos', label: 'S.J.Campos', price: config.instalacao.sjCampos || 0 },
-    { value: 'cacapavaTaubate', label: 'Caçapava/Taubaté', price: config.instalacao.cacapavaTaubate || 0 },
-    { value: 'litoral', label: 'Litoral', price: config.instalacao.litoral || 0 },
-    { value: 'guararemaSantaIsabel', label: 'Guararema/Sta Isabel', price: config.instalacao.guararemaSantaIsabel || 0 },
-    { value: 'santaBranca', label: 'Sta Branca', price: config.instalacao.santaBranca || 0 },
-    { value: 'saoPaulo', label: 'São Paulo', price: config.instalacao.saoPaulo || 0 },
-    { value: 'instalacaoLoja', label: 'Instalação em Loja', price: config.instalacao.instalacaoLoja || 0 },
-  ];
+  // Localidades vêm do modelo unificado (editável via Configurações)
+  const instalacaoOptions = getProductOptions('instalacao', config);
+  const selectedOption = instalacaoOptions.find((o) => o.id === instalacao);
 
   return (
     <div className="space-y-3 pt-4 border-t border-border/60">
@@ -51,15 +45,15 @@ const InstallationSection: React.FC<InstallationSectionProps> = ({
       >
         <option value="">Selecione a localidade</option>
         {instalacaoOptions.map((option) => (
-          <option key={option.value} value={option.value}>
+          <option key={option.id} value={option.id}>
             {option.label} - {formatCurrency(option.price)}
           </option>
         ))}
       </select>
-      {instalacao && (
+      {instalacao && selectedOption && (
         <div className="flex justify-between text-sm text-primary">
           <span>Instalação:</span>
-          <span className="currency-value">+{formatCurrency(instalacaoOptions.find(o => o.value === instalacao)?.price || 0)}</span>
+          <span className="currency-value">+{formatCurrency(selectedOption.price)}</span>
         </div>
       )}
     </div>
