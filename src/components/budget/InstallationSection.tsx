@@ -39,7 +39,7 @@ const InstallationSection: React.FC<InstallationSectionProps> = ({
   ];
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 pt-4 border-t border-border/60">
       <Label htmlFor="instalacao" className="form-label">
         Custo de Instalação:
       </Label>

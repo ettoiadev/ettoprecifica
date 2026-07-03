@@ -47,7 +47,7 @@ const PaymentAndDeliverySection: React.FC<PaymentAndDeliverySectionProps> = ({
   const selectedCartaoOption = cartaoOptions.find(o => o.value === cartaoCredito);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-4 border-t border-border/60">
       {/* Cartão de Crédito */}
       <div className="space-y-3">
         <Label className="form-label">

@@ -28,7 +28,7 @@ const ArteFinalSection: React.FC<ArteFinalSectionProps> = ({
   const selected = options.find((o) => o.id === arteFinalId);
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 pt-4 border-t border-border/60">
       <Label className="form-label">Arte Final:</Label>
       <div className="flex flex-wrap gap-2">
         {options.map((option) => {
