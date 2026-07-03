@@ -26,7 +26,7 @@
 ```bash
 # Criar .env.local
 VITE_SUPABASE_URL=https://ghyctsclpcsrznrqegrp.supabase.co
-VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdoeWN0c2NscGNzcnpucnFlZ3JwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ0NTg4ODIsImV4cCI6MjA4MDAzNDg4Mn0.wmXh7yCqNG-w6NLGregnteU-HSm7Oe_p7UiaTbWTtyo
+VITE_SUPABASE_ANON_KEY=<sua_chave_anon_supabase>
 
 # Adicionar ao .gitignore
 .env.local
