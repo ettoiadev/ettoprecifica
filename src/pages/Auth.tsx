@@ -38,8 +38,9 @@ const Auth: React.FC = () => {
         await signUp(email, password, name);
         toast.success('Conta criada! Verifique seu email.');
       }
-    } catch (error: any) {
-      toast.error(error.message || 'Erro ao processar requisição');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Erro ao processar requisição';
+      toast.error(message);
     } finally {
       setLoading(false);
     }

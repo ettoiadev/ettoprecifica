@@ -19,7 +19,7 @@ export const useBudgets = () => {
       const saved = localStorage.getItem('budgets');
       if (saved) {
         try {
-          const parsed = JSON.parse(saved).map((b: any) => ({
+          const parsed = (JSON.parse(saved) as Budget[]).map((b) => ({
             ...b,
             createdAt: new Date(b.createdAt),
             updatedAt: new Date(b.updatedAt),

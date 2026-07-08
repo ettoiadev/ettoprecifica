@@ -14,9 +14,20 @@ export interface BudgetItem {
   name: string;
   type: string;
   dimensions?: { width: number; height: number };
-  options?: Record<string, any>;
+  options?: Record<string, unknown>;
   price: number;
   createdAt: Date;
+}
+
+// Formato bruto de uma linha de budget_items retornada pelo Supabase (colunas snake_case, price como string).
+interface BudgetItemRow {
+  id: string;
+  name: string;
+  type: string;
+  dimensions?: BudgetItem['dimensions'];
+  options?: BudgetItem['options'];
+  price: string;
+  created_at: string;
 }
 
 export const budgetService = {
@@ -32,7 +43,7 @@ export const budgetService = {
     return budgets.map((budget) => ({
       id: budget.id,
       name: budget.name,
-      items: budget.budget_items.map((item: any) => ({
+      items: budget.budget_items.map((item: BudgetItemRow) => ({
         id: item.id,
         name: item.name,
         type: item.type,

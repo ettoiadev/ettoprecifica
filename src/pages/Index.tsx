@@ -30,21 +30,25 @@ const Index = () => {
       if (!user) return;
 
       // Função para fazer deep merge de configurações
-      const deepMergeConfig = (defaultCfg: PricingConfig, loadedCfg: any): PricingConfig => {
+      const deepMergeConfig = (
+        defaultCfg: PricingConfig,
+        loadedCfg: Record<string, unknown>
+      ): PricingConfig => {
         const merged = { ...defaultCfg };
-        
+
         // Para cada seção, fazer merge profundo
-        Object.keys(defaultCfg).forEach((key) => {
-          if (loadedCfg[key] && typeof loadedCfg[key] === 'object') {
-            merged[key as keyof PricingConfig] = {
-              ...defaultCfg[key as keyof PricingConfig],
-              ...loadedCfg[key]
-            } as any;
-          } else if (loadedCfg[key] !== undefined) {
-            merged[key as keyof PricingConfig] = loadedCfg[key];
+        (Object.keys(defaultCfg) as (keyof PricingConfig)[]).forEach((key) => {
+          const loadedValue = loadedCfg[key];
+          if (loadedValue && typeof loadedValue === 'object' && !Array.isArray(loadedValue)) {
+            merged[key] = {
+              ...defaultCfg[key],
+              ...(loadedValue as object),
+            } as PricingConfig[typeof key];
+          } else if (loadedValue !== undefined) {
+            merged[key] = loadedValue as PricingConfig[typeof key];
           }
         });
-        
+
         return merged;
       };
 

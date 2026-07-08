@@ -20,7 +20,7 @@ export const CurrencyInput: React.FC<CurrencyInputProps> = ({
 }) => {
   const formatCurrency = (inputValue: string): string => {
     // Remove tudo exceto números
-    let numbers = inputValue.replace(/\D/g, '');
+    const numbers = inputValue.replace(/\D/g, '');
     
     if (!numbers) return '';
     

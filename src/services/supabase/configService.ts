@@ -1,6 +1,12 @@
 import { supabase } from '../../lib/supabase/client';
 import { PricingConfig } from '../../types/pricing';
 
+export interface BudgetSettings {
+  paymentMethod: string;
+  deliveryTime: string;
+  warranty: string;
+}
+
 export const configService = {
   async getPricingConfig(userId: string): Promise<PricingConfig | null> {
     const { data, error } = await supabase
@@ -64,7 +70,7 @@ export const configService = {
     };
   },
 
-  async saveBudgetSettings(userId: string, settings: any): Promise<void> {
+  async saveBudgetSettings(userId: string, settings: BudgetSettings): Promise<void> {
     const { data: existing } = await supabase
       .from('budget_settings')
       .select('id')
