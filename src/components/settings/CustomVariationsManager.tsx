@@ -32,6 +32,8 @@ interface CustomVariationsManagerProps {
   addLabel?: string;
   unitDefault?: string;
   showCategory?: boolean;
+  /** Exibe o campo "Valor mínimo (R$)" por item (piso do total da linha). */
+  showMinPrice?: boolean;
 }
 
 const CustomVariationsManager: React.FC<CustomVariationsManagerProps> = ({
@@ -42,10 +44,11 @@ const CustomVariationsManager: React.FC<CustomVariationsManagerProps> = ({
   addLabel = 'Adicionar Variação',
   unitDefault = 'm²',
   showCategory = false,
+  showMinPrice = false,
 }) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingVariation, setEditingVariation] = useState<ProductVariation | null>(null);
-  const [formData, setFormData] = useState({ label: '', price: '', unit: unitDefault, category: '' });
+  const [formData, setFormData] = useState({ label: '', price: '', unit: unitDefault, category: '', minPrice: '' });
 
   const handleOpenDialog = (variation?: ProductVariation) => {
     if (variation) {
@@ -55,10 +58,11 @@ const CustomVariationsManager: React.FC<CustomVariationsManagerProps> = ({
         price: variation.price.toString(),
         unit: variation.unit || unitDefault,
         category: variation.category || '',
+        minPrice: variation.minPrice != null ? variation.minPrice.toString() : '',
       });
     } else {
       setEditingVariation(null);
-      setFormData({ label: '', price: '', unit: unitDefault, category: '' });
+      setFormData({ label: '', price: '', unit: unitDefault, category: '', minPrice: '' });
     }
     setIsDialogOpen(true);
   };
@@ -66,7 +70,7 @@ const CustomVariationsManager: React.FC<CustomVariationsManagerProps> = ({
   const handleCloseDialog = () => {
     setIsDialogOpen(false);
     setEditingVariation(null);
-    setFormData({ label: '', price: '', unit: unitDefault, category: '' });
+    setFormData({ label: '', price: '', unit: unitDefault, category: '', minPrice: '' });
   };
 
   const handleSave = () => {
@@ -74,12 +78,16 @@ const CustomVariationsManager: React.FC<CustomVariationsManagerProps> = ({
       return;
     }
 
+    const parsedMinPrice = parseFloat(formData.minPrice);
     const newVariation: ProductVariation = {
       id: editingVariation?.id || `custom_${Date.now()}`,
       label: formData.label,
       price: parseFloat(formData.price),
       unit: formData.unit,
       ...(showCategory && formData.category ? { category: formData.category } : {}),
+      ...(showMinPrice && formData.minPrice !== '' && !Number.isNaN(parsedMinPrice)
+        ? { minPrice: parsedMinPrice }
+        : {}),
     };
 
     let updatedVariations: ProductVariation[];
@@ -138,6 +146,11 @@ const CustomVariationsManager: React.FC<CustomVariationsManagerProps> = ({
                 </div>
                 <div className="text-xs text-gray-500">
                   R$ {variation.price.toFixed(2)} / {variation.unit || 'm²'}
+                  {showMinPrice && (
+                    <span className="ml-2 text-gray-400">
+                      · mín. R$ {(variation.minPrice ?? 20).toFixed(2)}
+                    </span>
+                  )}
                 </div>
               </div>
               <div className="flex gap-1">
@@ -249,6 +262,27 @@ const CustomVariationsManager: React.FC<CustomVariationsManagerProps> = ({
                 }
               />
             </div>
+            {showMinPrice && (
+              <div className="grid gap-2">
+                <Label htmlFor="minPrice">Valor mínimo (R$)</Label>
+                <Input
+                  id="minPrice"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="20.00"
+                  value={formData.minPrice}
+                  onChange={(e) =>
+                    setFormData({ ...formData, minPrice: e.target.value })
+                  }
+                />
+                <p className="text-xs text-gray-500">
+                  Piso do total: enquanto área × preço × quantidade estiver abaixo
+                  deste valor, cobra-se o mínimo; ao ultrapassá-lo, passa a valer o
+                  preço por m². Em branco = R$ 20,00 (padrão).
+                </p>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button

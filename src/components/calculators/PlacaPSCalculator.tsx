@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { PlacaPSConfig, formatCurrency, calculateMinimumCharge, PricingConfig } from '../../types/pricing';
+import { PlacaPSConfig, formatCurrency, applyItemMinimumCharge, PricingConfig } from '../../types/pricing';
 import { getProductOptions } from '../../utils/productOptions';
 import BudgetSummaryExtended from '../BudgetSummaryExtended';
 
@@ -35,15 +35,16 @@ const PlacaPSCalculator: React.FC<Props> = ({ config, fullConfig }) => {
 
   useEffect(() => {
     if (area > 0 && tipoSelecionado && quantidade > 0) {
-      const basePrice = baseOptionsById.get(tipoSelecionado)?.price || 0;
+      const baseOption = baseOptionsById.get(tipoSelecionado);
+      const basePrice = baseOption?.price || 0;
       const extrasPrice = customSelecionadas.reduce((sum, id) => {
         return sum + (customOptionsById.get(id)?.price || 0);
       }, 0);
 
       const pricePerM2 = basePrice + extrasPrice;
       const subtotal = area * pricePerM2 * quantidade;
-      // Aplicar preço mínimo ao total final, não por unidade
-      setTotal(calculateMinimumCharge(subtotal));
+      // Aplicar o valor mínimo da espessura ao total da linha (não por unidade)
+      setTotal(applyItemMinimumCharge(subtotal, baseOption?.minPrice));
     } else {
       setTotal(0);
     }

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { LetraCaixaConfig, formatCurrency, calculateMinimumCharge, PricingConfig } from '../../types/pricing';
+import { LetraCaixaConfig, formatCurrency, applyItemMinimumCharge, PricingConfig } from '../../types/pricing';
 import { getProductOptions } from '../../utils/productOptions';
 import BudgetSummaryExtended from '../BudgetSummaryExtended';
 
@@ -43,8 +43,8 @@ const LetraCaixaCalculator: React.FC<Props> = ({ config, fullConfig }) => {
       });
 
       const subtotal = area * pricePerM2 * quantidade;
-      // Aplicar preço mínimo ao total final, não por unidade
-      setTotal(calculateMinimumCharge(subtotal));
+      // Aplicar o valor mínimo da espessura ao total da linha (não por unidade)
+      setTotal(applyItemMinimumCharge(subtotal, espessuraOption?.minPrice));
     } else {
       setTotal(0);
     }

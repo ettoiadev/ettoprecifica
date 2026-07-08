@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { AdesivoConfig, formatCurrency, calculateMinimumCharge, PricingConfig } from '../../types/pricing';
+import { AdesivoConfig, formatCurrency, applyItemMinimumCharge, PricingConfig } from '../../types/pricing';
 import { getProductOptions } from '../../utils/productOptions';
 import BudgetSummaryExtended from '../BudgetSummaryExtended';
 
@@ -26,10 +26,11 @@ const AdesivoCalculator: React.FC<Props> = ({ config, fullConfig }) => {
 
   useEffect(() => {
     if (area > 0 && selectedOption && quantidade > 0) {
-      const selectedPrice = options.find(opt => opt.id === selectedOption)?.price || 0;
+      const selected = options.find(opt => opt.id === selectedOption);
+      const selectedPrice = selected?.price || 0;
       const subtotal = area * selectedPrice * quantidade;
-      // Aplicar preço mínimo ao total final, não por unidade
-      setTotal(calculateMinimumCharge(subtotal));
+      // Aplicar o valor mínimo do item ao total da linha (não por unidade)
+      setTotal(applyItemMinimumCharge(subtotal, selected?.minPrice));
     } else {
       setTotal(0);
     }

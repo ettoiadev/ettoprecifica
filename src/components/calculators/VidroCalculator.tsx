@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { VidroConfig, formatCurrency, calculateMinimumCharge, PricingConfig } from '../../types/pricing';
+import { VidroConfig, formatCurrency, applyItemMinimumCharge, PricingConfig } from '../../types/pricing';
 import { getProductOptions } from '../../utils/productOptions';
 import BudgetSummaryExtended from '../BudgetSummaryExtended';
 
@@ -32,7 +32,7 @@ const VidroCalculator: React.FC<Props> = ({ config, fullConfig }) => {
         return;
       }
       const vidroSubtotal = area * espessuraOption.price * quantidade;
-      const vidroTotal = calculateMinimumCharge(vidroSubtotal);
+      const vidroTotal = applyItemMinimumCharge(vidroSubtotal, espessuraOption.minPrice);
       const prolongadoresTotal = prolongadores * config.prolongadores;
 
       // Aplicar preço mínimo ao total final incluindo prolongadores
@@ -75,7 +75,10 @@ const VidroCalculator: React.FC<Props> = ({ config, fullConfig }) => {
         <span>Vidro:</span>
         <span>
           {formatCurrency(
-            calculateMinimumCharge(area * (espessuraOptions.find(opt => opt.id === espessura)?.price || 0)) * quantidade
+            applyItemMinimumCharge(
+              area * (espessuraOptions.find(opt => opt.id === espessura)?.price || 0),
+              espessuraOptions.find(opt => opt.id === espessura)?.minPrice
+            ) * quantidade
           )}
         </span>
       </div>

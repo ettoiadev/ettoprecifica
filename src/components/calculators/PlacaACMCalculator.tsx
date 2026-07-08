@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { PlacaACMConfig, formatCurrency, calculateMinimumCharge, PricingConfig } from '../../types/pricing';
+import { PlacaACMConfig, formatCurrency, applyItemMinimumCharge, PricingConfig } from '../../types/pricing';
 import { getProductOptions } from '../../utils/productOptions';
 import BudgetSummaryExtended from '../BudgetSummaryExtended';
 
@@ -30,8 +30,8 @@ const PlacaACMCalculator: React.FC<Props> = ({ config, fullConfig }) => {
   useEffect(() => {
     if (area > 0 && quantidade > 0 && selected) {
       const subtotal = area * preco * quantidade;
-      // Aplicar preço mínimo ao total final, não por unidade
-      setTotal(calculateMinimumCharge(subtotal));
+      // Aplicar o valor mínimo do item ao total da linha (não por unidade)
+      setTotal(applyItemMinimumCharge(subtotal, selected.minPrice));
     } else {
       setTotal(0);
     }

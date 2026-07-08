@@ -5,6 +5,12 @@ export interface ProductVariation {
   price: number;
   unit?: string;
   category?: string;
+  /**
+   * Valor mínimo (piso) cobrado para este item, incidindo sobre o total da linha
+   * (área × preço × quantidade). Abaixo dele, cobra-se o mínimo; ao ultrapassá-lo,
+   * passa a valer o cálculo por m². Se ausente, usa DEFAULT_MINIMUM_CHARGE (R$20).
+   */
+  minPrice?: number;
 }
 
 export interface AdesivoConfig {
@@ -315,8 +321,23 @@ export const formatCurrency = (value: number): string => {
   }).format(value);
 };
 
+/** Valor mínimo padrão do sistema, usado quando o item não define o seu. */
+export const DEFAULT_MINIMUM_CHARGE = 20.0;
+
 export const calculateMinimumCharge = (value: number): number => {
-  return Math.max(value, 20.0);
+  return Math.max(value, DEFAULT_MINIMUM_CHARGE);
+};
+
+/**
+ * Aplica o valor mínimo (piso) de um item ao total da linha. Se o item não tiver
+ * mínimo configurado, usa o padrão do sistema (R$20). Comportamento: enquanto o
+ * valor calculado (área × preço × quantidade) estiver abaixo do piso, cobra-se o
+ * piso; ao ultrapassá-lo, passa a valer o cálculo por m².
+ */
+export const applyItemMinimumCharge = (value: number, minPrice?: number): number => {
+  const floor =
+    typeof minPrice === 'number' && !Number.isNaN(minPrice) ? minPrice : DEFAULT_MINIMUM_CHARGE;
+  return Math.max(value, floor);
 };
 
 export const calculateLonaMinimumCharge = (value: number, minPrice: number): number => {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { LaserConfig, formatCurrency, calculateMinimumCharge, PricingConfig, ProductVariation } from '../../types/pricing';
+import { LaserConfig, formatCurrency, applyItemMinimumCharge, PricingConfig, ProductVariation } from '../../types/pricing';
 import { getProductOptions } from '../../utils/productOptions';
 import BudgetSummaryExtended from '../BudgetSummaryExtended';
 
@@ -28,7 +28,7 @@ const LaserCalculator: React.FC<Props> = ({ config, fullConfig }) => {
   useEffect(() => {
     if (area > 0 && selected && quantidade > 0) {
       const subtotal = area * selected.price * quantidade;
-      setTotal(calculateMinimumCharge(subtotal));
+      setTotal(applyItemMinimumCharge(subtotal, selected.minPrice));
     } else {
       setTotal(0);
     }

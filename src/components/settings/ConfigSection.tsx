@@ -12,20 +12,23 @@ interface ListManagerDef {
   addLabel: string;
   unitDefault?: string;
   showCategory?: boolean;
+  showMinPrice?: boolean;
 }
 
 // Seções com listas editáveis (CRUD) e a quais chaves da config elas apontam.
+// showMinPrice: habilita o "Valor mínimo (R$)" por item nas calculadoras de lista
+// que aplicam piso ao total (Adesivo, Placa PS, Placa ACM, Letra PVC, Vidro, Laser).
 const LIST_MANAGERS: Record<string, ListManagerDef[]> = {
-  adesivo: [{ key: 'variations', label: 'Opções de Adesivo', addLabel: 'Adicionar Opção' }],
+  adesivo: [{ key: 'variations', label: 'Opções de Adesivo', addLabel: 'Adicionar Opção', showMinPrice: true }],
   lona: [{ key: 'variations', label: 'Tipos de Lona', addLabel: 'Adicionar Tipo' }],
   placaPS: [
-    { key: 'variations', label: 'Espessuras', addLabel: 'Adicionar Espessura' },
+    { key: 'variations', label: 'Espessuras', addLabel: 'Adicionar Espessura', showMinPrice: true },
     { key: 'customVariations', label: 'Variações Adicionais (somam ao m²)', addLabel: 'Adicionar Variação' },
   ],
-  placaACM: [{ key: 'variations', label: 'Tipos de ACM', addLabel: 'Adicionar Tipo' }],
-  letraCaixa: [{ key: 'variations', label: 'Espessuras', addLabel: 'Adicionar Espessura' }],
-  vidro: [{ key: 'variations', label: 'Espessuras', addLabel: 'Adicionar Espessura' }],
-  laser: [{ key: 'variations', label: 'Materiais', addLabel: 'Adicionar Material', showCategory: true }],
+  placaACM: [{ key: 'variations', label: 'Tipos de ACM', addLabel: 'Adicionar Tipo', showMinPrice: true }],
+  letraCaixa: [{ key: 'variations', label: 'Espessuras', addLabel: 'Adicionar Espessura', showMinPrice: true }],
+  vidro: [{ key: 'variations', label: 'Espessuras', addLabel: 'Adicionar Espessura', showMinPrice: true }],
+  laser: [{ key: 'variations', label: 'Materiais', addLabel: 'Adicionar Material', showCategory: true, showMinPrice: true }],
   arteFinal: [
     { key: 'customVariations', label: 'Opções de Arte Final', addLabel: 'Adicionar Opção', unitDefault: 'serviço' },
   ],
@@ -139,6 +142,7 @@ const ConfigSection = React.memo<ConfigSectionProps>(({ title, section, fields, 
             addLabel={mgr.addLabel}
             unitDefault={mgr.unitDefault}
             showCategory={mgr.showCategory}
+            showMinPrice={mgr.showMinPrice}
           />
         ))}
       </CardContent>
