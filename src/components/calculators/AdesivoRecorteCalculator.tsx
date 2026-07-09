@@ -71,6 +71,7 @@ const AdesivoRecorteCalculator: React.FC = () => {
   const [largura, setLargura] = useState<string>('');
   const [altura, setAltura] = useState<string>('');
   const [areaDireta, setAreaDireta] = useState<string>('');
+  const [quantidade, setQuantidade] = useState<number>(1);
   // Aproveitamento do vinil: padrão Sólido 100% (a maioria dos recortes é sólida).
   const [percentual, setPercentual] = useState<number>(100);
   // Máscara de transferência (papel) — usada em vários recortes de aplicação.
@@ -91,6 +92,15 @@ const AdesivoRecorteCalculator: React.FC = () => {
   const larguraNum = parseFloat(largura) || 0;
   const alturaNum = parseFloat(altura) || 0;
   const areaDiretaNum = parseFloat(areaDireta) || 0;
+  const qtd = quantidade > 0 ? quantidade : 1;
+
+  // Área de vinil de UMA unidade conforme o modo escolhido.
+  const areaUnit =
+    modo === 'area' ? areaDiretaNum : larguraNum * alturaNum * (percentual / 100);
+  // Área total do pedido (soma das unidades). O motor da skill é linear na área,
+  // então enviar a área total faz material/corte/máscara escalarem por unidade,
+  // mantendo registro (2 cores) e deslocamento uma vez só, e o mínimo no total.
+  const areaTotal = areaUnit * qtd;
 
   // Entradas válidas conforme o modo escolhido.
   const entradaValida =
@@ -136,10 +146,8 @@ const AdesivoRecorteCalculator: React.FC = () => {
       try {
         const cor2 =
           cores === 2 ? { cores: 2, produtoCor2: produtoCor2 || undefined, percentualCor2 } : {};
-        const body =
-          modo === 'area'
-            ? { produto, area: areaDiretaNum, mascara: comMascara, cidade, ...cor2 }
-            : { produto, largura: larguraNum, altura: alturaNum, percentual, mascara: comMascara, cidade, ...cor2 };
+        // Sempre via área direta (já computada no app com modo + % + quantidade).
+        const body = { produto, area: areaTotal, mascara: comMascara, cidade, ...cor2 };
         const { data, error } = await supabase.functions.invoke('calc-adesivo-recorte', { body });
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
@@ -153,7 +161,7 @@ const AdesivoRecorteCalculator: React.FC = () => {
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [produto, modo, larguraNum, alturaNum, areaDiretaNum, percentual, comMascara, cores, produtoCor2, percentualCor2, cidade]);
+  }, [produto, entradaValida, areaTotal, comMascara, cores, produtoCor2, percentualCor2, cidade]);
 
   // Aplica o valor mínimo de projeto ao preço exibido (como o resto do app faz).
   const precos = useMemo(() => {
@@ -180,10 +188,12 @@ const AdesivoRecorteCalculator: React.FC = () => {
   }, [materiais]);
 
   // Trecho que descreve a quantidade conforme o modo (para textos/cotação).
-  const medidaTexto =
+  const unidadeTexto =
     modo === 'area'
       ? `${areaDiretaNum.toFixed(3)} m² (área)`
       : `${larguraNum.toFixed(2)}×${alturaNum.toFixed(2)}m (${percentual}%)`;
+  const qtdPrefixo = qtd > 1 ? `${qtd}x ` : '';
+  const medidaTexto = `${qtdPrefixo}${unidadeTexto}`;
   const mascaraTexto = comMascara ? ' + máscara' : '';
   const coresTexto = cores === 2 ? ' + 2ª cor' : '';
 
@@ -448,6 +458,29 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
           )}
 
           <div>
+            <label htmlFor="quantidade" className="block text-sm font-medium text-gray-700 mb-3">
+              Quantidade
+            </label>
+            <div className="flex items-center gap-2">
+              <input
+                id="quantidade"
+                type="number"
+                min="1"
+                step="1"
+                value={quantidade || ''}
+                onChange={(e) => {
+                  const v = parseInt(e.target.value, 10);
+                  setQuantidade(Number.isFinite(v) && v > 0 ? v : 1);
+                }}
+                className="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              <span className="text-sm text-gray-500">
+                unidades iguais — o preço soma a área total (mínimo e registro valem uma vez).
+              </span>
+            </div>
+          </div>
+
+          <div>
             <label className="flex items-start gap-3 cursor-pointer">
               <input
                 type="checkbox"
@@ -537,8 +570,19 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
                         <span>{cores === 2 ? 'Material (1ª cor):' : 'Material:'}</span>
                         <span>{result.produto_encontrado}</span>
                       </div>
+                      {qtd > 1 && (
+                        <div className="flex justify-between text-sm text-gray-600">
+                          <span>Quantidade:</span>
+                          <span>{qtd} un.</span>
+                        </div>
+                      )}
                       <div className="flex justify-between text-sm text-gray-600">
-                        <span>Área de vinil{modo === 'area' ? '' : ` (${percentual}%)`}:</span>
+                        <span>
+                          {qtd > 1
+                            ? `Área de vinil total (${qtd}×)`
+                            : `Área de vinil${modo === 'area' ? '' : ` (${percentual}%)`}`}
+                          :
+                        </span>
                         <span>{num(result.area_adesivo_m2).toFixed(3)} m²</span>
                       </div>
                       {cores === 2 && (
