@@ -71,7 +71,8 @@ const AdesivoRecorteCalculator: React.FC = () => {
   const [largura, setLargura] = useState<string>('');
   const [altura, setAltura] = useState<string>('');
   const [areaDireta, setAreaDireta] = useState<string>('');
-  const [percentual, setPercentual] = useState<number>(25);
+  // Aproveitamento do vinil: padrão Sólido 100% (a maioria dos recortes é sólida).
+  const [percentual, setPercentual] = useState<number>(100);
   // Máscara de transferência (papel) — usada em vários recortes de aplicação.
   const [comMascara, setComMascara] = useState<boolean>(false);
   // 2 cores: 2ª cor de vinil recortado (material + % da área da 1ª cor).
