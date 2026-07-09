@@ -62,6 +62,7 @@ Deno.serve(async (req: Request) => {
     const altura = Number(body?.altura);
     const cidade = String(body?.cidade ?? "Jacareí");
     const area = Number(body?.area); // modo área direta (m²)
+    const comMascara = body?.mascara === true; // máscara de transferência (papel)
     let percentual = Number(body?.percentual);
     if (!(percentual > 0) || percentual > 100) percentual = 25;
 
@@ -79,11 +80,13 @@ Deno.serve(async (req: Request) => {
     }
 
     // Modo área direta tem prioridade; senão usa bounding box + percentual.
+    // p_com_mascara sempre explícito (evita o aviso padrão da função).
     const rpcArgs = temArea
       ? {
           p_produto: produto,
           p_area_m2: area,
           p_cidade: cidade,
+          p_com_mascara: comMascara,
         }
       : {
           p_produto: produto,
@@ -91,6 +94,7 @@ Deno.serve(async (req: Request) => {
           altura_m: altura,
           p_percentual_area: percentual,
           p_cidade: cidade,
+          p_com_mascara: comMascara,
         };
 
     const { data, error } = await supabase.rpc("calc_adesivo_recorte", rpcArgs);
@@ -104,6 +108,7 @@ Deno.serve(async (req: Request) => {
       altura,
       area,
       percentual,
+      mascara: comMascara,
       cidade,
       resultado,
     });

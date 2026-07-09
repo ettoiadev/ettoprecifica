@@ -14,6 +14,8 @@ interface RecorteResult {
   area_adesivo_m2?: number | string;
   custo_material?: number | string;
   custo_corte_plotter?: number | string;
+  usa_mascara?: boolean;
+  custo_mascara?: number | string;
   subtotal_materiais?: number | string;
   custo_deslocamento?: number | string;
   preco_minimo_projeto?: number | string;
@@ -63,6 +65,8 @@ const AdesivoRecorteCalculator: React.FC = () => {
   const [altura, setAltura] = useState<string>('');
   const [areaDireta, setAreaDireta] = useState<string>('');
   const [percentual, setPercentual] = useState<number>(25);
+  // Máscara de transferência (papel) — usada em vários recortes de aplicação.
+  const [comMascara, setComMascara] = useState<boolean>(false);
   const [cidade, setCidade] = useState<string>('Jacareí');
   const [cidades, setCidades] = useState<string[]>(CIDADES_FALLBACK);
 
@@ -120,8 +124,8 @@ const AdesivoRecorteCalculator: React.FC = () => {
       try {
         const body =
           modo === 'area'
-            ? { produto, area: areaDiretaNum, cidade }
-            : { produto, largura: larguraNum, altura: alturaNum, percentual, cidade };
+            ? { produto, area: areaDiretaNum, mascara: comMascara, cidade }
+            : { produto, largura: larguraNum, altura: alturaNum, percentual, mascara: comMascara, cidade };
         const { data, error } = await supabase.functions.invoke('calc-adesivo-recorte', { body });
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
@@ -135,7 +139,7 @@ const AdesivoRecorteCalculator: React.FC = () => {
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [produto, modo, larguraNum, alturaNum, areaDiretaNum, percentual, cidade]);
+  }, [produto, modo, larguraNum, alturaNum, areaDiretaNum, percentual, comMascara, cidade]);
 
   // Aplica o valor mínimo de projeto ao preço exibido (como o resto do app faz).
   const precos = useMemo(() => {
@@ -166,12 +170,14 @@ const AdesivoRecorteCalculator: React.FC = () => {
     modo === 'area'
       ? `${areaDiretaNum.toFixed(3)} m² (área)`
       : `${larguraNum.toFixed(2)}×${alturaNum.toFixed(2)}m (${percentual}%)`;
+  const mascaraTexto = comMascara ? ' + máscara' : '';
 
   const handleCopy = () => {
     if (!result || !precos) return;
     const texto = `Orçamento Adesivo de Recorte
 Material: ${result.produto_encontrado ?? produto}
 Quantidade: ${medidaTexto}
+Máscara de transferência: ${comMascara ? 'sim' : 'não'}
 Cidade: ${cidade}
 
 Preço (sem nota fiscal): ${formatCurrency(precos.semNota)}
@@ -185,7 +191,7 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
   const handleAddCotacao = () => {
     if (!result || !precos) return;
     addItem({
-      descricao: `Adesivo recorte ${result.produto_encontrado ?? produto} ${medidaTexto}`,
+      descricao: `Adesivo recorte ${result.produto_encontrado ?? produto} ${medidaTexto}${mascaraTexto}`,
       precoSemNota: precos.semNota,
       precoComNota: precos.comNota,
     });
@@ -353,6 +359,25 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
           )}
 
           <div>
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={comMascara}
+                onChange={(e) => setComMascara(e.target.checked)}
+                className="mt-0.5 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              />
+              <span>
+                <span className="block text-sm font-medium text-gray-700">
+                  Máscara de transferência (papel)
+                </span>
+                <span className="block text-xs text-gray-500">
+                  Marque quando o recorte for de aplicação (letras/logos que precisam de máscara).
+                </span>
+              </span>
+            </label>
+          </div>
+
+          <div>
             <label htmlFor="cidade-recorte" className="block text-sm font-medium text-gray-700 mb-3">
               Cidade (instalação)
             </label>
@@ -440,6 +465,12 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
                       <span>Corte na plotter:</span>
                       <span>{formatCurrency(num(result.custo_corte_plotter))}</span>
                     </div>
+                    {result.usa_mascara && (
+                      <div className="flex justify-between text-sm text-gray-600">
+                        <span>Máscara de transferência:</span>
+                        <span>{formatCurrency(num(result.custo_mascara))}</span>
+                      </div>
+                    )}
                     <div className="flex justify-between text-sm text-gray-600">
                       <span>Deslocamento:</span>
                       <span>{formatCurrency(num(result.custo_deslocamento))}</span>
