@@ -47,8 +47,8 @@ const inputClass =
 
 const FachadaCalculator: React.FC<Props> = () => {
   const [tipo, setTipo] = useState<'acm' | 'lona'>('acm');
-  // Acabamento da lona: 'ilhos' (ilhós + abraçadeiras) ou 'rebite' (cantoneira).
-  const [fixacao, setFixacao] = useState<'ilhos' | 'rebite'>('ilhos');
+  // Acabamento da lona: 'rebite' (cantoneira, padrão/mais usado) ou 'ilhos' (ilhós + abraçadeiras).
+  const [fixacao, setFixacao] = useState<'ilhos' | 'rebite'>('rebite');
   const [largura, setLargura] = useState<string>('');
   const [altura, setAltura] = useState<string>('');
   const [cidade, setCidade] = useState<string>('Jacareí');
