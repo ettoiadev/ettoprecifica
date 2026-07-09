@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import AdesivoCalculator from '../components/calculators/AdesivoCalculator';
+import AdesivoRecorteCalculator from '../components/calculators/AdesivoRecorteCalculator';
 import LonaCalculator from '../components/calculators/LonaCalculator';
 import PlacaPSCalculator from '../components/calculators/PlacaPSCalculator';
 import PlacaACMCalculator from '../components/calculators/PlacaACMCalculator';
@@ -105,6 +106,7 @@ const Index = () => {
   const getTabTitle = () => {
     const titles: Record<string, string> = {
       'adesivo': 'Calculadora de Adesivo',
+      'adesivo-recorte': 'Calculadora de Adesivo de Recorte',
       'lona': 'Calculadora de Lona',
       'placa-ps': 'Calculadora de Placa em PS',
       'placa-acm': 'Calculadora de Placa em ACM',
@@ -121,6 +123,8 @@ const Index = () => {
     switch (activeTab) {
       case 'adesivo':
         return <AdesivoCalculator config={config.adesivo} fullConfig={config} />;
+      case 'adesivo-recorte':
+        return <AdesivoRecorteCalculator />;
       case 'lona':
         return <LonaCalculator config={config.lona} fullConfig={config} />;
       case 'placa-ps':

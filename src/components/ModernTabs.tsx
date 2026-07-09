@@ -1,5 +1,5 @@
 import React from 'react';
-import { FileText, Package, Square, Layers, Building, Type, Shield, Lightbulb, Zap } from 'lucide-react';
+import { FileText, Scissors, Package, Square, Layers, Building, Type, Shield, Lightbulb, Zap } from 'lucide-react';
 interface ModernTabsProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
@@ -13,6 +13,11 @@ const ModernTabs: React.FC<ModernTabsProps> = ({
     label: 'Adesivo',
     icon: FileText,
     color: 'from-red-500 to-pink-500'
+  }, {
+    id: 'adesivo-recorte',
+    label: 'Recorte',
+    icon: Scissors,
+    color: 'from-rose-500 to-red-500'
   }, {
     id: 'lona',
     label: 'Lona',
