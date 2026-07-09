@@ -49,6 +49,7 @@ const LaserCalculator: React.FC<Props> = () => {
   const [cidade, setCidade] = useState<string>('Jacareí');
   const [largura, setLargura] = useState<string>('');
   const [altura, setAltura] = useState<string>('');
+  const [quantidade, setQuantidade] = useState<number>(1);
 
   const [result, setResult] = useState<LaserResult | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
@@ -58,6 +59,21 @@ const LaserCalculator: React.FC<Props> = () => {
 
   const larguraNum = parseFloat(largura) || 0;
   const alturaNum = forma === 'circular' ? larguraNum : parseFloat(altura) || 0;
+  const qtd = quantidade > 0 ? quantidade : 1;
+
+  // Preço do pedido: (material + LED) × qtd + deslocamento (uma vez), com o mínimo
+  // de projeto no total. O fator de NF vem do próprio resultado (qty=1).
+  const precos = useMemo(() => {
+    if (!result || !result.material_encontrado) return null;
+    const varUnit = num(result.custo_material_venda) + num(result.custo_led);
+    const desloc = num(result.custo_deslocamento);
+    const minimo = num(result.preco_minimo_projeto);
+    const semNota = Math.max(varUnit * qtd + desloc, minimo);
+    const fatorNota =
+      num(result.preco_final) > 0 ? num(result.preco_com_nota) / num(result.preco_final) : 1.0931;
+    return { semNota, comNota: semNota * fatorNota };
+  }, [result, qtd]);
+  const qtdPrefixo = qtd > 1 ? `${qtd}x ` : '';
 
   // Carrega materiais + cidades do motor (uma vez).
   useEffect(() => {
@@ -133,17 +149,17 @@ const LaserCalculator: React.FC<Props> = () => {
   }, [materiais]);
 
   const handleCopy = () => {
-    if (!result || !result.material_encontrado) return;
+    if (!result || !result.material_encontrado || !precos) return;
     const dim = forma === 'circular'
       ? `Ø ${larguraNum.toFixed(2)} m`
       : `${larguraNum.toFixed(2)} x ${alturaNum.toFixed(2)} m`;
     const texto = `Orçamento Laser — ${result.material_encontrado}
-Forma: ${forma === 'circular' ? 'Circular' : 'Retangular'} (${dim})
+Forma: ${forma === 'circular' ? 'Circular' : 'Retangular'} (${dim})${qtd > 1 ? ` — ${qtd} unidades` : ''}
 Complexidade: ${complexidade === 'complexo' ? 'Complexo' : 'Padrão'}${comLed ? ' + LED' : ''}
 Cidade: ${cidade}
 
-Preço (sem nota fiscal): ${formatCurrency(num(result.preco_final))}
-Preço (com nota fiscal): ${formatCurrency(num(result.preco_com_nota))}`;
+Preço (sem nota fiscal): ${formatCurrency(precos.semNota)}
+Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
     navigator.clipboard.writeText(texto).then(
       () => toast.success('Orçamento copiado!'),
       () => toast.error('Não foi possível copiar.')
@@ -151,14 +167,14 @@ Preço (com nota fiscal): ${formatCurrency(num(result.preco_com_nota))}`;
   };
 
   const handleAddCotacao = () => {
-    if (!result || !result.material_encontrado) return;
+    if (!result || !result.material_encontrado || !precos) return;
     const dim = forma === 'circular'
       ? `Ø${larguraNum.toFixed(2)}m`
       : `${larguraNum.toFixed(2)}×${alturaNum.toFixed(2)}m`;
     addItem({
-      descricao: `Laser ${result.material_encontrado} ${dim}`,
-      precoSemNota: num(result.preco_final),
-      precoComNota: num(result.preco_com_nota),
+      descricao: `Laser ${result.material_encontrado} ${qtdPrefixo}${dim}`,
+      precoSemNota: precos.semNota,
+      precoComNota: precos.comNota,
     });
     toast.success('Adicionado à cotação!');
   };
@@ -293,6 +309,29 @@ Preço (com nota fiscal): ${formatCurrency(num(result.preco_com_nota))}`;
           </label>
 
           <div>
+            <label htmlFor="laser-quantidade" className="block text-sm font-medium text-gray-700 mb-3">
+              Quantidade
+            </label>
+            <div className="flex items-center gap-2">
+              <input
+                id="laser-quantidade"
+                type="number"
+                min="1"
+                step="1"
+                value={quantidade || ''}
+                onChange={(e) => {
+                  const v = parseInt(e.target.value, 10);
+                  setQuantidade(Number.isFinite(v) && v > 0 ? v : 1);
+                }}
+                className="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              <span className="text-sm text-gray-500">
+                peças iguais — mínimo e deslocamento valem uma vez.
+              </span>
+            </div>
+          </div>
+
+          <div>
             <label htmlFor="laser-cidade" className="block text-sm font-medium text-gray-700 mb-3">
               Cidade (instalação, se houver)
             </label>
@@ -342,11 +381,17 @@ Preço (com nota fiscal): ${formatCurrency(num(result.preco_com_nota))}`;
                       Preço de venda (sem nota fiscal)
                     </div>
                     <div className="text-3xl font-bold text-blue-600">
-                      {formatCurrency(num(result.preco_final))}
+                      {formatCurrency(precos ? precos.semNota : num(result.preco_final))}
                     </div>
                     <div className="mt-1 text-sm text-gray-600">
-                      Com nota fiscal: {formatCurrency(num(result.preco_com_nota))}
+                      Com nota fiscal:{' '}
+                      {formatCurrency(precos ? precos.comNota : num(result.preco_com_nota))}
                     </div>
+                    {qtd > 1 && (
+                      <div className="mt-1 text-xs text-gray-500">
+                        {qtd} unidades · {formatCurrency((precos ? precos.semNota : 0) / qtd)} cada
+                      </div>
+                    )}
                   </div>
 
                   <div className="space-y-1">
@@ -355,9 +400,15 @@ Preço (com nota fiscal): ${formatCurrency(num(result.preco_com_nota))}`;
                       <span>{result.material_encontrado}</span>
                     </div>
                     <div className="flex justify-between text-sm text-gray-600">
-                      <span>Área:</span>
+                      <span>Área{qtd > 1 ? ' (por peça)' : ''}:</span>
                       <span>{num(result.area_m2).toFixed(3)} m²</span>
                     </div>
+                    {qtd > 1 && (
+                      <div className="flex justify-between text-sm text-gray-600">
+                        <span>Quantidade:</span>
+                        <span>{qtd} peças</span>
+                      </div>
+                    )}
                     <div className="flex justify-between text-sm text-gray-600">
                       <span>Preço base:</span>
                       <span>{formatCurrency(num(result.preco_venda_m2_base))}/m²</span>
