@@ -61,27 +61,52 @@ Deno.serve(async (req: Request) => {
     const largura = Number(body?.largura);
     const altura = Number(body?.altura);
     const cidade = String(body?.cidade ?? "Jacareí");
+    const area = Number(body?.area); // modo área direta (m²)
     let percentual = Number(body?.percentual);
     if (!(percentual > 0) || percentual > 100) percentual = 25;
+
+    const temArea = area > 0;
+    const temMedida = largura > 0 && altura > 0;
 
     if (!produto) {
       return json({ error: "informe o produto (material de recorte)" }, 400);
     }
-    if (!(largura > 0) || !(altura > 0)) {
-      return json({ error: "largura e altura devem ser maiores que zero" }, 400);
+    if (!temArea && !temMedida) {
+      return json(
+        { error: "informe a área (m²) OU largura e altura maiores que zero" },
+        400,
+      );
     }
 
-    const { data, error } = await supabase.rpc("calc_adesivo_recorte", {
-      p_produto: produto,
-      largura_m: largura,
-      altura_m: altura,
-      p_percentual_area: percentual,
-      p_cidade: cidade,
-    });
+    // Modo área direta tem prioridade; senão usa bounding box + percentual.
+    const rpcArgs = temArea
+      ? {
+          p_produto: produto,
+          p_area_m2: area,
+          p_cidade: cidade,
+        }
+      : {
+          p_produto: produto,
+          largura_m: largura,
+          altura_m: altura,
+          p_percentual_area: percentual,
+          p_cidade: cidade,
+        };
+
+    const { data, error } = await supabase.rpc("calc_adesivo_recorte", rpcArgs);
     if (error) throw error;
 
     const resultado = Array.isArray(data) ? data[0] : data;
-    return json({ produto, largura, altura, percentual, cidade, resultado });
+    return json({
+      produto,
+      modo: temArea ? "area" : "medida",
+      largura,
+      altura,
+      area,
+      percentual,
+      cidade,
+      resultado,
+    });
   } catch (e) {
     return json({ error: e instanceof Error ? e.message : String(e) }, 500);
   }

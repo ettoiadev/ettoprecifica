@@ -57,8 +57,11 @@ const inputClass =
 const AdesivoRecorteCalculator: React.FC = () => {
   const [materiais, setMateriais] = useState<Material[]>([]);
   const [produto, setProduto] = useState<string>('');
+  // Modo de entrada: 'medida' (retângulo × %) ou 'area' (área real do recorte em m²).
+  const [modo, setModo] = useState<'medida' | 'area'>('medida');
   const [largura, setLargura] = useState<string>('');
   const [altura, setAltura] = useState<string>('');
+  const [areaDireta, setAreaDireta] = useState<string>('');
   const [percentual, setPercentual] = useState<number>(25);
   const [cidade, setCidade] = useState<string>('Jacareí');
   const [cidades, setCidades] = useState<string[]>(CIDADES_FALLBACK);
@@ -71,6 +74,11 @@ const AdesivoRecorteCalculator: React.FC = () => {
 
   const larguraNum = parseFloat(largura) || 0;
   const alturaNum = parseFloat(altura) || 0;
+  const areaDiretaNum = parseFloat(areaDireta) || 0;
+
+  // Entradas válidas conforme o modo escolhido.
+  const entradaValida =
+    modo === 'area' ? areaDiretaNum > 0 : larguraNum > 0 && alturaNum > 0;
 
   // Carrega materiais e cidades do motor (uma vez); mantém fallback se falhar.
   useEffect(() => {
@@ -100,7 +108,7 @@ const AdesivoRecorteCalculator: React.FC = () => {
 
   // Recalcula (com debounce) sempre que entradas mudarem.
   useEffect(() => {
-    if (!produto || !(larguraNum > 0) || !(alturaNum > 0)) {
+    if (!produto || !entradaValida) {
       setResult(null);
       setError(null);
       return;
@@ -110,9 +118,11 @@ const AdesivoRecorteCalculator: React.FC = () => {
       setLoading(true);
       setError(null);
       try {
-        const { data, error } = await supabase.functions.invoke('calc-adesivo-recorte', {
-          body: { produto, largura: larguraNum, altura: alturaNum, percentual, cidade },
-        });
+        const body =
+          modo === 'area'
+            ? { produto, area: areaDiretaNum, cidade }
+            : { produto, largura: larguraNum, altura: alturaNum, percentual, cidade };
+        const { data, error } = await supabase.functions.invoke('calc-adesivo-recorte', { body });
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
         setResult((data?.resultado as RecorteResult) ?? null);
@@ -125,7 +135,7 @@ const AdesivoRecorteCalculator: React.FC = () => {
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [produto, larguraNum, alturaNum, percentual, cidade]);
+  }, [produto, modo, larguraNum, alturaNum, areaDiretaNum, percentual, cidade]);
 
   // Aplica o valor mínimo de projeto ao preço exibido (como o resto do app faz).
   const precos = useMemo(() => {
@@ -151,11 +161,17 @@ const AdesivoRecorteCalculator: React.FC = () => {
     return grupos;
   }, [materiais]);
 
+  // Trecho que descreve a quantidade conforme o modo (para textos/cotação).
+  const medidaTexto =
+    modo === 'area'
+      ? `${areaDiretaNum.toFixed(3)} m² (área)`
+      : `${larguraNum.toFixed(2)}×${alturaNum.toFixed(2)}m (${percentual}%)`;
+
   const handleCopy = () => {
     if (!result || !precos) return;
     const texto = `Orçamento Adesivo de Recorte
 Material: ${result.produto_encontrado ?? produto}
-Medidas: ${larguraNum.toFixed(2)} x ${alturaNum.toFixed(2)} m (aproveitamento ${percentual}%)
+Quantidade: ${medidaTexto}
 Cidade: ${cidade}
 
 Preço (sem nota fiscal): ${formatCurrency(precos.semNota)}
@@ -169,7 +185,7 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
   const handleAddCotacao = () => {
     if (!result || !precos) return;
     addItem({
-      descricao: `Adesivo recorte ${result.produto_encontrado ?? produto} ${larguraNum.toFixed(2)}×${alturaNum.toFixed(2)}m (${percentual}%)`,
+      descricao: `Adesivo recorte ${result.produto_encontrado ?? produto} ${medidaTexto}`,
       precoSemNota: precos.semNota,
       precoComNota: precos.comNota,
     });
@@ -214,79 +230,127 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-3">Dimensões (retângulo)</label>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">Largura (m)</label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={largura}
-                  onChange={(e) => setLargura(e.target.value)}
-                  className={inputClass}
-                  placeholder="0.00"
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">Altura (m)</label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={altura}
-                  onChange={(e) => setAltura(e.target.value)}
-                  className={inputClass}
-                  placeholder="0.00"
-                />
-              </div>
-            </div>
-            {larguraNum > 0 && alturaNum > 0 && (
-              <p className="text-sm text-gray-600 mt-2">
-                Retângulo: {(larguraNum * alturaNum).toFixed(2)} m²
-              </p>
-            )}
-          </div>
-
-          <div>
-            <label htmlFor="percentual" className="block text-sm font-medium text-gray-700 mb-3">
-              Aproveitamento do vinil
-            </label>
-            <div className="grid grid-cols-3 gap-3 mb-3">
-              {PRESETS.map((p) => (
+            <label className="block text-sm font-medium text-gray-700 mb-3">Modo de cálculo</label>
+            <div className="grid grid-cols-2 gap-3">
+              {([
+                { value: 'medida', label: 'Por medida' },
+                { value: 'area', label: 'Área direta (m²)' },
+              ] as const).map((mo) => (
                 <button
-                  key={p.value}
+                  key={mo.value}
                   type="button"
-                  onClick={() => setPercentual(p.value)}
-                  className={`px-3 py-2 rounded-lg border text-xs font-medium transition-colors ${
-                    percentual === p.value
+                  onClick={() => setModo(mo.value)}
+                  className={`px-4 py-3 rounded-lg border text-sm font-medium transition-colors ${
+                    modo === mo.value
                       ? 'bg-blue-50 border-blue-300 text-blue-700'
                       : 'border-gray-300 text-gray-700 hover:bg-gray-50'
                   }`}
                 >
-                  {p.label}
+                  {mo.label}
                 </button>
               ))}
             </div>
-            <div className="flex items-center gap-2">
-              <input
-                id="percentual"
-                type="number"
-                min="1"
-                max="100"
-                step="1"
-                value={percentual}
-                onChange={(e) => {
-                  const v = parseInt(e.target.value, 10);
-                  setPercentual(Number.isFinite(v) ? Math.min(100, Math.max(1, v)) : 25);
-                }}
-                className="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-              <span className="text-sm text-gray-500">
-                % do retângulo é vinil (o corte recortado quase nunca preenche a caixa toda).
-              </span>
-            </div>
+            <p className="text-xs text-gray-500 mt-2">
+              {modo === 'area'
+                ? 'Informe direto a área real de vinil recortado — mais preciso quando você já sabe a metragem.'
+                : 'Informe o retângulo (painel/placa) e estime quanto dele é vinil.'}
+            </p>
           </div>
+
+          {modo === 'area' ? (
+            <div>
+              <label htmlFor="area-direta" className="block text-sm font-medium text-gray-700 mb-3">
+                Área de vinil (m²)
+              </label>
+              <input
+                id="area-direta"
+                type="number"
+                min="0"
+                step="0.001"
+                value={areaDireta}
+                onChange={(e) => setAreaDireta(e.target.value)}
+                className={inputClass}
+                placeholder="0.000"
+              />
+            </div>
+          ) : (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">Dimensões (retângulo)</label>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Largura (m)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={largura}
+                      onChange={(e) => setLargura(e.target.value)}
+                      className={inputClass}
+                      placeholder="0.00"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Altura (m)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={altura}
+                      onChange={(e) => setAltura(e.target.value)}
+                      className={inputClass}
+                      placeholder="0.00"
+                    />
+                  </div>
+                </div>
+                {larguraNum > 0 && alturaNum > 0 && (
+                  <p className="text-sm text-gray-600 mt-2">
+                    Retângulo: {(larguraNum * alturaNum).toFixed(2)} m²
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label htmlFor="percentual" className="block text-sm font-medium text-gray-700 mb-3">
+                  Aproveitamento do vinil
+                </label>
+                <div className="grid grid-cols-3 gap-3 mb-3">
+                  {PRESETS.map((p) => (
+                    <button
+                      key={p.value}
+                      type="button"
+                      onClick={() => setPercentual(p.value)}
+                      className={`px-3 py-2 rounded-lg border text-xs font-medium transition-colors ${
+                        percentual === p.value
+                          ? 'bg-blue-50 border-blue-300 text-blue-700'
+                          : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    id="percentual"
+                    type="number"
+                    min="1"
+                    max="100"
+                    step="1"
+                    value={percentual}
+                    onChange={(e) => {
+                      const v = parseInt(e.target.value, 10);
+                      setPercentual(Number.isFinite(v) ? Math.min(100, Math.max(1, v)) : 25);
+                    }}
+                    className="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                  <span className="text-sm text-gray-500">
+                    % do retângulo é vinil (o corte recortado quase nunca preenche a caixa toda).
+                  </span>
+                </div>
+              </div>
+            </>
+          )}
 
           <div>
             <label htmlFor="cidade-recorte" className="block text-sm font-medium text-gray-700 mb-3">
@@ -311,9 +375,9 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
         <div className="bg-gray-50 rounded-xl border border-gray-200 p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Orçamento</h3>
 
-          {!(produto && larguraNum > 0 && alturaNum > 0) ? (
+          {!(produto && entradaValida) ? (
             <p className="text-sm text-gray-500">
-              Selecione o material e informe as dimensões para ver o preço.
+              Selecione o material e informe {modo === 'area' ? 'a área' : 'as dimensões'} para ver o preço.
             </p>
           ) : loading ? (
             <div className="flex items-center gap-2 text-sm text-gray-500">
@@ -360,7 +424,7 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
                         <span>{result.produto_encontrado}</span>
                       </div>
                       <div className="flex justify-between text-sm text-gray-600">
-                        <span>Área de vinil ({percentual}%):</span>
+                        <span>Área de vinil{modo === 'area' ? '' : ` (${percentual}%)`}:</span>
                         <span>{num(result.area_adesivo_m2).toFixed(3)} m²</span>
                       </div>
                     </div>
