@@ -31,6 +31,7 @@ interface FachadaResult {
   area_lona_m2?: number | string;
   qtd_barras_cantoneira?: number;
   qtd_ilhos?: number;
+  qtd_abracadeiras?: number;
 }
 
 // Cidades atendidas (fallback caso a Edge Function não responda a listagem).
@@ -46,6 +47,8 @@ const inputClass =
 
 const FachadaCalculator: React.FC<Props> = () => {
   const [tipo, setTipo] = useState<'acm' | 'lona'>('acm');
+  // Acabamento da lona: 'ilhos' (ilhós + abraçadeiras) ou 'rebite' (cantoneira).
+  const [fixacao, setFixacao] = useState<'ilhos' | 'rebite'>('ilhos');
   const [largura, setLargura] = useState<string>('');
   const [altura, setAltura] = useState<string>('');
   const [cidade, setCidade] = useState<string>('Jacareí');
@@ -93,7 +96,7 @@ const FachadaCalculator: React.FC<Props> = () => {
       setError(null);
       try {
         const { data, error } = await supabase.functions.invoke('calc-fachada', {
-          body: { tipo, largura: larguraNum, altura: alturaNum, cidade },
+          body: { tipo, largura: larguraNum, altura: alturaNum, cidade, fixacao },
         });
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
@@ -107,7 +110,7 @@ const FachadaCalculator: React.FC<Props> = () => {
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [tipo, larguraNum, alturaNum, cidade]);
+  }, [tipo, fixacao, larguraNum, alturaNum, cidade]);
 
   const composicao = useMemo(() => {
     if (!result) return [] as { label: string; valor: string }[];
@@ -117,17 +120,23 @@ const FachadaCalculator: React.FC<Props> = () => {
         { label: 'Barras de metalon', valor: `${result.qtd_barras_metalon ?? 0}` },
       ];
     }
-    return [
+    const linhas = [
       { label: 'Área de lona', valor: `${num(result.area_lona_m2).toFixed(2)} m²` },
       { label: 'Barras de metalon', valor: `${result.qtd_barras_metalon ?? 0}` },
-      { label: 'Barras de cantoneira', valor: `${result.qtd_barras_cantoneira ?? 0}` },
-      { label: 'Ilhós', valor: `${result.qtd_ilhos ?? 0}` },
     ];
-  }, [result, tipo]);
+    if (fixacao === 'rebite') {
+      linhas.push({ label: 'Barras de cantoneira', valor: `${result.qtd_barras_cantoneira ?? 0}` });
+    } else {
+      linhas.push({ label: 'Ilhós', valor: `${result.qtd_ilhos ?? 0}` });
+      linhas.push({ label: 'Abraçadeiras nylon', valor: `${result.qtd_abracadeiras ?? 0}` });
+    }
+    return linhas;
+  }, [result, tipo, fixacao]);
 
   const handleCopy = () => {
     if (!result) return;
-    const texto = `Orçamento Fachada ${tipo.toUpperCase()}
+    const acab = tipo === 'lona' ? ` (${fixacao === 'ilhos' ? 'ilhós' : 'cantoneira'})` : '';
+    const texto = `Orçamento Fachada ${tipo.toUpperCase()}${acab}
 Medidas: ${larguraNum.toFixed(2)} x ${alturaNum.toFixed(2)} m
 Cidade: ${cidade}
 
@@ -141,8 +150,9 @@ Preço (com nota fiscal): ${formatCurrency(num(result.preco_com_nota_60))}`;
 
   const handleAddCotacao = () => {
     if (!result) return;
+    const acab = tipo === 'lona' ? ` ${fixacao === 'ilhos' ? 'ilhós' : 'cantoneira'}` : '';
     addItem({
-      descricao: `Fachada ${tipo.toUpperCase()} ${larguraNum.toFixed(2)}×${alturaNum.toFixed(2)}m`,
+      descricao: `Fachada ${tipo.toUpperCase()}${acab} ${larguraNum.toFixed(2)}×${alturaNum.toFixed(2)}m`,
       precoSemNota: num(result.preco_sem_nota_60),
       precoComNota: num(result.preco_com_nota_60),
     });
@@ -181,6 +191,36 @@ Preço (com nota fiscal): ${formatCurrency(num(result.preco_com_nota_60))}`;
               ))}
             </div>
           </div>
+
+          {tipo === 'lona' && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-3">Acabamento</label>
+              <div className="grid grid-cols-2 gap-3">
+                {([
+                  { value: 'ilhos', label: 'Ilhós' },
+                  { value: 'rebite', label: 'Cantoneira' },
+                ] as const).map((f) => (
+                  <button
+                    key={f.value}
+                    type="button"
+                    onClick={() => setFixacao(f.value)}
+                    className={`px-4 py-3 rounded-lg border text-sm font-medium transition-colors ${
+                      fixacao === f.value
+                        ? 'bg-blue-50 border-blue-300 text-blue-700'
+                        : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                {fixacao === 'ilhos'
+                  ? 'Lona presa com ilhós a cada 30 cm + abraçadeiras de nylon (à mostra no quadro).'
+                  : 'Lona esticada com rebites e acabamento em cantoneira de alumínio.'}
+              </p>
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-3">Dimensões</label>
