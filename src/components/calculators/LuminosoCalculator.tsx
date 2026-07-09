@@ -55,7 +55,6 @@ const LuminosoCalculator: React.FC<Props> = () => {
   const [tipoLuz, setTipoLuz] = useState<TipoLuz>('modulo');
   const [largura, setLargura] = useState<string>('');
   const [altura, setAltura] = useState<string>('');
-  const [quantidade, setQuantidade] = useState<number>(1);
   const [cidade, setCidade] = useState<string>('Jacareí');
   const [cidades, setCidades] = useState<string[]>(CIDADES_FALLBACK);
 
@@ -67,20 +66,6 @@ const LuminosoCalculator: React.FC<Props> = () => {
 
   const larguraNum = parseFloat(largura) || 0;
   const alturaNum = parseFloat(altura) || 0;
-  const qtd = quantidade > 0 ? quantidade : 1;
-
-  // Preço do pedido: variável × qtd + deslocamento (uma vez). O deslocamento e o
-  // fator de venda vêm do próprio resultado (qty=1), sem duplicar margem.
-  const precos = useMemo(() => {
-    if (!result) return null;
-    const custoUnit = num(result.custo_total);
-    const desloc = num(result.custo_deslocamento);
-    const custoPedido = (custoUnit - desloc) * qtd + desloc;
-    const fatorSem = custoUnit > 0 ? num(result.preco_sem_nota_60) / custoUnit : 2.5;
-    const fatorCom = custoUnit > 0 ? num(result.preco_com_nota_60) / custoUnit : 2.7325;
-    return { semNota: custoPedido * fatorSem, comNota: custoPedido * fatorCom };
-  }, [result, qtd]);
-  const qtdPrefixo = qtd > 1 ? `${qtd}x ` : '';
 
   // Carrega cidades do motor (uma vez); mantém o fallback se falhar.
   useEffect(() => {
@@ -157,15 +142,15 @@ const LuminosoCalculator: React.FC<Props> = () => {
   }, [result, tipoLuz]);
 
   const handleCopy = () => {
-    if (!result || !precos) return;
+    if (!result) return;
     const matLabel = material === 'lona' ? 'Lona' : 'ACM vazado';
     const texto = `Orçamento Luminoso ${matLabel} (${faces} face${faces > 1 ? 's' : ''})
 Iluminação: ${tipoLuz === 'modulo' ? 'Módulo LED' : 'Lâmpada tubular'}
-Medidas: ${larguraNum.toFixed(2)} x ${alturaNum.toFixed(2)} m${qtd > 1 ? ` — ${qtd} unidades` : ''}
+Medidas: ${larguraNum.toFixed(2)} x ${alturaNum.toFixed(2)} m
 Cidade: ${cidade}
 
-Preço (sem nota fiscal): ${formatCurrency(precos.semNota)}
-Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
+Preço (sem nota fiscal): ${formatCurrency(num(result.preco_sem_nota_60))}
+Preço (com nota fiscal): ${formatCurrency(num(result.preco_com_nota_60))}`;
     navigator.clipboard.writeText(texto).then(
       () => toast.success('Orçamento copiado!'),
       () => toast.error('Não foi possível copiar.')
@@ -173,12 +158,12 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
   };
 
   const handleAddCotacao = () => {
-    if (!result || !precos) return;
+    if (!result) return;
     const matLabel = material === 'lona' ? 'Lona' : 'ACM vazado';
     addItem({
-      descricao: `Luminoso ${matLabel} ${faces}f ${qtdPrefixo}${larguraNum.toFixed(2)}×${alturaNum.toFixed(2)}m`,
-      precoSemNota: precos.semNota,
-      precoComNota: precos.comNota,
+      descricao: `Luminoso ${matLabel} ${faces}f ${larguraNum.toFixed(2)}×${alturaNum.toFixed(2)}m`,
+      precoSemNota: num(result.preco_sem_nota_60),
+      precoComNota: num(result.preco_com_nota_60),
     });
     toast.success('Adicionado à cotação!');
   };
@@ -275,29 +260,6 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
           </div>
 
           <div>
-            <label htmlFor="quantidade-lum" className="block text-sm font-medium text-gray-700 mb-3">
-              Quantidade
-            </label>
-            <div className="flex items-center gap-2">
-              <input
-                id="quantidade-lum"
-                type="number"
-                min="1"
-                step="1"
-                value={quantidade || ''}
-                onChange={(e) => {
-                  const v = parseInt(e.target.value, 10);
-                  setQuantidade(Number.isFinite(v) && v > 0 ? v : 1);
-                }}
-                className="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-              <span className="text-sm text-gray-500">
-                unidades iguais — deslocamento cobrado uma vez.
-              </span>
-            </div>
-          </div>
-
-          <div>
             <label htmlFor="cidade-lum" className="block text-sm font-medium text-gray-700 mb-3">
               Cidade (instalação)
             </label>
@@ -345,17 +307,11 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
                   Preço de venda (sem nota fiscal)
                 </div>
                 <div className="text-3xl font-bold text-blue-600">
-                  {formatCurrency(precos ? precos.semNota : num(result.preco_sem_nota_60))}
+                  {formatCurrency(num(result.preco_sem_nota_60))}
                 </div>
                 <div className="mt-1 text-sm text-gray-600">
-                  Com nota fiscal:{' '}
-                  {formatCurrency(precos ? precos.comNota : num(result.preco_com_nota_60))}
+                  Com nota fiscal: {formatCurrency(num(result.preco_com_nota_60))}
                 </div>
-                {qtd > 1 && (
-                  <div className="mt-1 text-xs text-gray-500">
-                    {qtd} unidades · {formatCurrency((precos ? precos.semNota : 0) / qtd)} cada
-                  </div>
-                )}
               </div>
 
               <div>
@@ -386,7 +342,7 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
                   <span>{formatCurrency(num(result.custo_deslocamento))}</span>
                 </div>
                 <div className="flex justify-between text-sm font-medium text-gray-900 pt-1">
-                  <span>Custo total{qtd > 1 ? ' (por unidade)' : ''}:</span>
+                  <span>Custo total:</span>
                   <span>{formatCurrency(num(result.custo_total))}</span>
                 </div>
               </div>
