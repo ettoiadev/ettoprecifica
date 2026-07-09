@@ -4,6 +4,8 @@ import { formatCurrency, PricingConfig } from '../types/pricing';
 import { getProductOptions } from '../utils/productOptions';
 import { useBudgetSettings } from '../hooks/useBudgetSettings';
 import { useToast } from '../hooks/use-toast';
+import { useCotacao } from '../contexts/CotacaoContext';
+import { PlusCircle } from 'lucide-react';
 import BudgetHeader from './budget/BudgetHeader';
 import ProductDetails from './budget/ProductDetails';
 import NotaFiscalSection from './budget/NotaFiscalSection';
@@ -39,6 +41,19 @@ const BudgetSummaryExtended: React.FC<BudgetSummaryExtendedProps> = ({
   const [finalTotal, setFinalTotal] = useState<number>(0);
   const { formatBudgetText } = useBudgetSettings();
   const { toast } = useToast();
+  const { addItem } = useCotacao();
+
+  const handleAddCotacao = () => {
+    const nfPct = config?.notaFiscal?.percentual || 0;
+    const descricao = `${productName || 'Item'}${quantity ? ` (${quantity}x)` : ''}`;
+    addItem({
+      descricao,
+      precoSemNota: baseTotal,
+      precoComNota: baseTotal * (1 + nfPct / 100),
+    });
+    const t = toast({ title: 'Adicionado à cotação', description: descricao });
+    setTimeout(() => t.dismiss(), 2500);
+  };
 
   const cartaoOptions = useMemo(() => [
     { value: 'none', label: 'Não aplicar', taxa: 0 },
@@ -198,6 +213,14 @@ const BudgetSummaryExtended: React.FC<BudgetSummaryExtendedProps> = ({
         />
         
         <BudgetTotal finalTotal={finalTotal} quantity={quantity} />
+
+        <button
+          type="button"
+          onClick={handleAddCotacao}
+          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-blue-600 text-blue-600 text-sm font-medium hover:bg-blue-50 transition-colors"
+        >
+          <PlusCircle className="w-4 h-4" /> Adicionar à cotação
+        </button>
       </div>
     </div>
   );

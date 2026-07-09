@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Loader2, AlertTriangle, Copy } from 'lucide-react';
+import { Loader2, AlertTriangle, Copy, PlusCircle } from 'lucide-react';
 import { formatCurrency, FachadaConfig, PricingConfig } from '../../types/pricing';
 import { supabase } from '../../lib/supabase/client';
+import { useCotacao } from '../../contexts/CotacaoContext';
 import { toast } from 'sonner';
 
 interface Props {
@@ -53,6 +54,8 @@ const FachadaCalculator: React.FC<Props> = () => {
   const [result, setResult] = useState<FachadaResult | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+
+  const { addItem } = useCotacao();
 
   const larguraNum = parseFloat(largura) || 0;
   const alturaNum = parseFloat(altura) || 0;
@@ -134,6 +137,16 @@ Preço (com nota fiscal): ${formatCurrency(num(result.preco_com_nota_60))}`;
       () => toast.success('Orçamento copiado!'),
       () => toast.error('Não foi possível copiar.')
     );
+  };
+
+  const handleAddCotacao = () => {
+    if (!result) return;
+    addItem({
+      descricao: `Fachada ${tipo.toUpperCase()} ${larguraNum.toFixed(2)}×${alturaNum.toFixed(2)}m`,
+      precoSemNota: num(result.preco_sem_nota_60),
+      precoComNota: num(result.preco_com_nota_60),
+    });
+    toast.success('Adicionado à cotação!');
   };
 
   return (
@@ -295,13 +308,22 @@ Preço (com nota fiscal): ${formatCurrency(num(result.preco_com_nota_60))}`;
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={handleCopy}
-                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors"
-              >
-                <Copy className="w-4 h-4" /> Copiar orçamento
-              </button>
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  onClick={handleAddCotacao}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-blue-600 text-blue-600 text-sm font-medium hover:bg-blue-50 transition-colors"
+                >
+                  <PlusCircle className="w-4 h-4" /> Adicionar à cotação
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCopy}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors"
+                >
+                  <Copy className="w-4 h-4" /> Copiar orçamento
+                </button>
+              </div>
             </div>
           ) : null}
         </div>

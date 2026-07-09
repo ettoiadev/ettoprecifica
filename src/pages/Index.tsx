@@ -13,6 +13,7 @@ import SettingsPanel from '../components/SettingsPanel';
 import ModernHeader from '../components/ModernHeader';
 import ModernTabs from '../components/ModernTabs';
 import ModernCalculatorWrapper from '../components/ModernCalculatorWrapper';
+import CotacaoBar from '../components/CotacaoBar';
 import { PricingConfig, defaultConfig } from '../types/pricing';
 import { migrateConfig } from '../utils/productOptions';
 import { useAuth } from '../contexts/AuthContext';
@@ -165,6 +166,9 @@ const Index = () => {
           {renderCalculator()}
         </ModernCalculatorWrapper>
       </div>
+
+      {/* Carrinho de cotação (acumula itens de qualquer aba) */}
+      <CotacaoBar />
 
       {/* Background Decorations */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
