@@ -66,6 +66,12 @@ Deno.serve(async (req: Request) => {
     let percentual = Number(body?.percentual);
     if (!(percentual > 0) || percentual > 100) percentual = 25;
 
+    // 2 cores (opcional): 2ª cor de vinil recortado sobreposta à 1ª.
+    const cores = Number(body?.cores) === 2 ? 2 : 1;
+    const produtoCor2 = String(body?.produtoCor2 ?? "").trim();
+    let percentualCor2 = Number(body?.percentualCor2);
+    if (!(percentualCor2 > 0) || percentualCor2 > 100) percentualCor2 = 90;
+
     const temArea = area > 0;
     const temMedida = largura > 0 && altura > 0;
 
@@ -81,7 +87,7 @@ Deno.serve(async (req: Request) => {
 
     // Modo área direta tem prioridade; senão usa bounding box + percentual.
     // p_com_mascara sempre explícito (evita o aviso padrão da função).
-    const rpcArgs = temArea
+    const rpcArgs: Record<string, unknown> = temArea
       ? {
           p_produto: produto,
           p_area_m2: area,
@@ -97,6 +103,12 @@ Deno.serve(async (req: Request) => {
           p_com_mascara: comMascara,
         };
 
+    if (cores === 2) {
+      rpcArgs.p_cores = 2;
+      rpcArgs.p_percentual_area_cor2 = percentualCor2;
+      if (produtoCor2) rpcArgs.p_produto_cor2 = produtoCor2;
+    }
+
     const { data, error } = await supabase.rpc("calc_adesivo_recorte", rpcArgs);
     if (error) throw error;
 
@@ -109,6 +121,8 @@ Deno.serve(async (req: Request) => {
       area,
       percentual,
       mascara: comMascara,
+      cores,
+      percentualCor2,
       cidade,
       resultado,
     });

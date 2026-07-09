@@ -16,6 +16,13 @@ interface RecorteResult {
   custo_corte_plotter?: number | string;
   usa_mascara?: boolean;
   custo_mascara?: number | string;
+  cores?: number;
+  produto_cor2_encontrado?: string | null;
+  area_cor2_m2?: number | string;
+  custo_material_cor2?: number | string;
+  custo_corte_cor2?: number | string;
+  custo_mascara_cor2?: number | string;
+  custo_registro_2cores?: number | string;
   subtotal_materiais?: number | string;
   custo_deslocamento?: number | string;
   preco_minimo_projeto?: number | string;
@@ -67,6 +74,10 @@ const AdesivoRecorteCalculator: React.FC = () => {
   const [percentual, setPercentual] = useState<number>(25);
   // Máscara de transferência (papel) — usada em vários recortes de aplicação.
   const [comMascara, setComMascara] = useState<boolean>(false);
+  // 2 cores: 2ª cor de vinil recortado (material + % da área da 1ª cor).
+  const [cores, setCores] = useState<1 | 2>(1);
+  const [produtoCor2, setProdutoCor2] = useState<string>('');
+  const [percentualCor2, setPercentualCor2] = useState<number>(90);
   const [cidade, setCidade] = useState<string>('Jacareí');
   const [cidades, setCidades] = useState<string[]>(CIDADES_FALLBACK);
 
@@ -122,10 +133,12 @@ const AdesivoRecorteCalculator: React.FC = () => {
       setLoading(true);
       setError(null);
       try {
+        const cor2 =
+          cores === 2 ? { cores: 2, produtoCor2: produtoCor2 || undefined, percentualCor2 } : {};
         const body =
           modo === 'area'
-            ? { produto, area: areaDiretaNum, mascara: comMascara, cidade }
-            : { produto, largura: larguraNum, altura: alturaNum, percentual, mascara: comMascara, cidade };
+            ? { produto, area: areaDiretaNum, mascara: comMascara, cidade, ...cor2 }
+            : { produto, largura: larguraNum, altura: alturaNum, percentual, mascara: comMascara, cidade, ...cor2 };
         const { data, error } = await supabase.functions.invoke('calc-adesivo-recorte', { body });
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
@@ -139,7 +152,7 @@ const AdesivoRecorteCalculator: React.FC = () => {
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [produto, modo, larguraNum, alturaNum, areaDiretaNum, percentual, comMascara, cidade]);
+  }, [produto, modo, larguraNum, alturaNum, areaDiretaNum, percentual, comMascara, cores, produtoCor2, percentualCor2, cidade]);
 
   // Aplica o valor mínimo de projeto ao preço exibido (como o resto do app faz).
   const precos = useMemo(() => {
@@ -171,11 +184,12 @@ const AdesivoRecorteCalculator: React.FC = () => {
       ? `${areaDiretaNum.toFixed(3)} m² (área)`
       : `${larguraNum.toFixed(2)}×${alturaNum.toFixed(2)}m (${percentual}%)`;
   const mascaraTexto = comMascara ? ' + máscara' : '';
+  const coresTexto = cores === 2 ? ' + 2ª cor' : '';
 
   const handleCopy = () => {
     if (!result || !precos) return;
     const texto = `Orçamento Adesivo de Recorte
-Material: ${result.produto_encontrado ?? produto}
+Material: ${result.produto_encontrado ?? produto}${cores === 2 ? `\n2ª cor: ${result.produto_cor2_encontrado ?? (produtoCor2 || result.produto_encontrado)} (${percentualCor2}%)` : ''}
 Quantidade: ${medidaTexto}
 Máscara de transferência: ${comMascara ? 'sim' : 'não'}
 Cidade: ${cidade}
@@ -191,7 +205,7 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
   const handleAddCotacao = () => {
     if (!result || !precos) return;
     addItem({
-      descricao: `Adesivo recorte ${result.produto_encontrado ?? produto} ${medidaTexto}${mascaraTexto}`,
+      descricao: `Adesivo recorte ${result.produto_encontrado ?? produto} ${medidaTexto}${mascaraTexto}${coresTexto}`,
       precoSemNota: precos.semNota,
       precoComNota: precos.comNota,
     });
@@ -234,6 +248,80 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
               ))}
             </select>
           </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-3">Cores</label>
+            <div className="grid grid-cols-2 gap-3">
+              {([
+                { value: 1, label: '1 cor' },
+                { value: 2, label: '2 cores' },
+              ] as const).map((co) => (
+                <button
+                  key={co.value}
+                  type="button"
+                  onClick={() => setCores(co.value)}
+                  className={`px-4 py-3 rounded-lg border text-sm font-medium transition-colors ${
+                    cores === co.value
+                      ? 'bg-blue-50 border-blue-300 text-blue-700'
+                      : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  {co.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {cores === 2 && (
+            <>
+              <div>
+                <label htmlFor="material-cor2" className="block text-sm font-medium text-gray-700 mb-3">
+                  Material da 2ª cor
+                </label>
+                <select
+                  id="material-cor2"
+                  value={produtoCor2}
+                  onChange={(e) => setProdutoCor2(e.target.value)}
+                  className={inputClass}
+                >
+                  <option value="">Mesma da 1ª cor</option>
+                  {Object.entries(materiaisPorUso).map(([uso, itens]) => (
+                    <optgroup key={uso} label={USO_LABEL[uso] ?? uso}>
+                      {itens.map((m) => (
+                        <option key={m.nome} value={m.nome}>
+                          {m.nome}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label htmlFor="percentual-cor2" className="block text-sm font-medium text-gray-700 mb-3">
+                  Área da 2ª cor
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    id="percentual-cor2"
+                    type="number"
+                    min="1"
+                    max="100"
+                    step="1"
+                    value={percentualCor2}
+                    onChange={(e) => {
+                      const v = parseInt(e.target.value, 10);
+                      setPercentualCor2(Number.isFinite(v) ? Math.min(100, Math.max(1, v)) : 90);
+                    }}
+                    className="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                  <span className="text-sm text-gray-500">
+                    % da área da 1ª cor (cada cor gasta quase o mesmo de material). Inclui registro fixo.
+                  </span>
+                </div>
+              </div>
+            </>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-3">Modo de cálculo</label>
@@ -445,30 +533,70 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
                     <div className="text-sm font-semibold text-gray-700 mb-2">Composição</div>
                     <div className="space-y-1">
                       <div className="flex justify-between text-sm text-gray-600">
-                        <span>Material:</span>
+                        <span>{cores === 2 ? 'Material (1ª cor):' : 'Material:'}</span>
                         <span>{result.produto_encontrado}</span>
                       </div>
                       <div className="flex justify-between text-sm text-gray-600">
                         <span>Área de vinil{modo === 'area' ? '' : ` (${percentual}%)`}:</span>
                         <span>{num(result.area_adesivo_m2).toFixed(3)} m²</span>
                       </div>
+                      {cores === 2 && (
+                        <>
+                          <div className="flex justify-between text-sm text-gray-600">
+                            <span>Material (2ª cor):</span>
+                            <span>{result.produto_cor2_encontrado}</span>
+                          </div>
+                          <div className="flex justify-between text-sm text-gray-600">
+                            <span>Área da 2ª cor ({percentualCor2}%):</span>
+                            <span>{num(result.area_cor2_m2).toFixed(3)} m²</span>
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
 
                   {/* Detalhamento de custo */}
                   <div className="pt-3 border-t border-gray-200 space-y-1">
                     <div className="flex justify-between text-sm text-gray-600">
-                      <span>Custo do vinil:</span>
-                      <span>{formatCurrency(num(result.custo_material))}</span>
+                      <span>{cores === 2 ? 'Vinil + corte (1ª cor):' : 'Custo do vinil:'}</span>
+                      <span>
+                        {formatCurrency(
+                          cores === 2
+                            ? num(result.custo_material) + num(result.custo_corte_plotter)
+                            : num(result.custo_material)
+                        )}
+                      </span>
                     </div>
-                    <div className="flex justify-between text-sm text-gray-600">
-                      <span>Corte na plotter:</span>
-                      <span>{formatCurrency(num(result.custo_corte_plotter))}</span>
-                    </div>
+                    {cores !== 2 && (
+                      <div className="flex justify-between text-sm text-gray-600">
+                        <span>Corte na plotter:</span>
+                        <span>{formatCurrency(num(result.custo_corte_plotter))}</span>
+                      </div>
+                    )}
+                    {cores === 2 && (
+                      <>
+                        <div className="flex justify-between text-sm text-gray-600">
+                          <span>Vinil + corte (2ª cor):</span>
+                          <span>
+                            {formatCurrency(
+                              num(result.custo_material_cor2) + num(result.custo_corte_cor2)
+                            )}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-sm text-gray-600">
+                          <span>Registro (2 cores):</span>
+                          <span>{formatCurrency(num(result.custo_registro_2cores))}</span>
+                        </div>
+                      </>
+                    )}
                     {result.usa_mascara && (
                       <div className="flex justify-between text-sm text-gray-600">
                         <span>Máscara de transferência:</span>
-                        <span>{formatCurrency(num(result.custo_mascara))}</span>
+                        <span>
+                          {formatCurrency(
+                            num(result.custo_mascara) + num(result.custo_mascara_cor2)
+                          )}
+                        </span>
                       </div>
                     )}
                     <div className="flex justify-between text-sm text-gray-600">
