@@ -34,58 +34,12 @@ export const settingsConfig: ConfigSectionData[] = [
     fields: []
   },
   {
-    title: "Fachada",
-    section: "fachada",
-    fields: [
-      { key: 'lona', label: 'Lona', unit: 'm²' },
-      { key: 'acm122', label: 'ACM 1.22m', unit: 'unid' },
-      { key: 'acm150', label: 'ACM 1.50m', unit: 'unid' },
-      { key: 'cantoneira', label: 'Cantoneira 3/4', unit: 'unid' },
-      { key: 'estruturaMetalica.precoPorBarra', label: 'Estrutura Metálica - Preço por Barra', unit: 'unid' },
-      { key: 'estruturaMetalica.comprimentoBarra', label: 'Estrutura Metálica - Comprimento da Barra', unit: 'm' },
-    ]
-  },
-  {
     title: "Letra PVC",
     section: "letraCaixa",
     fields: [
       { key: 'pinturaAutomotiva', label: 'Pintura Automotiva (Opcional)', unit: 'm²' },
       { key: 'fitaDuplaFace', label: 'Fita Dupla-Face (Opcional)', unit: 'm²' },
     ]
-  },
-  {
-    title: "Vidro",
-    section: "vidro",
-    fields: [
-      { key: 'prolongadores', label: 'Prolongadores', unit: 'unid' },
-    ]
-  },
-  {
-    title: "Luminoso",
-    section: "luminoso",
-    fields: [
-      { key: 'lona', label: 'Lona', unit: 'm²' },
-      { key: 'metalon20x20', label: 'Metalon 20x20', unit: 'unid' },
-      { key: 'acm122', label: 'ACM 1.22m', unit: 'unid' },
-      { key: 'acm150', label: 'ACM 1.50m', unit: 'unid' },
-      { key: 'lampadaTubular122', label: 'Lâmpada Tubular 1,22m', unit: 'unid' },
-      { key: 'lampadaTubular60', label: 'Lâmpada Tubular 60cm', unit: 'unid' },
-      { key: 'moduloLed17w', label: 'Módulo LED 1,7w Lente 160º', unit: 'unid' },
-      { key: 'moduloLed15w', label: 'Módulo LED 1,5w Mega Lente', unit: 'unid' },
-      { key: 'fonteChaveada5a', label: 'Fonte Chaveada 5a', unit: 'unid' },
-      { key: 'fonteChaveada10a', label: 'Fonte Chaveada 10a', unit: 'unid' },
-      { key: 'fonteChaveada15a', label: 'Fonte Chaveada 15a', unit: 'unid' },
-      { key: 'fonteChaveada20a', label: 'Fonte Chaveada 20a', unit: 'unid' },
-      { key: 'fonteChaveada30a', label: 'Fonte Chaveada 30a', unit: 'unid' },
-      { key: 'luminosoRedondoOval', label: 'Luminoso Redondo ou Oval', unit: 'unid' },
-      { key: 'estruturaMetalica.precoPorBarra', label: 'Estrutura Metálica - Preço por Barra', unit: 'unid' },
-      { key: 'estruturaMetalica.comprimentoBarra', label: 'Estrutura Metálica - Comprimento da Barra', unit: 'm' },
-    ]
-  },
-  {
-    title: "Laser",
-    section: "laser",
-    fields: []
   },
   {
     title: "Nota Fiscal",
