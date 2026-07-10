@@ -136,7 +136,7 @@ const Index = () => {
       case 'letra-caixa':
         return <LetraCaixaCalculator config={config.letraCaixa} fullConfig={config} />;
       case 'vidro':
-        return <VidroCalculator config={config.vidro} fullConfig={config} />;
+        return <VidroCalculator />;
       case 'luminoso':
         return <LuminosoCalculator config={config.luminoso} fullConfig={config} />;
       case 'laser':
