@@ -387,9 +387,10 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
                       Com nota fiscal:{' '}
                       {formatCurrency(precos ? precos.comNota : num(result.preco_com_nota))}
                     </div>
-                    {qtd > 1 && (
+                    {qtd > 1 && precos && (
                       <div className="mt-1 text-xs text-gray-500">
-                        {qtd} unidades · {formatCurrency((precos ? precos.semNota : 0) / qtd)} cada
+                        {qtd} peças · unitário {formatCurrency(precos.semNota / qtd)} (
+                        {formatCurrency(precos.comNota / qtd)} c/ nota)
                       </div>
                     )}
                   </div>

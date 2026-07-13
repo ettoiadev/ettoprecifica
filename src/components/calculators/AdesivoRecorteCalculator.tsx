@@ -555,6 +555,12 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
                     <div className="mt-1 text-sm text-gray-600">
                       Com nota fiscal: {formatCurrency(precos.comNota)}
                     </div>
+                    {qtd > 1 && (
+                      <div className="mt-1 text-xs text-gray-500">
+                        {qtd} un. · unitário {formatCurrency(precos.semNota / qtd)} (
+                        {formatCurrency(precos.comNota / qtd)} c/ nota)
+                      </div>
+                    )}
                     {precos.aplicouMinimo && (
                       <div className="mt-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">
                         Valor mínimo de projeto aplicado ({formatCurrency(precos.minimo)}).

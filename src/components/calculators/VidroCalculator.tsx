@@ -321,7 +321,8 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
                     </div>
                     {qtd > 1 && (
                       <div className="mt-1 text-xs text-gray-500">
-                        {qtd} peças · {formatCurrency(precos.semNota / qtd)} cada
+                        {qtd} peças · unitário {formatCurrency(precos.semNota / qtd)} (
+                        {formatCurrency(precos.comNota / qtd)} c/ nota)
                       </div>
                     )}
                   </div>
