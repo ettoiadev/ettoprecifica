@@ -46,24 +46,34 @@ Deno.serve(async (req: Request) => {
 
     const tipoLuz = String(body?.tipo_luz ?? "modulo").toLowerCase();
     const material = String(body?.material ?? "lona").toLowerCase();
+    // Forma: 'circular' usa largura como diâmetro (altura é ignorada pela função).
+    const forma = String(body?.forma ?? "retangular").toLowerCase();
     const faces = Number(body?.faces);
     const largura = Number(body?.largura);
-    const altura = Number(body?.altura);
+    const altura = forma === "circular" ? Number(body?.largura) : Number(body?.altura);
     const cidade = String(body?.cidade ?? "Jacareí");
 
     if (tipoLuz !== "modulo" && tipoLuz !== "tubular") {
       return json({ error: "tipo_luz inválido (use 'modulo' ou 'tubular')" }, 400);
     }
-    if (material !== "lona" && material !== "acm_vazado") {
-      return json({ error: "material inválido (use 'lona' ou 'acm_vazado')" }, 400);
+    if (material !== "lona" && material !== "acm_vazado" && material !== "acrilico") {
+      return json(
+        { error: "material inválido (use 'lona', 'acm_vazado' ou 'acrilico')" },
+        400,
+      );
+    }
+    if (forma !== "retangular" && forma !== "circular") {
+      return json({ error: "forma inválida (use 'retangular' ou 'circular')" }, 400);
     }
     if (faces !== 1 && faces !== 2) {
       return json({ error: "faces inválido (use 1 ou 2)" }, 400);
     }
     if (!(largura > 0) || !(altura > 0)) {
-      return json({ error: "largura e altura devem ser maiores que zero" }, 400);
+      return json({ error: "dimensões devem ser maiores que zero" }, 400);
     }
 
+    // p_forma sempre explícito: sem ele a chamada fica ambígua entre os dois
+    // overloads de calc_luminoso (6 e 7 argumentos).
     const { data, error } = await supabase.rpc("calc_luminoso", {
       largura_m: largura,
       altura_m: altura,
@@ -71,11 +81,12 @@ Deno.serve(async (req: Request) => {
       p_cidade: cidade,
       p_faces: faces,
       p_material: material,
+      p_forma: forma,
     });
     if (error) throw error;
 
     const resultado = Array.isArray(data) ? data[0] : data;
-    return json({ tipo_luz: tipoLuz, material, faces, largura, altura, cidade, resultado });
+    return json({ tipo_luz: tipoLuz, material, forma, faces, largura, altura, cidade, resultado });
   } catch (e) {
     return json({ error: e instanceof Error ? e.message : String(e) }, 500);
   }

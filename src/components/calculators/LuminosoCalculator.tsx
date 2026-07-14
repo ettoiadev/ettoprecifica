@@ -13,7 +13,10 @@ interface Props {
 // Resultado da função calc_luminoso (via Edge Function calc-luminoso).
 // Campos numéricos podem chegar como string.
 interface LuminosoResult {
-  area_face_m2?: number | string;
+  forma?: string;
+  area_circular_m2?: number | string; // área real das faces (círculo ou retângulo × faces)
+  area_material_comprado_m2?: number | string; // área de material efetivamente comprada
+  perimetro_m?: number | string;
   custo_face?: number | string;
   qtd_barras_metalon?: number;
   custo_metalon?: number | string;
@@ -36,8 +39,15 @@ interface LuminosoResult {
   alerta?: string;
 }
 
-type Material = 'lona' | 'acm_vazado';
+type Material = 'lona' | 'acm_vazado' | 'acrilico';
 type TipoLuz = 'modulo' | 'tubular';
+type Forma = 'retangular' | 'circular';
+
+const MATERIAL_LABEL: Record<Material, string> = {
+  lona: 'Lona',
+  acm_vazado: 'ACM vazado',
+  acrilico: 'Acrílico',
+};
 
 const CIDADES_FALLBACK = [
   'Caçapava', 'Guararema', 'Igaratá', 'Jacareí', 'Litoral', 'Paraibuna',
@@ -51,6 +61,7 @@ const inputClass =
 
 const LuminosoCalculator: React.FC<Props> = () => {
   const [material, setMaterial] = useState<Material>('lona');
+  const [forma, setForma] = useState<Forma>('retangular');
   const [faces, setFaces] = useState<1 | 2>(2);
   const [tipoLuz, setTipoLuz] = useState<TipoLuz>('modulo');
   const [largura, setLargura] = useState<string>('');
@@ -65,7 +76,8 @@ const LuminosoCalculator: React.FC<Props> = () => {
   const { addItem } = useCotacao();
 
   const larguraNum = parseFloat(largura) || 0;
-  const alturaNum = parseFloat(altura) || 0;
+  // Circular: largura é o diâmetro e a altura acompanha (a função ignora altura).
+  const alturaNum = forma === 'circular' ? larguraNum : parseFloat(altura) || 0;
 
   // Carrega cidades do motor (uma vez); mantém o fallback se falhar.
   useEffect(() => {
@@ -102,6 +114,7 @@ const LuminosoCalculator: React.FC<Props> = () => {
         const { data, error } = await supabase.functions.invoke('calc-luminoso', {
           body: {
             material,
+            forma,
             faces,
             tipo_luz: tipoLuz,
             largura: larguraNum,
@@ -121,12 +134,16 @@ const LuminosoCalculator: React.FC<Props> = () => {
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [material, faces, tipoLuz, larguraNum, alturaNum, cidade]);
+  }, [material, forma, faces, tipoLuz, larguraNum, alturaNum, cidade]);
 
   const composicao = useMemo(() => {
     if (!result) return [] as { label: string; valor: string }[];
     const linhas: { label: string; valor: string }[] = [
-      { label: 'Área da face', valor: `${num(result.area_face_m2).toFixed(2)} m²` },
+      { label: 'Área das faces', valor: `${num(result.area_circular_m2).toFixed(2)} m²` },
+      {
+        label: 'Material comprado',
+        valor: `${num(result.area_material_comprado_m2).toFixed(2)} m²`,
+      },
       { label: 'Barras de metalon', valor: `${result.qtd_barras_metalon ?? 0}` },
     ];
     if ((result.qtd_barras_cantoneira ?? 0) > 0) {
@@ -141,12 +158,21 @@ const LuminosoCalculator: React.FC<Props> = () => {
     return linhas;
   }, [result, tipoLuz]);
 
+  // Dimensão em texto conforme a forma (circular usa diâmetro).
+  const dimTexto =
+    forma === 'circular'
+      ? `Ø ${larguraNum.toFixed(2)} m`
+      : `${larguraNum.toFixed(2)} x ${alturaNum.toFixed(2)} m`;
+  const dimCurta =
+    forma === 'circular'
+      ? `Ø${larguraNum.toFixed(2)}m`
+      : `${larguraNum.toFixed(2)}×${alturaNum.toFixed(2)}m`;
+
   const handleCopy = () => {
     if (!result) return;
-    const matLabel = material === 'lona' ? 'Lona' : 'ACM vazado';
-    const texto = `Orçamento Luminoso ${matLabel} (${faces} face${faces > 1 ? 's' : ''})
+    const texto = `Orçamento Luminoso ${MATERIAL_LABEL[material]} (${faces} face${faces > 1 ? 's' : ''})
+Forma: ${forma === 'circular' ? 'Circular' : 'Retangular'} (${dimTexto})
 Iluminação: ${tipoLuz === 'modulo' ? 'Módulo LED' : 'Lâmpada tubular'}
-Medidas: ${larguraNum.toFixed(2)} x ${alturaNum.toFixed(2)} m
 Cidade: ${cidade}
 
 Preço (sem nota fiscal): ${formatCurrency(num(result.preco_sem_nota_60))}
@@ -159,9 +185,8 @@ Preço (com nota fiscal): ${formatCurrency(num(result.preco_com_nota_60))}`;
 
   const handleAddCotacao = () => {
     if (!result) return;
-    const matLabel = material === 'lona' ? 'Lona' : 'ACM vazado';
     addItem({
-      descricao: `Luminoso ${matLabel} ${faces}f ${larguraNum.toFixed(2)}×${alturaNum.toFixed(2)}m`,
+      descricao: `Luminoso ${MATERIAL_LABEL[material]} ${faces}f ${dimCurta}`,
       precoSemNota: num(result.preco_sem_nota_60),
       precoComNota: num(result.preco_com_nota_60),
     });
@@ -190,14 +215,31 @@ Preço (com nota fiscal): ${formatCurrency(num(result.preco_com_nota_60))}`;
         <div className="space-y-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-3">Material</label>
+            <div className="grid grid-cols-3 gap-3">
+              {(['lona', 'acm_vazado', 'acrilico'] as const).map((m) => (
+                <button key={m} type="button" onClick={() => setMaterial(m)} className={btn(material === m)}>
+                  {MATERIAL_LABEL[m]}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-3">Forma</label>
             <div className="grid grid-cols-2 gap-3">
-              <button type="button" onClick={() => setMaterial('lona')} className={btn(material === 'lona')}>
-                Lona
+              <button type="button" onClick={() => setForma('retangular')} className={btn(forma === 'retangular')}>
+                Retangular
               </button>
-              <button type="button" onClick={() => setMaterial('acm_vazado')} className={btn(material === 'acm_vazado')}>
-                ACM vazado
+              <button type="button" onClick={() => setForma('circular')} className={btn(forma === 'circular')}>
+                Circular
               </button>
             </div>
+            {forma === 'circular' && (
+              <p className="text-xs text-gray-500 mt-2">
+                O material é cobrado pela chapa quadrada que envolve o círculo (a perda do recorte
+                também é paga).
+              </p>
+            )}
           </div>
 
           <div>
@@ -226,9 +268,9 @@ Preço (com nota fiscal): ${formatCurrency(num(result.preco_com_nota_60))}`;
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-3">Dimensões</label>
-            <div className="grid grid-cols-2 gap-4">
+            {forma === 'circular' ? (
               <div>
-                <label className="block text-xs text-gray-500 mb-1">Largura (m)</label>
+                <label className="block text-xs text-gray-500 mb-1">Diâmetro (m)</label>
                 <input
                   type="number"
                   min="0"
@@ -239,22 +281,42 @@ Preço (com nota fiscal): ${formatCurrency(num(result.preco_com_nota_60))}`;
                   placeholder="0.00"
                 />
               </div>
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">Altura (m)</label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={altura}
-                  onChange={(e) => setAltura(e.target.value)}
-                  className={inputClass}
-                  placeholder="0.00"
-                />
+            ) : (
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Largura (m)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={largura}
+                    onChange={(e) => setLargura(e.target.value)}
+                    className={inputClass}
+                    placeholder="0.00"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Altura (m)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={altura}
+                    onChange={(e) => setAltura(e.target.value)}
+                    className={inputClass}
+                    placeholder="0.00"
+                  />
+                </div>
               </div>
-            </div>
+            )}
             {larguraNum > 0 && alturaNum > 0 && (
               <p className="text-sm text-gray-600 mt-2">
-                Área: {(larguraNum * alturaNum).toFixed(2)} m²
+                Área (1 face):{' '}
+                {(forma === 'circular'
+                  ? Math.PI * (larguraNum / 2) ** 2
+                  : larguraNum * alturaNum
+                ).toFixed(2)}{' '}
+                m²
               </p>
             )}
           </div>

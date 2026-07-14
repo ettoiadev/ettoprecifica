@@ -13,7 +13,8 @@ interface Props {
 interface LaserResult {
   material_encontrado?: string | null;
   forma?: string;
-  area_m2?: number | string;
+  area_real_m2?: number | string; // área da peça
+  area_comprada_m2?: number | string; // área cobrada (chapa; no circular inclui a perda)
   preco_venda_m2_base?: number | string;
   multiplicador_complexidade?: number | string;
   custo_material_venda?: number | string;
@@ -401,9 +402,15 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
                       <span>{result.material_encontrado}</span>
                     </div>
                     <div className="flex justify-between text-sm text-gray-600">
-                      <span>Área{qtd > 1 ? ' (por peça)' : ''}:</span>
-                      <span>{num(result.area_m2).toFixed(3)} m²</span>
+                      <span>Área da peça{qtd > 1 ? ' (cada)' : ''}:</span>
+                      <span>{num(result.area_real_m2).toFixed(3)} m²</span>
                     </div>
+                    {num(result.area_comprada_m2) > num(result.area_real_m2) && (
+                      <div className="flex justify-between text-sm text-gray-600">
+                        <span>Área cobrada (chapa):</span>
+                        <span>{num(result.area_comprada_m2).toFixed(3)} m²</span>
+                      </div>
+                    )}
                     {qtd > 1 && (
                       <div className="flex justify-between text-sm text-gray-600">
                         <span>Quantidade:</span>
