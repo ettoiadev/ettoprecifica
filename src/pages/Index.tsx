@@ -111,7 +111,7 @@ const Index = () => {
       'placa-ps': 'Calculadora de Placa em PS',
       'placa-acm': 'Calculadora de Placa em ACM',
       'fachada': 'Calculadora de Fachada Simples',
-      'letra-caixa': 'Calculadora de Letra Caixa em PVC',
+      'letra-caixa': 'Calculadora de Letra Caixa',
       'vidro': 'Calculadora de Vidro Temperado',
       'luminoso': 'Calculadora de Luminoso',
       'laser': 'Calculadora de Laser',
@@ -134,7 +134,7 @@ const Index = () => {
       case 'fachada':
         return <FachadaCalculator config={config.fachada} fullConfig={config} />;
       case 'letra-caixa':
-        return <LetraCaixaCalculator config={config.letraCaixa} fullConfig={config} />;
+        return <LetraCaixaCalculator />;
       case 'vidro':
         return <VidroCalculator />;
       case 'luminoso':

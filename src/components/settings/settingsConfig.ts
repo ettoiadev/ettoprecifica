@@ -29,14 +29,6 @@ export const settingsConfig: ConfigSectionData[] = [
     fields: []
   },
   {
-    title: "Letra PVC",
-    section: "letraCaixa",
-    fields: [
-      { key: 'pinturaAutomotiva', label: 'Pintura Automotiva (Opcional)', unit: 'm²' },
-      { key: 'fitaDuplaFace', label: 'Fita Dupla-Face (Opcional)', unit: 'm²' },
-    ]
-  },
-  {
     title: "Nota Fiscal",
     section: "notaFiscal",
     fields: [

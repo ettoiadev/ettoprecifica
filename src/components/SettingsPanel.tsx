@@ -19,7 +19,7 @@ const GERAL = '__geral__';
 
 // Agrupamento das seções para a navegação lateral
 const SECTION_GROUPS: { label: string; sections: string[] }[] = [
-  { label: 'Produtos', sections: ['adesivo', 'lona', 'placaACM', 'letraCaixa'] },
+  { label: 'Produtos', sections: ['adesivo', 'lona', 'placaACM'] },
   { label: 'Taxas & Serviços', sections: ['notaFiscal', 'arteFinal', 'cartaoCredito', 'instalacao'] },
   { label: 'Geral', sections: [GERAL] },
 ];

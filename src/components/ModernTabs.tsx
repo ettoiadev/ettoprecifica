@@ -40,7 +40,7 @@ const ModernTabs: React.FC<ModernTabsProps> = ({
     color: 'from-orange-500 to-red-500'
   }, {
     id: 'letra-caixa',
-    label: 'Letra PVC',
+    label: 'Letra Caixa',
     icon: Type,
     color: 'from-teal-500 to-cyan-500'
   }, {
