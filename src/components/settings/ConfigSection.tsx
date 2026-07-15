@@ -17,16 +17,12 @@ interface ListManagerDef {
 
 // Seções com listas editáveis (CRUD) e a quais chaves da config elas apontam.
 // showMinPrice: habilita o "Valor mínimo (R$)" por item nas calculadoras de lista
-// que aplicam piso ao total (Adesivo, Placa PS, Placa ACM, Letra PVC).
-// Obs.: Vidro, Fachada, Luminoso e Laser são precificados pelo motor da skill
-// (Edge Functions) e não têm configuração editável aqui.
+// que aplicam piso ao total (Adesivo, Placa ACM, Letra PVC).
+// Obs.: Vidro, Fachada, Luminoso, Laser e Placa PS são precificados pelo motor da
+// skill (Edge Functions) e não têm configuração editável aqui.
 const LIST_MANAGERS: Record<string, ListManagerDef[]> = {
   adesivo: [{ key: 'variations', label: 'Opções de Adesivo', addLabel: 'Adicionar Opção', showMinPrice: true }],
   lona: [{ key: 'variations', label: 'Tipos de Lona', addLabel: 'Adicionar Tipo' }],
-  placaPS: [
-    { key: 'variations', label: 'Espessuras', addLabel: 'Adicionar Espessura', showMinPrice: true },
-    { key: 'customVariations', label: 'Variações Adicionais (somam ao m²)', addLabel: 'Adicionar Variação' },
-  ],
   placaACM: [{ key: 'variations', label: 'Tipos de ACM', addLabel: 'Adicionar Tipo', showMinPrice: true }],
   letraCaixa: [{ key: 'variations', label: 'Espessuras', addLabel: 'Adicionar Espessura', showMinPrice: true }],
   arteFinal: [

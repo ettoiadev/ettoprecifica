@@ -24,11 +24,6 @@ export const settingsConfig: ConfigSectionData[] = [
     ]
   },
   {
-    title: "Placa PS",
-    section: "placaPS",
-    fields: []
-  },
-  {
     title: "Placa ACM",
     section: "placaACM",
     fields: []
