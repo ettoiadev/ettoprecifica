@@ -49,12 +49,15 @@ Deno.serve(async (req: Request) => {
     const largura = Number(body?.largura);
     const altura = Number(body?.altura);
     const cidade = String(body?.cidade ?? "Jacareí");
-    // Acabamento da lona: 'ilhos' (ilhós + abraçadeiras) ou 'rebite' (cantoneira).
-    // Só se aplica à fachada de lona; ACM ignora.
+    // Fixação da lona: 'ilhos' (ilhós + abraçadeiras) ou 'rebite' (cantoneira).
     const fixacao =
-      String(body?.fixacao ?? "ilhos").toLowerCase() === "rebite"
-        ? "rebite"
-        : "ilhos";
+      String(body?.fixacao ?? "ilhos").toLowerCase() === "rebite" ? "rebite" : "ilhos";
+    // Lona iluminada (backlight) — preço de mercado maior.
+    const iluminado = body?.iluminado === true;
+    // Acabamento do ACM (preço de mercado por m² depende disso).
+    const ACAB_ACM = ["simples", "recortes_dobras", "letra_pvc", "letra_iluminada"];
+    let acabamento = String(body?.acabamento ?? "simples").toLowerCase();
+    if (!ACAB_ACM.includes(acabamento)) acabamento = "simples";
 
     if (tipo !== "acm" && tipo !== "lona") {
       return json({ error: "tipo inválido (use 'acm' ou 'lona')" }, 400);
@@ -69,6 +72,7 @@ Deno.serve(async (req: Request) => {
         largura_m: largura,
         altura_m: altura,
         p_cidade: cidade,
+        p_acabamento: acabamento,
       }));
     } else {
       ({ data, error } = await supabase.rpc("calc_fachada_lona", {
@@ -76,12 +80,13 @@ Deno.serve(async (req: Request) => {
         altura_m: altura,
         p_cidade: cidade,
         p_fixacao: fixacao,
+        p_iluminado: iluminado,
       }));
     }
     if (error) throw error;
 
     const resultado = Array.isArray(data) ? data[0] : data;
-    return json({ tipo, largura, altura, cidade, fixacao, resultado });
+    return json({ tipo, largura, altura, cidade, fixacao, iluminado, acabamento, resultado });
   } catch (e) {
     return json({ error: e instanceof Error ? e.message : String(e) }, 500);
   }

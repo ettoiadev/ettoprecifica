@@ -1,28 +1,22 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Loader2, AlertTriangle, Copy, PlusCircle } from 'lucide-react';
-import { formatCurrency, FachadaConfig, PricingConfig } from '../../types/pricing';
+import { formatCurrency } from '../../types/pricing';
 import { supabase } from '../../lib/supabase/client';
 import { useCotacao } from '../../contexts/CotacaoContext';
 import { toast } from 'sonner';
 
-interface Props {
-  config: FachadaConfig;
-  fullConfig: PricingConfig;
-}
-
-// Resultado retornado pelas funções calc_fachada_acm / calc_fachada_lona
-// (via Edge Function calc-fachada). Campos numéricos podem chegar como string.
+// Resultado das funções calc_fachada_acm / calc_fachada_lona (via Edge Function
+// calc-fachada). Modelo de "preço de mercado por m²" (motor 1): o preço final já
+// vem pronto por acabamento, com mínimo de fachada aplicado. Campos numéricos
+// podem chegar como string.
 interface FachadaResult {
-  // comuns
-  subtotal_materiais?: number | string;
-  minutos_mo?: number | string;
-  custo_mo?: number | string;
+  motor_usado?: string;
+  area_m2?: number | string;
+  preco_mercado_m2?: number | string;
+  preco_final?: number | string;
+  preco_final_com_nota?: number | string;
   custo_deslocamento?: number | string;
-  preco_minimo_cidade?: number | string;
-  custo_total?: number | string;
-  preco_sem_nota_60?: number | string;
-  preco_sem_nota_55?: number | string;
-  preco_com_nota_60?: number | string;
+  preco_minimo_fachada?: number | string;
   alerta?: string;
   // ACM
   qtd_chapas_acm?: number;
@@ -34,7 +28,15 @@ interface FachadaResult {
   qtd_abracadeiras?: number;
 }
 
-// Cidades atendidas (fallback caso a Edge Function não responda a listagem).
+type AcabamentoAcm = 'simples' | 'recortes_dobras' | 'letra_pvc' | 'letra_iluminada';
+
+const ACABAMENTO_ACM: { value: AcabamentoAcm; label: string }[] = [
+  { value: 'simples', label: 'Simples' },
+  { value: 'recortes_dobras', label: 'Recortes/dobras' },
+  { value: 'letra_pvc', label: 'Letra PVC' },
+  { value: 'letra_iluminada', label: 'Letra iluminada' },
+];
+
 const CIDADES_FALLBACK = [
   'Caçapava', 'Guararema', 'Igaratá', 'Jacareí', 'Litoral', 'Paraibuna',
   'Santa Branca', 'Santa Isabel', 'São José dos Campos', 'São Paulo', 'Taubaté',
@@ -45,10 +47,19 @@ const num = (v: number | string | undefined): number => Number(v ?? 0);
 const inputClass =
   'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent';
 
-const FachadaCalculator: React.FC<Props> = () => {
+const btn = (active: boolean) =>
+  `px-4 py-3 rounded-lg border text-sm font-medium transition-colors ${
+    active
+      ? 'bg-blue-50 border-blue-300 text-blue-700'
+      : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+  }`;
+
+const FachadaCalculator: React.FC = () => {
   const [tipo, setTipo] = useState<'acm' | 'lona'>('acm');
-  // Acabamento da lona: 'rebite' (cantoneira, padrão/mais usado) ou 'ilhos' (ilhós + abraçadeiras).
+  const [acabamentoAcm, setAcabamentoAcm] = useState<AcabamentoAcm>('simples');
+  // Fixação da lona: 'rebite' (cantoneira, mais usado) ou 'ilhos' (ilhós + abraçadeiras).
   const [fixacao, setFixacao] = useState<'ilhos' | 'rebite'>('rebite');
+  const [iluminadoLona, setIluminadoLona] = useState<boolean>(false);
   const [largura, setLargura] = useState<string>('');
   const [altura, setAltura] = useState<string>('');
   const [cidade, setCidade] = useState<string>('Jacareí');
@@ -83,7 +94,7 @@ const FachadaCalculator: React.FC<Props> = () => {
     };
   }, []);
 
-  // Recalcula (com debounce) sempre que medidas, tipo ou cidade mudarem.
+  // Recalcula (com debounce) sempre que as entradas mudarem.
   useEffect(() => {
     if (!(larguraNum > 0) || !(alturaNum > 0)) {
       setResult(null);
@@ -95,9 +106,11 @@ const FachadaCalculator: React.FC<Props> = () => {
       setLoading(true);
       setError(null);
       try {
-        const { data, error } = await supabase.functions.invoke('calc-fachada', {
-          body: { tipo, largura: larguraNum, altura: alturaNum, cidade, fixacao },
-        });
+        const body =
+          tipo === 'acm'
+            ? { tipo, acabamento: acabamentoAcm, largura: larguraNum, altura: alturaNum, cidade }
+            : { tipo, fixacao, iluminado: iluminadoLona, largura: larguraNum, altura: alturaNum, cidade };
+        const { data, error } = await supabase.functions.invoke('calc-fachada', { body });
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
         setResult((data?.resultado as FachadaResult) ?? null);
@@ -110,7 +123,16 @@ const FachadaCalculator: React.FC<Props> = () => {
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [tipo, fixacao, larguraNum, alturaNum, cidade]);
+  }, [tipo, acabamentoAcm, fixacao, iluminadoLona, larguraNum, alturaNum, cidade]);
+
+  // Descrição curta do acabamento para textos/cotação.
+  const acabamentoTexto = useMemo(() => {
+    if (tipo === 'acm') {
+      return ACABAMENTO_ACM.find((a) => a.value === acabamentoAcm)?.label ?? '';
+    }
+    const base = fixacao === 'ilhos' ? 'ilhós' : 'cantoneira';
+    return iluminadoLona ? `${base}, iluminada` : base;
+  }, [tipo, acabamentoAcm, fixacao, iluminadoLona]);
 
   const composicao = useMemo(() => {
     if (!result) return [] as { label: string; valor: string }[];
@@ -135,13 +157,12 @@ const FachadaCalculator: React.FC<Props> = () => {
 
   const handleCopy = () => {
     if (!result) return;
-    const acab = tipo === 'lona' ? ` (${fixacao === 'ilhos' ? 'ilhós' : 'cantoneira'})` : '';
-    const texto = `Orçamento Fachada ${tipo.toUpperCase()}${acab}
+    const texto = `Orçamento Fachada ${tipo.toUpperCase()} (${acabamentoTexto})
 Medidas: ${larguraNum.toFixed(2)} x ${alturaNum.toFixed(2)} m
 Cidade: ${cidade}
 
-Preço (sem nota fiscal): ${formatCurrency(num(result.preco_sem_nota_60))}
-Preço (com nota fiscal): ${formatCurrency(num(result.preco_com_nota_60))}`;
+Preço (sem nota fiscal): ${formatCurrency(num(result.preco_final))}
+Preço (com nota fiscal): ${formatCurrency(num(result.preco_final_com_nota))}`;
     navigator.clipboard.writeText(texto).then(
       () => toast.success('Orçamento copiado!'),
       () => toast.error('Não foi possível copiar.')
@@ -150,11 +171,10 @@ Preço (com nota fiscal): ${formatCurrency(num(result.preco_com_nota_60))}`;
 
   const handleAddCotacao = () => {
     if (!result) return;
-    const acab = tipo === 'lona' ? ` ${fixacao === 'ilhos' ? 'ilhós' : 'cantoneira'}` : '';
     addItem({
-      descricao: `Fachada ${tipo.toUpperCase()}${acab} ${larguraNum.toFixed(2)}×${alturaNum.toFixed(2)}m`,
-      precoSemNota: num(result.preco_sem_nota_60),
-      precoComNota: num(result.preco_com_nota_60),
+      descricao: `Fachada ${tipo.toUpperCase()} ${acabamentoTexto} ${larguraNum.toFixed(2)}×${alturaNum.toFixed(2)}m`,
+      precoSemNota: num(result.preco_final),
+      precoComNota: num(result.preco_final_com_nota),
     });
     toast.success('Adicionado à cotação!');
   };
@@ -164,8 +184,8 @@ Preço (com nota fiscal): ${formatCurrency(num(result.preco_com_nota_60))}`;
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Calculadora de Fachada</h2>
         <p className="text-gray-600">
-          Informe o tipo, as medidas e a cidade. O preço é calculado por composição de materiais e
-          mão de obra (não por m²), com os dados reais da tabela de precificação.
+          Informe o tipo, o acabamento, as medidas e a cidade. O preço vem do motor de precificação
+          (preço de mercado por m² conforme o acabamento), com o mínimo de fachada aplicado.
         </p>
       </div>
 
@@ -176,50 +196,64 @@ Preço (com nota fiscal): ${formatCurrency(num(result.preco_com_nota_60))}`;
             <label className="block text-sm font-medium text-gray-700 mb-3">Tipo de Fachada</label>
             <div className="grid grid-cols-2 gap-3">
               {(['acm', 'lona'] as const).map((t) => (
-                <button
-                  key={t}
-                  type="button"
-                  onClick={() => setTipo(t)}
-                  className={`px-4 py-3 rounded-lg border text-sm font-medium transition-colors ${
-                    tipo === t
-                      ? 'bg-blue-50 border-blue-300 text-blue-700'
-                      : 'border-gray-300 text-gray-700 hover:bg-gray-50'
-                  }`}
-                >
+                <button key={t} type="button" onClick={() => setTipo(t)} className={btn(tipo === t)}>
                   {t === 'acm' ? 'ACM' : 'Lona'}
                 </button>
               ))}
             </div>
           </div>
 
-          {tipo === 'lona' && (
+          {tipo === 'acm' ? (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-3">Acabamento</label>
-              <div className="grid grid-cols-2 gap-3">
-                {([
-                  { value: 'ilhos', label: 'Ilhós' },
-                  { value: 'rebite', label: 'Cantoneira' },
-                ] as const).map((f) => (
-                  <button
-                    key={f.value}
-                    type="button"
-                    onClick={() => setFixacao(f.value)}
-                    className={`px-4 py-3 rounded-lg border text-sm font-medium transition-colors ${
-                      fixacao === f.value
-                        ? 'bg-blue-50 border-blue-300 text-blue-700'
-                        : 'border-gray-300 text-gray-700 hover:bg-gray-50'
-                    }`}
-                  >
-                    {f.label}
-                  </button>
+              <label htmlFor="acabamento-acm" className="block text-sm font-medium text-gray-700 mb-3">
+                Acabamento
+              </label>
+              <select
+                id="acabamento-acm"
+                value={acabamentoAcm}
+                onChange={(e) => setAcabamentoAcm(e.target.value as AcabamentoAcm)}
+                className={inputClass}
+              >
+                {ACABAMENTO_ACM.map((a) => (
+                  <option key={a.value} value={a.value}>
+                    {a.label}
+                  </option>
                 ))}
-              </div>
-              <p className="text-xs text-gray-500 mt-2">
-                {fixacao === 'ilhos'
-                  ? 'Lona presa com ilhós a cada 30 cm + abraçadeiras de nylon (à mostra no quadro).'
-                  : 'Lona esticada com rebites e acabamento em cantoneira de alumínio.'}
-              </p>
+              </select>
             </div>
+          ) : (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">Acabamento</label>
+                <div className="grid grid-cols-2 gap-3">
+                  {([
+                    { value: 'ilhos', label: 'Ilhós' },
+                    { value: 'rebite', label: 'Cantoneira' },
+                  ] as const).map((f) => (
+                    <button key={f.value} type="button" onClick={() => setFixacao(f.value)} className={btn(fixacao === f.value)}>
+                      {f.label}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  {fixacao === 'ilhos'
+                    ? 'Lona presa com ilhós a cada 30 cm + abraçadeiras de nylon (à mostra no quadro).'
+                    : 'Lona esticada com rebites e acabamento em cantoneira de alumínio.'}
+                </p>
+              </div>
+
+              <label className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={iluminadoLona}
+                  onChange={(e) => setIluminadoLona(e.target.checked)}
+                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                />
+                <span className="text-sm font-medium text-gray-700">
+                  Iluminada (backlight) — preço de mercado maior
+                </span>
+              </label>
+            </>
           )}
 
           <div>
@@ -281,9 +315,7 @@ Preço (com nota fiscal): ${formatCurrency(num(result.preco_com_nota_60))}`;
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Orçamento</h3>
 
           {!(larguraNum > 0 && alturaNum > 0) ? (
-            <p className="text-sm text-gray-500">
-              Preencha largura e altura para ver o preço.
-            </p>
+            <p className="text-sm text-gray-500">Preencha largura e altura para ver o preço.</p>
           ) : loading ? (
             <div className="flex items-center gap-2 text-sm text-gray-500">
               <Loader2 className="w-4 h-4 animate-spin" /> Calculando…
@@ -308,10 +340,14 @@ Preço (com nota fiscal): ${formatCurrency(num(result.preco_com_nota_60))}`;
                   Preço de venda (sem nota fiscal)
                 </div>
                 <div className="text-3xl font-bold text-blue-600">
-                  {formatCurrency(num(result.preco_sem_nota_60))}
+                  {formatCurrency(num(result.preco_final))}
                 </div>
                 <div className="mt-1 text-sm text-gray-600">
-                  Com nota fiscal: {formatCurrency(num(result.preco_com_nota_60))}
+                  Com nota fiscal: {formatCurrency(num(result.preco_final_com_nota))}
+                </div>
+                <div className="mt-1 text-xs text-gray-500">
+                  Preço de mercado: {formatCurrency(num(result.preco_mercado_m2))}/m² ·{' '}
+                  {num(result.area_m2).toFixed(2)} m²
                 </div>
               </div>
 
@@ -328,25 +364,12 @@ Preço (com nota fiscal): ${formatCurrency(num(result.preco_com_nota_60))}`;
                 </div>
               </div>
 
-              {/* Detalhamento de custo */}
-              <div className="pt-3 border-t border-gray-200 space-y-1">
-                <div className="flex justify-between text-sm text-gray-600">
-                  <span>Materiais:</span>
-                  <span>{formatCurrency(num(result.subtotal_materiais))}</span>
+              {num(result.custo_deslocamento) > 0 && (
+                <div className="text-xs text-gray-500 pt-2 border-t border-gray-200">
+                  Deslocamento de {formatCurrency(num(result.custo_deslocamento))} para {cidade} não
+                  está incluído no preço de mercado — some se for cobrar à parte.
                 </div>
-                <div className="flex justify-between text-sm text-gray-600">
-                  <span>Mão de obra ({num(result.minutos_mo).toFixed(0)} min):</span>
-                  <span>{formatCurrency(num(result.custo_mo))}</span>
-                </div>
-                <div className="flex justify-between text-sm text-gray-600">
-                  <span>Deslocamento:</span>
-                  <span>{formatCurrency(num(result.custo_deslocamento))}</span>
-                </div>
-                <div className="flex justify-between text-sm font-medium text-gray-900 pt-1">
-                  <span>Custo total:</span>
-                  <span>{formatCurrency(num(result.custo_total))}</span>
-                </div>
-              </div>
+              )}
 
               <div className="space-y-2">
                 <button
