@@ -5,37 +5,27 @@ import { supabase } from '../../lib/supabase/client';
 import { useCotacao } from '../../contexts/CotacaoContext';
 import { toast } from 'sonner';
 
-// Resultado da função calc_ps_adesivado (via Edge Function calc-ps).
+// Resultado da função calc_ps_adesivado (via Edge Function calc-ps). Modelo de
+// "preço de mercado por m²" (motor 1); quando o material não tem preço de mercado
+// cadastrado, a função cai no custo real (motor 2) e preenche as colunas de custo.
 // Campos numéricos podem chegar como string.
 interface PSResult {
   material_encontrado?: string | null;
-  fornecedor?: string | null;
-  chapa_medida?: string | null;
-  qtd_chapas?: number;
-  custo_chapas?: number | string;
-  qtd_emendas?: number;
-  custo_emendas?: number | string;
-  area_impressao_m2?: number | string;
-  custo_impressao?: number | string;
-  subtotal_materiais?: number | string;
-  custo_deslocamento?: number | string;
-  preco_minimo_projeto?: number | string;
-  custo_total?: number | string;
-  preco_sem_nota_58?: number | string;
-  preco_com_nota_58?: number | string;
+  motor_usado?: string | null;
+  area_peca_m2?: number | string;
+  preco_mercado_m2?: number | string | null;
+  preco_final?: number | string;
+  preco_com_nota?: number | string;
+  material_custo_m2?: number | string | null;
+  custo_material?: number | string | null;
+  custo_impressao?: number | string | null;
+  custo_total_motor2?: number | string | null;
   alerta?: string;
 }
 
 interface Material {
   nome: string;
-  largura_chapa_m: number | string;
-  comprimento_chapa_m: number | string;
 }
-
-const CIDADES_FALLBACK = [
-  'Caçapava', 'Guararema', 'Igaratá', 'Jacareí', 'Litoral', 'Paraibuna',
-  'Santa Branca', 'Santa Isabel', 'São José dos Campos', 'São Paulo', 'Taubaté',
-];
 
 const num = (v: number | string | undefined | null): number => Number(v ?? 0);
 
@@ -49,8 +39,6 @@ const PlacaPSCalculator: React.FC = () => {
   const [altura, setAltura] = useState<string>('');
   const [quantidade, setQuantidade] = useState<number>(1);
   const [percentual, setPercentual] = useState<number>(100);
-  const [cidade, setCidade] = useState<string>('Jacareí');
-  const [cidades, setCidades] = useState<string[]>(CIDADES_FALLBACK);
 
   const [result, setResult] = useState<PSResult | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
@@ -62,25 +50,21 @@ const PlacaPSCalculator: React.FC = () => {
   const alturaNum = parseFloat(altura) || 0;
   const qtd = quantidade > 0 ? quantidade : 1;
 
-  // Carrega tipos de placa e cidades do motor (uma vez); mantém fallback se falhar.
+  // Carrega tipos de placa do motor (uma vez).
   useEffect(() => {
     let ativo = true;
     (async () => {
       try {
-        const [mat, cid] = await Promise.all([
-          supabase.functions.invoke('calc-ps', { body: { action: 'materiais' } }),
-          supabase.functions.invoke('calc-ps', { body: { action: 'cidades' } }),
-        ]);
+        const { data, error } = await supabase.functions.invoke('calc-ps', {
+          body: { action: 'materiais' },
+        });
         if (!ativo) return;
-        if (!mat.error && Array.isArray(mat.data?.materiais) && mat.data.materiais.length > 0) {
-          setMateriais(mat.data.materiais);
-          setTipo((t) => t || mat.data.materiais[0].nome);
-        }
-        if (!cid.error && Array.isArray(cid.data?.cidades) && cid.data.cidades.length > 0) {
-          setCidades(cid.data.cidades);
+        if (!error && Array.isArray(data?.materiais) && data.materiais.length > 0) {
+          setMateriais(data.materiais);
+          setTipo((t) => t || data.materiais[0].nome);
         }
       } catch {
-        /* mantém fallback */
+        /* ignore */
       }
     })();
     return () => {
@@ -88,8 +72,7 @@ const PlacaPSCalculator: React.FC = () => {
     };
   }, []);
 
-  // Recalcula (com debounce) quando as entradas mudam. A quantidade é aplicada
-  // no app (chamada por 1 peça).
+  // Recalcula (com debounce) quando as entradas mudam.
   useEffect(() => {
     if (!tipo || !(larguraNum > 0) || !(alturaNum > 0)) {
       setResult(null);
@@ -102,7 +85,7 @@ const PlacaPSCalculator: React.FC = () => {
       setError(null);
       try {
         const { data, error } = await supabase.functions.invoke('calc-ps', {
-          body: { tipo, largura: larguraNum, altura: alturaNum, percentual, cidade },
+          body: { tipo, largura: larguraNum, altura: alturaNum, percentual },
         });
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
@@ -116,28 +99,24 @@ const PlacaPSCalculator: React.FC = () => {
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [tipo, larguraNum, alturaNum, percentual, cidade]);
+  }, [tipo, larguraNum, alturaNum, percentual]);
 
-  // Preço do pedido: variável × qtd + deslocamento (uma vez). Fator de venda/NF
-  // derivado do próprio resultado (sem duplicar margem).
+  // Preço do pedido: preço por peça × quantidade (modelo de mercado, sem custo fixo).
   const precos = useMemo(() => {
     if (!result || !result.material_encontrado) return null;
-    const custoUnit = num(result.custo_total);
-    const desloc = num(result.custo_deslocamento);
-    const custoPedido = (custoUnit - desloc) * qtd + desloc;
-    const fatorSem = custoUnit > 0 ? num(result.preco_sem_nota_58) / custoUnit : 1 / 0.42;
-    const fatorCom = custoUnit > 0 ? num(result.preco_com_nota_58) / custoUnit : 1.0931 / 0.42;
-    return { semNota: custoPedido * fatorSem, comNota: custoPedido * fatorCom };
+    return {
+      semNota: num(result.preco_final) * qtd,
+      comNota: num(result.preco_com_nota) * qtd,
+    };
   }, [result, qtd]);
 
-  const qtdPrefixo = qtd > 1 ? `${qtd}x ` : '';
+  // Motor 2 (fallback de custo) tem colunas de custo preenchidas.
+  const isMotor2 = result != null && result.custo_material != null;
 
   const handleCopy = () => {
     if (!result || !precos) return;
     const texto = `Orçamento Placa PS — ${result.material_encontrado}
 Medidas: ${larguraNum.toFixed(2)} x ${alturaNum.toFixed(2)} m${qtd > 1 ? ` — ${qtd} peças` : ''}
-Impressão: ${percentual}%
-Cidade: ${cidade}
 
 Preço (sem nota fiscal): ${formatCurrency(precos.semNota)}
 Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
@@ -149,6 +128,7 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
 
   const handleAddCotacao = () => {
     if (!result || !precos) return;
+    const qtdPrefixo = qtd > 1 ? `${qtd}x ` : '';
     addItem({
       descricao: `Placa PS ${result.material_encontrado} ${qtdPrefixo}${larguraNum.toFixed(2)}×${alturaNum.toFixed(2)}m`,
       precoSemNota: precos.semNota,
@@ -164,8 +144,8 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Calculadora de Placa em PS</h2>
         <p className="text-gray-600">
-          Placa de PS com impressão digital adesivada. O preço vem do motor de precificação:
-          chapas (por encaixe na melhor orientação) + emendas + impressão + deslocamento.
+          Placa de PS com impressão digital adesivada. O preço vem do motor de precificação
+          (preço de mercado por m² conforme o tipo de placa), com o mínimo de projeto aplicado.
         </p>
       </div>
 
@@ -264,26 +244,8 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
             </div>
           </div>
           <p className="-mt-3 text-xs text-gray-500">
-            Impressão = quanto da placa é impresso (100% = placa toda).
+            Impressão (%) só afeta placas sem preço de mercado (cálculo por custo).
           </p>
-
-          <div>
-            <label htmlFor="ps-cidade" className="block text-sm font-medium text-gray-700 mb-3">
-              Cidade (instalação, se houver)
-            </label>
-            <select
-              id="ps-cidade"
-              value={cidade}
-              onChange={(e) => setCidade(e.target.value)}
-              className={inputClass}
-            >
-              {cidades.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-          </div>
         </div>
 
         {/* Resultado */}
@@ -325,6 +287,12 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
                     <div className="mt-1 text-sm text-gray-600">
                       Com nota fiscal: {formatCurrency(precos.comNota)}
                     </div>
+                    {num(result.preco_mercado_m2) > 0 && (
+                      <div className="mt-1 text-xs text-gray-500">
+                        Preço de mercado: {formatCurrency(num(result.preco_mercado_m2))}/m² ·{' '}
+                        {num(result.area_peca_m2).toFixed(2)} m²
+                      </div>
+                    )}
                     {qtd > 1 && (
                       <div className="mt-1 text-xs text-gray-500">
                         {qtd} peças · unitário {formatCurrency(precos.semNota / qtd)} (
@@ -333,29 +301,17 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
                     )}
                   </div>
 
-                  {/* Composição (por peça) */}
+                  {/* Composição */}
                   <div>
-                    <div className="text-sm font-semibold text-gray-700 mb-2">
-                      Composição{qtd > 1 ? ' (por peça)' : ''}
-                    </div>
+                    <div className="text-sm font-semibold text-gray-700 mb-2">Composição</div>
                     <div className="space-y-1">
                       <div className="flex justify-between text-sm text-gray-600">
                         <span>Placa:</span>
                         <span>{result.material_encontrado}</span>
                       </div>
                       <div className="flex justify-between text-sm text-gray-600">
-                        <span>Chapas ({result.chapa_medida}):</span>
-                        <span>{result.qtd_chapas}</span>
-                      </div>
-                      {(result.qtd_emendas ?? 0) > 0 && (
-                        <div className="flex justify-between text-sm text-gray-600">
-                          <span>Emendas:</span>
-                          <span>{result.qtd_emendas}</span>
-                        </div>
-                      )}
-                      <div className="flex justify-between text-sm text-gray-600">
-                        <span>Área de impressão:</span>
-                        <span>{num(result.area_impressao_m2).toFixed(2)} m²</span>
+                        <span>Área{qtd > 1 ? ' (por peça)' : ''}:</span>
+                        <span>{num(result.area_peca_m2).toFixed(2)} m²</span>
                       </div>
                       {qtd > 1 && (
                         <div className="flex justify-between text-sm text-gray-600">
@@ -366,33 +322,23 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
                     </div>
                   </div>
 
-                  {/* Detalhamento de custo (por peça) */}
-                  <div className="pt-3 border-t border-gray-200 space-y-1">
-                    <div className="flex justify-between text-sm text-gray-600">
-                      <span>Chapas:</span>
-                      <span>{formatCurrency(num(result.custo_chapas))}</span>
-                    </div>
-                    {num(result.custo_emendas) > 0 && (
+                  {/* Detalhamento de custo — só no fallback por custo (motor 2) */}
+                  {isMotor2 && (
+                    <div className="pt-3 border-t border-gray-200 space-y-1">
                       <div className="flex justify-between text-sm text-gray-600">
-                        <span>Emendas:</span>
-                        <span>{formatCurrency(num(result.custo_emendas))}</span>
+                        <span>Material:</span>
+                        <span>{formatCurrency(num(result.custo_material))}</span>
                       </div>
-                    )}
-                    <div className="flex justify-between text-sm text-gray-600">
-                      <span>Impressão:</span>
-                      <span>{formatCurrency(num(result.custo_impressao))}</span>
-                    </div>
-                    {num(result.custo_deslocamento) > 0 && (
                       <div className="flex justify-between text-sm text-gray-600">
-                        <span>Deslocamento:</span>
-                        <span>{formatCurrency(num(result.custo_deslocamento))}</span>
+                        <span>Impressão:</span>
+                        <span>{formatCurrency(num(result.custo_impressao))}</span>
                       </div>
-                    )}
-                    <div className="flex justify-between text-sm font-medium text-gray-900 pt-1">
-                      <span>Custo total{qtd > 1 ? ' (por peça)' : ''}:</span>
-                      <span>{formatCurrency(num(result.custo_total))}</span>
+                      <div className="flex justify-between text-sm font-medium text-gray-900 pt-1">
+                        <span>Custo total{qtd > 1 ? ' (por peça)' : ''}:</span>
+                        <span>{formatCurrency(num(result.custo_total_motor2))}</span>
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   <div className="space-y-2">
                     <button
