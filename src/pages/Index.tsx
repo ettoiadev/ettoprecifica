@@ -10,6 +10,10 @@ import LetraCaixaCalculator from '../components/calculators/LetraCaixaCalculator
 import VidroCalculator from '../components/calculators/VidroCalculator';
 import LuminosoCalculator from '../components/calculators/LuminosoCalculator';
 import LaserCalculator from '../components/calculators/LaserCalculator';
+import DtfCalculator from '../components/calculators/DtfCalculator';
+import EtiquetasCalculator from '../components/calculators/EtiquetasCalculator';
+import GivCalculator from '../components/calculators/GivCalculator';
+import CavaletesCalculator from '../components/calculators/CavaletesCalculator';
 import SettingsPanel from '../components/SettingsPanel';
 import ModernHeader from '../components/ModernHeader';
 import ModernTabs from '../components/ModernTabs';
@@ -115,6 +119,10 @@ const Index = () => {
       'vidro': 'Calculadora de Vidro Temperado',
       'luminoso': 'Calculadora de Luminoso',
       'laser': 'Calculadora de Laser',
+      'dtf': 'Calculadora de DTF',
+      'etiquetas': 'Calculadora de Etiquetas / Rótulos',
+      'giv': 'Calculadora de Gráfica (GIV)',
+      'cavaletes': 'Calculadora de Cavaletes',
     };
     return titles[activeTab];
   };
@@ -141,6 +149,14 @@ const Index = () => {
         return <LuminosoCalculator config={config.luminoso} fullConfig={config} />;
       case 'laser':
         return <LaserCalculator config={config.laser} fullConfig={config} />;
+      case 'dtf':
+        return <DtfCalculator />;
+      case 'etiquetas':
+        return <EtiquetasCalculator />;
+      case 'giv':
+        return <GivCalculator />;
+      case 'cavaletes':
+        return <CavaletesCalculator />;
       default:
         return <AdesivoCalculator config={config.adesivo} fullConfig={config} />;
     }
