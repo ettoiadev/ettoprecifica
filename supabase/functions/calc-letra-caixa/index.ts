@@ -21,7 +21,7 @@ function json(payload: unknown, status = 200): Response {
   });
 }
 
-const MATERIAIS = ["pvc", "acm", "galvanizado", "inox"];
+const MATERIAIS = ["pvc", "acm", "galvanizado", "inox", "impressao_3d"];
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
@@ -52,9 +52,19 @@ Deno.serve(async (req: Request) => {
 
     const material = String(body?.material ?? "").toLowerCase();
     const iluminado = body?.iluminado === true;
+    // Tipo de iluminação (novo overload da skill): 'frontal_acrilico' usa a
+    // tabela de mercado própria (LED já incluso, sem +45%); vazio/null = padrão
+    // (retroiluminado usa p_iluminado). Sempre enviado ao RPC para desambiguar
+    // os dois overloads de calc_letra_caixa (evita "function is not unique").
+    const tipoIluminacao = body?.tipoIluminacao
+      ? String(body.tipoIluminacao).toLowerCase()
+      : null;
 
     if (!MATERIAIS.includes(material)) {
-      return json({ error: "material inválido (use pvc, acm, galvanizado ou inox)" }, 400);
+      return json(
+        { error: "material inválido (use pvc, acm, galvanizado, inox ou impressao_3d)" },
+        400,
+      );
     }
 
     // Modo PVC: por m² da placa. Demais: por altura (cm) × nº de caracteres.
@@ -84,11 +94,12 @@ Deno.serve(async (req: Request) => {
       altura_placa_m: material === "pvc" ? alturaPlaca : null,
       p_espessura_mm: espessura,
       p_iluminado: iluminado,
+      p_tipo_iluminacao: tipoIluminacao,
     });
     if (error) throw error;
 
     const resultado = Array.isArray(data) ? data[0] : data;
-    return json({ material, iluminado, resultado });
+    return json({ material, iluminado, tipoIluminacao, resultado });
   } catch (e) {
     return json({ error: e instanceof Error ? e.message : String(e) }, 500);
   }

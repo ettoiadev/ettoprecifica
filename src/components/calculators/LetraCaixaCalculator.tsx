@@ -16,18 +16,41 @@ interface LetraResult {
   preco_por_letra?: number | string;
   preco_sem_iluminacao?: number | string;
   adicional_iluminacao?: number | string;
-  preco_final?: number | string;
-  preco_com_nota?: number | string;
+  preco_final?: number | string | null;
+  preco_com_nota?: number | string | null;
   alerta?: string;
 }
 
-type Material = 'pvc' | 'acm' | 'galvanizado' | 'inox';
+type Material = 'pvc' | 'acm' | 'galvanizado' | 'inox' | 'impressao_3d';
+// Modo de iluminação:
+//  - 'sem'     → sem iluminação (preço padrão)
+//  - 'retro'   → retroiluminada (padrão +45%, via p_iluminado)
+//  - 'frontal' → frontal acrílico (tabela própria, LED já incluso, sem +45%)
+type Ilum = 'sem' | 'retro' | 'frontal';
 
 const MATERIAL_LABEL: Record<Material, string> = {
   pvc: 'PVC',
   acm: 'ACM',
   galvanizado: 'Galvanizado',
   inox: 'Inox',
+  impressao_3d: 'Impressão 3D',
+};
+
+// Modos de iluminação disponíveis por material (validado no motor da skill):
+// ACM/Galvanizado têm os três; Inox só padrão; Impressão 3D só frontal;
+// PVC (por m²) só sem/retro (backlight).
+const ILUM_OPTS: Record<Material, Ilum[]> = {
+  pvc: ['sem', 'retro'],
+  acm: ['sem', 'retro', 'frontal'],
+  galvanizado: ['sem', 'retro', 'frontal'],
+  inox: ['sem', 'retro'],
+  impressao_3d: ['frontal'],
+};
+
+const ILUM_LABEL: Record<Ilum, string> = {
+  sem: 'Sem iluminação',
+  retro: 'Retroiluminada (+45%)',
+  frontal: 'Frontal acrílico',
 };
 
 const num = (v: number | string | undefined | null): number => Number(v ?? 0);
@@ -44,13 +67,13 @@ const btn = (active: boolean) =>
 
 const LetraCaixaCalculator: React.FC = () => {
   const [material, setMaterial] = useState<Material>('pvc');
-  const [iluminado, setIluminado] = useState<boolean>(false);
+  const [iluminacao, setIluminacao] = useState<Ilum>('sem');
   // PVC (por m² da placa)
   const [espessuras, setEspessuras] = useState<number[]>([10, 20, 30]);
   const [espessura, setEspessura] = useState<number>(20);
   const [larguraPlaca, setLarguraPlaca] = useState<string>('');
   const [alturaPlaca, setAlturaPlaca] = useState<string>('');
-  // ACM/Galvanizado/Inox (por altura da letra × nº de caracteres)
+  // ACM/Galvanizado/Inox/Impressão 3D (por altura da letra × nº de caracteres)
   const [alturaCm, setAlturaCm] = useState<string>('');
   const [nCaracteres, setNCaracteres] = useState<string>('');
   const [larguraTotalCm, setLarguraTotalCm] = useState<string>('');
@@ -68,9 +91,18 @@ const LetraCaixaCalculator: React.FC = () => {
   const nCaracteresNum = parseInt(nCaracteres, 10) || 0;
   const larguraTotalCmNum = parseFloat(larguraTotalCm) || 0;
 
+  const opcoesIlum = ILUM_OPTS[material];
+
   const entradaValida = isPvc
     ? larguraPlacaNum > 0 && alturaPlacaNum > 0
     : alturaCmNum > 0 && nCaracteresNum > 0;
+
+  // Troca de material: mantém o modo de iluminação atual se for válido para o
+  // novo material; senão cai para o primeiro disponível (ex.: Impressão 3D → frontal).
+  const changeMaterial = (m: Material) => {
+    setMaterial(m);
+    setIluminacao((atual) => (ILUM_OPTS[m].includes(atual) ? atual : ILUM_OPTS[m][0]));
+  };
 
   // Carrega as espessuras de PVC do motor (uma vez); mantém fallback.
   useEffect(() => {
@@ -106,6 +138,8 @@ const LetraCaixaCalculator: React.FC = () => {
       setLoading(true);
       setError(null);
       try {
+        const iluminado = iluminacao === 'retro';
+        const tipoIluminacao = iluminacao === 'frontal' ? 'frontal_acrilico' : undefined;
         const body = isPvc
           ? {
               material,
@@ -117,6 +151,7 @@ const LetraCaixaCalculator: React.FC = () => {
           : {
               material,
               iluminado,
+              tipoIluminacao,
               alturaCm: alturaCmNum,
               nCaracteres: nCaracteresNum,
               larguraTotalCm: larguraTotalCmNum > 0 ? larguraTotalCmNum : undefined,
@@ -136,7 +171,7 @@ const LetraCaixaCalculator: React.FC = () => {
     return () => clearTimeout(timer);
   }, [
     material,
-    iluminado,
+    iluminacao,
     isPvc,
     larguraPlacaNum,
     alturaPlacaNum,
@@ -146,19 +181,26 @@ const LetraCaixaCalculator: React.FC = () => {
     larguraTotalCmNum,
   ]);
 
+  const ilumSuffix =
+    iluminacao === 'retro' ? ' retroiluminada' : iluminacao === 'frontal' ? ' frontal acrílico' : '';
+
   const descricao = useMemo(() => {
     if (isPvc) {
-      return `Letra caixa PVC ${espessura}mm ${larguraPlacaNum.toFixed(2)}×${alturaPlacaNum.toFixed(2)}m`;
+      return `Letra caixa PVC ${espessura}mm ${larguraPlacaNum.toFixed(2)}×${alturaPlacaNum.toFixed(2)}m${ilumSuffix}`;
     }
-    return `Letra caixa ${MATERIAL_LABEL[material]} ${alturaCmNum}cm ${nCaracteresNum} letras`;
-  }, [isPvc, material, espessura, larguraPlacaNum, alturaPlacaNum, alturaCmNum, nCaracteresNum]);
+    return `Letra caixa ${MATERIAL_LABEL[material]} ${alturaCmNum}cm ${nCaracteresNum} letras${ilumSuffix}`;
+  }, [isPvc, material, espessura, larguraPlacaNum, alturaPlacaNum, alturaCmNum, nCaracteresNum, ilumSuffix]);
+
+  // Preço válido: motor pode retornar preco_final nulo quando não há referência
+  // de mercado (ex.: altura fora da faixa pesquisada) — nesse caso mostramos o alerta.
+  const temPreco = !!result && result.preco_final != null && num(result.preco_final) > 0;
 
   const handleCopy = () => {
-    if (!result) return;
+    if (!temPreco || !result) return;
     const detalhe = isPvc
       ? `Placa: ${larguraPlacaNum.toFixed(2)} x ${alturaPlacaNum.toFixed(2)} m (${espessura}mm)`
       : `Letras: ${nCaracteresNum} × ${alturaCmNum} cm de altura`;
-    const texto = `Orçamento Letra Caixa — ${MATERIAL_LABEL[material]}${iluminado ? ' (iluminada)' : ''}
+    const texto = `Orçamento Letra Caixa — ${MATERIAL_LABEL[material]}${ilumSuffix}
 ${detalhe}
 
 Preço (sem nota fiscal): ${formatCurrency(num(result.preco_final))}
@@ -170,24 +212,22 @@ Preço (com nota fiscal): ${formatCurrency(num(result.preco_com_nota))}`;
   };
 
   const handleAddCotacao = () => {
-    if (!result) return;
+    if (!temPreco || !result) return;
     addItem({
-      descricao: `${descricao}${iluminado ? ' iluminada' : ''}`,
+      descricao,
       precoSemNota: num(result.preco_final),
       precoComNota: num(result.preco_com_nota),
     });
     toast.success('Adicionado à cotação!');
   };
 
-  const semResultado = result && !result.material_resultado;
-
   return (
     <div className="p-6">
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Calculadora de Letra Caixa</h2>
         <p className="text-gray-600">
-          Escolha o material. PVC é por m² da placa; ACM, galvanizado e inox são por altura da letra
-          × nº de caracteres (com correção de largura). Preço do motor de precificação.
+          Escolha o material. PVC é por m² da placa; ACM, galvanizado, inox e impressão 3D são por
+          altura da letra × nº de caracteres (com correção de largura). Preço do motor de precificação.
         </p>
       </div>
 
@@ -196,9 +236,9 @@ Preço (com nota fiscal): ${formatCurrency(num(result.preco_com_nota))}`;
         <div className="space-y-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-3">Material</label>
-            <div className="grid grid-cols-2 gap-3">
-              {(['pvc', 'acm', 'galvanizado', 'inox'] as const).map((m) => (
-                <button key={m} type="button" onClick={() => setMaterial(m)} className={btn(material === m)}>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {(['pvc', 'acm', 'galvanizado', 'inox', 'impressao_3d'] as const).map((m) => (
+                <button key={m} type="button" onClick={() => changeMaterial(m)} className={btn(material === m)}>
                   {MATERIAL_LABEL[m]}
                 </button>
               ))}
@@ -319,15 +359,33 @@ Preço (com nota fiscal): ${formatCurrency(num(result.preco_com_nota))}`;
             </>
           )}
 
-          <label className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={iluminado}
-              onChange={(e) => setIluminado(e.target.checked)}
-              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-            />
-            <span className="text-sm font-medium text-gray-700">Iluminada (backlight) — +45%</span>
-          </label>
+          {/* Iluminação */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-3">Iluminação</label>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {opcoesIlum.map((op) => (
+                <button
+                  key={op}
+                  type="button"
+                  onClick={() => setIluminacao(op)}
+                  className={btn(iluminacao === op)}
+                >
+                  {ILUM_LABEL[op]}
+                </button>
+              ))}
+            </div>
+            {iluminacao === 'frontal' && (
+              <p className="text-xs text-gray-500 mt-2">
+                Face de acrílico iluminada por LED. O preço de mercado já inclui LED, fonte e
+                instalação — sem adicional separado.
+              </p>
+            )}
+            {material === 'impressao_3d' && (
+              <p className="text-xs text-gray-500 mt-2">
+                Impressão 3D é fornecida apenas em frontal acrílico.
+              </p>
+            )}
+          </div>
         </div>
 
         {/* Resultado */}
@@ -358,7 +416,7 @@ Preço (com nota fiscal): ${formatCurrency(num(result.preco_com_nota))}`;
                 </div>
               )}
 
-              {!semResultado && (
+              {temPreco && (
                 <>
                   {/* Preço principal */}
                   <div className="bg-white rounded-lg border border-gray-200 p-4">
