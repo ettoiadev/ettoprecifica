@@ -10,40 +10,8 @@ export interface ConfigSectionData {
   fields: ConfigField[];
 }
 
-export const settingsConfig: ConfigSectionData[] = [
-  {
-    title: "Nota Fiscal",
-    section: "notaFiscal",
-    fields: [
-      { key: 'percentual', label: 'Percentual da Nota Fiscal', unit: '%' },
-    ]
-  },
-  {
-    title: "Arte Final",
-    section: "arteFinal",
-    fields: []
-  },
-  {
-    title: "Cartão de Crédito",
-    section: "cartaoCredito",
-    fields: [
-      { key: 'creditoVista', label: 'Crédito à vista', unit: '%' },
-      { key: 'taxa2x', label: 'Taxa 2x', unit: '%' },
-      { key: 'taxa3x', label: 'Taxa 3x', unit: '%' },
-      { key: 'taxa4x', label: 'Taxa 4x', unit: '%' },
-      { key: 'taxa5x', label: 'Taxa 5x', unit: '%' },
-      { key: 'taxa6x', label: 'Taxa 6x', unit: '%' },
-      { key: 'taxa7x', label: 'Taxa 7x', unit: '%' },
-      { key: 'taxa8x', label: 'Taxa 8x', unit: '%' },
-      { key: 'taxa9x', label: 'Taxa 9x', unit: '%' },
-      { key: 'taxa10x', label: 'Taxa 10x', unit: '%' },
-      { key: 'taxa11x', label: 'Taxa 11x', unit: '%' },
-      { key: 'taxa12x', label: 'Taxa 12x', unit: '%' },
-    ]
-  },
-  {
-    title: "Instalação por Localidade",
-    section: "instalacao",
-    fields: []
-  }
-];
+// Todos os produtos e taxas (NF, cartão, arte final, instalação/deslocamento)
+// agora são calculados pelo motor da skill via Edge Functions — a NF já vem
+// embutida em preco_com_nota e o deslocamento vem de deslocamento_cidades.
+// Não há mais configuração de preço editável no app; resta apenas a seção "Geral".
+export const settingsConfig: ConfigSectionData[] = [];

@@ -16,19 +16,9 @@ interface ListManagerDef {
 }
 
 // Seções com listas editáveis (CRUD) e a quais chaves da config elas apontam.
-// showMinPrice: habilita o "Valor mínimo (R$)" por item nas calculadoras de lista
-// que aplicam piso ao total (Adesivo, Placa ACM).
-// Obs.: todos os produtos por m²/unidade (Adesivo, Lona, Placa ACM/PS, Vidro,
-// Fachada, Luminoso, Laser, Letra Caixa, DTF, Etiquetas, GIV, Cavaletes) são
-// precificados pelo motor da skill (Edge Functions) e não têm config editável aqui.
-const LIST_MANAGERS: Record<string, ListManagerDef[]> = {
-  arteFinal: [
-    { key: 'customVariations', label: 'Opções de Arte Final', addLabel: 'Adicionar Opção', unitDefault: 'serviço' },
-  ],
-  instalacao: [
-    { key: 'variations', label: 'Localidades', addLabel: 'Adicionar Localidade', unitDefault: 'serviço' },
-  ],
-};
+// Obs.: todos os produtos e taxas são precificados pelo motor da skill
+// (Edge Functions), então não há mais nenhuma lista de preço editável no app.
+const LIST_MANAGERS: Record<string, ListManagerDef[]> = {};
 
 interface ConfigSectionProps {
   title: string;
