@@ -5,14 +5,15 @@ import { supabase } from '../../lib/supabase/client';
 import { useCotacao } from '../../contexts/CotacaoContext';
 import { toast } from 'sonner';
 
-// Calculadora de Lona/Banner — preço do motor da skill (Edge Function calc-lona
-// → calc_lona). Por m² com tipo de acabamento, bastão opcional e deslocamento
-// por cidade. Quantidade por reconstrução (deslocamento cobrado uma vez).
-interface LonaResult {
-  tipo_encontrado?: string;
+// Calculadora de Adesivo Impresso — preço do motor da skill (Edge Function
+// calc-adesivo-impresso → calc_adesivo_impresso). Por m² com acabamento,
+// aproveitamento do vinil e deslocamento por cidade. Quantidade por reconstrução.
+interface AdesivoResult {
+  acabamento_encontrado?: string;
   area_m2?: number | string;
+  aproveitamento_pct?: number | string;
+  area_cobrada_m2?: number | string;
   preco_m2?: number | string;
-  adicional_bastao?: number | string;
   custo_deslocamento?: number | string;
   preco_minimo_projeto?: number | string;
   preco_final?: number | string | null;
@@ -21,7 +22,7 @@ interface LonaResult {
 }
 
 interface Opcao {
-  tipo: string;
+  acabamento: string;
   nome: string;
   preco_venda_m2: number | string;
 }
@@ -31,17 +32,17 @@ const num = (v: number | string | undefined | null): number => Number(v ?? 0);
 const inputClass =
   'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent';
 
-const LonaCalculator: React.FC = () => {
+const AdesivoImpressoCalculator: React.FC = () => {
   const [opcoes, setOpcoes] = useState<Opcao[]>([]);
   const [cidades, setCidades] = useState<string[]>([]);
-  const [tipo, setTipo] = useState<string>('');
-  const [bastao, setBastao] = useState<boolean>(false);
+  const [acabamento, setAcabamento] = useState<string>('');
   const [cidade, setCidade] = useState<string>('Jacareí');
   const [largura, setLargura] = useState<string>('');
   const [altura, setAltura] = useState<string>('');
   const [quantidade, setQuantidade] = useState<number>(1);
+  const [aproveitamento, setAproveitamento] = useState<string>('100');
 
-  const [result, setResult] = useState<LonaResult | null>(null);
+  const [result, setResult] = useState<AdesivoResult | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -49,20 +50,21 @@ const LonaCalculator: React.FC = () => {
 
   const larguraNum = parseFloat(largura) || 0;
   const alturaNum = parseFloat(altura) || 0;
-  const entradaValida = larguraNum > 0 && alturaNum > 0 && tipo !== '';
+  const aproveitamentoNum = parseFloat(aproveitamento) || 0;
+  const entradaValida = larguraNum > 0 && alturaNum > 0 && acabamento !== '';
 
   useEffect(() => {
     let ativo = true;
     (async () => {
       try {
-        const { data, error } = await supabase.functions.invoke('calc-lona', {
+        const { data, error } = await supabase.functions.invoke('calc-adesivo-impresso', {
           body: { action: 'meta' },
         });
         if (!ativo) return;
         if (!error && data) {
           if (Array.isArray(data.opcoes) && data.opcoes.length > 0) {
             setOpcoes(data.opcoes);
-            setTipo((t) => t || data.opcoes[0].tipo);
+            setAcabamento((a) => a || data.opcoes[0].acabamento);
           }
           if (Array.isArray(data.cidades) && data.cidades.length > 0) {
             setCidades(data.cidades);
@@ -88,12 +90,18 @@ const LonaCalculator: React.FC = () => {
       setLoading(true);
       setError(null);
       try {
-        const { data, error } = await supabase.functions.invoke('calc-lona', {
-          body: { tipo, bastao, largura: larguraNum, altura: alturaNum, cidade },
+        const { data, error } = await supabase.functions.invoke('calc-adesivo-impresso', {
+          body: {
+            acabamento,
+            largura: larguraNum,
+            altura: alturaNum,
+            cidade,
+            aproveitamento: aproveitamentoNum > 0 ? aproveitamentoNum : undefined,
+          },
         });
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
-        setResult((data?.resultado as LonaResult) ?? null);
+        setResult((data?.resultado as AdesivoResult) ?? null);
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Erro ao calcular o preço.');
         setResult(null);
@@ -102,9 +110,10 @@ const LonaCalculator: React.FC = () => {
       }
     }, 500);
     return () => clearTimeout(timer);
-  }, [tipo, bastao, larguraNum, alturaNum, cidade, entradaValida]);
+  }, [acabamento, larguraNum, alturaNum, cidade, aproveitamentoNum, entradaValida]);
 
-  // Quantidade por reconstrução: deslocamento uma vez por pedido.
+  // Quantidade por reconstrução: preço unitário (que já inclui o deslocamento)
+  // multiplica pela qtd, e o deslocamento é cobrado uma única vez no pedido.
   const precos = useMemo(() => {
     if (!result || result.preco_final == null) return null;
     const unit = num(result.preco_final);
@@ -115,19 +124,19 @@ const LonaCalculator: React.FC = () => {
   }, [result, quantidade]);
 
   const temPreco = !!precos && precos.semNota > 0;
-  const nomeTipo = opcoes.find((o) => o.tipo === tipo)?.nome ?? tipo;
+  const nomeAcab = opcoes.find((o) => o.acabamento === acabamento)?.nome ?? acabamento;
 
   const descricao = useMemo(
     () =>
-      `Lona ${nomeTipo}${bastao ? ' c/ bastão' : ''} ${larguraNum.toFixed(2)}×${alturaNum.toFixed(2)}m${
+      `Adesivo impresso ${nomeAcab} ${larguraNum.toFixed(2)}×${alturaNum.toFixed(2)}m${
         quantidade > 1 ? ` (${quantidade}un)` : ''
       }`,
-    [nomeTipo, bastao, larguraNum, alturaNum, quantidade]
+    [nomeAcab, larguraNum, alturaNum, quantidade]
   );
 
   const handleCopy = () => {
     if (!temPreco || !precos) return;
-    const texto = `Orçamento Lona/Banner — ${nomeTipo}${bastao ? ' (com bastão)' : ''}
+    const texto = `Orçamento Adesivo Impresso — ${nomeAcab}
 Dimensões: ${larguraNum.toFixed(2)} x ${alturaNum.toFixed(2)} m — ${quantidade} un
 Cidade: ${cidade}
 
@@ -148,9 +157,10 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
   return (
     <div className="p-6">
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Calculadora de Lona</h2>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Calculadora de Adesivo Impresso</h2>
         <p className="text-gray-600">
-          Lona/banner por m², com acabamento e bastão opcional. Preço do motor de precificação.
+          Adesivo impresso por m², com acabamento e aproveitamento do vinil. Preço do motor de
+          precificação.
         </p>
       </div>
 
@@ -175,25 +185,26 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
           </div>
 
           <div>
-            <label htmlFor="tipo-lona" className="block text-sm font-medium text-gray-700 mb-3">Tipo de lona</label>
-            <select id="tipo-lona" value={tipo} onChange={(e) => setTipo(e.target.value)} className={inputClass}>
+            <label htmlFor="acab-ad" className="block text-sm font-medium text-gray-700 mb-3">Acabamento</label>
+            <select id="acab-ad" value={acabamento} onChange={(e) => setAcabamento(e.target.value)} className={inputClass}>
               {opcoes.length === 0 && <option value="">Carregando…</option>}
               {opcoes.map((o) => (
-                <option key={o.tipo} value={o.tipo}>
+                <option key={o.acabamento} value={o.acabamento}>
                   {o.nome} — {formatCurrency(num(o.preco_venda_m2))}/m²
                 </option>
               ))}
             </select>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 items-end">
-            <label className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
-              <input type="checkbox" checked={bastao} onChange={(e) => setBastao(e.target.checked)} className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
-              <span className="text-sm font-medium text-gray-700">Com bastão (madeira/PVC)</span>
-            </label>
+          <div className="grid grid-cols-2 gap-4">
             <div>
-              <label htmlFor="cidade-lona" className="block text-sm font-medium text-gray-700 mb-3">Cidade (instalação)</label>
-              <select id="cidade-lona" value={cidade} onChange={(e) => setCidade(e.target.value)} className={inputClass}>
+              <label htmlFor="aprov-ad" className="block text-sm font-medium text-gray-700 mb-3">Aproveitamento do vinil (%)</label>
+              <input id="aprov-ad" type="number" min="1" max="100" step="1" value={aproveitamento} onChange={(e) => setAproveitamento(e.target.value)} className={inputClass} placeholder="100" />
+              <p className="text-xs text-gray-500 mt-1">100% = sólido. Menor % cobra mais área de vinil.</p>
+            </div>
+            <div>
+              <label htmlFor="cidade-ad" className="block text-sm font-medium text-gray-700 mb-3">Cidade (instalação)</label>
+              <select id="cidade-ad" value={cidade} onChange={(e) => setCidade(e.target.value)} className={inputClass}>
                 {cidades.length === 0 && <option value="Jacareí">Jacareí</option>}
                 {cidades.map((c) => (
                   <option key={c} value={c}>{c}</option>
@@ -207,7 +218,7 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Orçamento</h3>
 
           {!entradaValida ? (
-            <p className="text-sm text-gray-500">Informe as dimensões e o tipo de lona para ver o preço.</p>
+            <p className="text-sm text-gray-500">Informe as dimensões e o acabamento para ver o preço.</p>
           ) : loading ? (
             <div className="flex items-center gap-2 text-sm text-gray-500">
               <Loader2 className="w-4 h-4 animate-spin" /> Calculando…
@@ -240,12 +251,9 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
                   </div>
 
                   <div className="space-y-1">
-                    <div className="flex justify-between text-sm text-gray-600"><span>Tipo:</span><span className="text-right">{result.tipo_encontrado}</span></div>
+                    <div className="flex justify-between text-sm text-gray-600"><span>Acabamento:</span><span className="text-right">{result.acabamento_encontrado}</span></div>
                     <div className="flex justify-between text-sm text-gray-600"><span>Preço/m²:</span><span>{formatCurrency(num(result.preco_m2))}</span></div>
-                    <div className="flex justify-between text-sm text-gray-600"><span>Área (un):</span><span>{num(result.area_m2).toFixed(2)} m²</span></div>
-                    {num(result.adicional_bastao) > 0 && (
-                      <div className="flex justify-between text-sm text-gray-600"><span>Adicional bastão (un):</span><span>{formatCurrency(num(result.adicional_bastao))}</span></div>
-                    )}
+                    <div className="flex justify-between text-sm text-gray-600"><span>Área cobrada (un):</span><span>{num(result.area_cobrada_m2).toFixed(2)} m²</span></div>
                     {num(result.custo_deslocamento) > 0 && (
                       <div className="flex justify-between text-sm text-gray-600"><span>Deslocamento ({cidade}):</span><span>{formatCurrency(num(result.custo_deslocamento))}</span></div>
                     )}
@@ -269,4 +277,4 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
   );
 };
 
-export default LonaCalculator;
+export default AdesivoImpressoCalculator;

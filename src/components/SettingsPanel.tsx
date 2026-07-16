@@ -18,18 +18,19 @@ interface Props {
 const GERAL = '__geral__';
 
 // Agrupamento das seções para a navegação lateral
+// Produtos com preço por m²/unidade agora são precificados pelo motor da skill
+// (Edge Functions), sem configuração editável aqui. Restam taxas/serviços gerais.
 const SECTION_GROUPS: { label: string; sections: string[] }[] = [
-  { label: 'Produtos', sections: ['adesivo', 'lona', 'placaACM'] },
   { label: 'Taxas & Serviços', sections: ['notaFiscal', 'arteFinal', 'cartaoCredito', 'instalacao'] },
   { label: 'Geral', sections: [GERAL] },
 ];
 
-const PRODUTO_SECTIONS = SECTION_GROUPS[0].sections;
+const PRODUTO_SECTIONS: string[] = [];
 
 const SettingsPanel: React.FC<Props> = ({ config, onSave, onClose }) => {
   const [editConfig, setEditConfig] = useState(convertConfigToCurrency(config));
   const [search, setSearch] = useState('');
-  const [activeSection, setActiveSection] = useState('adesivo');
+  const [activeSection, setActiveSection] = useState('notaFiscal');
 
   const handleSave = () => {
     const numericConfig = convertCurrencyToNumbers(editConfig);

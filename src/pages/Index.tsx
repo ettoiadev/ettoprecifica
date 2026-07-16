@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import AdesivoCalculator from '../components/calculators/AdesivoCalculator';
+import AdesivoImpressoCalculator from '../components/calculators/AdesivoImpressoCalculator';
 import AdesivoRecorteCalculator from '../components/calculators/AdesivoRecorteCalculator';
 import LonaCalculator from '../components/calculators/LonaCalculator';
 import PlacaPSCalculator from '../components/calculators/PlacaPSCalculator';
@@ -109,7 +109,7 @@ const Index = () => {
 
   const getTabTitle = () => {
     const titles: Record<string, string> = {
-      'adesivo': 'Calculadora de Adesivo',
+      'adesivo': 'Calculadora de Adesivo Impresso',
       'adesivo-recorte': 'Calculadora de Adesivo de Recorte',
       'lona': 'Calculadora de Lona',
       'placa-ps': 'Calculadora de Placa em PS',
@@ -130,15 +130,15 @@ const Index = () => {
   const renderCalculator = () => {
     switch (activeTab) {
       case 'adesivo':
-        return <AdesivoCalculator config={config.adesivo} fullConfig={config} />;
+        return <AdesivoImpressoCalculator />;
       case 'adesivo-recorte':
         return <AdesivoRecorteCalculator />;
       case 'lona':
-        return <LonaCalculator config={config.lona} fullConfig={config} />;
+        return <LonaCalculator />;
       case 'placa-ps':
         return <PlacaPSCalculator />;
       case 'placa-acm':
-        return <PlacaACMCalculator config={config.placaACM} fullConfig={config} />;
+        return <PlacaACMCalculator />;
       case 'fachada':
         return <FachadaCalculator config={config.fachada} fullConfig={config} />;
       case 'letra-caixa':
@@ -158,7 +158,7 @@ const Index = () => {
       case 'cavaletes':
         return <CavaletesCalculator />;
       default:
-        return <AdesivoCalculator config={config.adesivo} fullConfig={config} />;
+        return <AdesivoImpressoCalculator />;
     }
   };
 

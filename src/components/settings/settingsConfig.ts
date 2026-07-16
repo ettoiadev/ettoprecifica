@@ -12,23 +12,6 @@ export interface ConfigSectionData {
 
 export const settingsConfig: ConfigSectionData[] = [
   {
-    title: "Adesivo",
-    section: "adesivo",
-    fields: []
-  },
-  {
-    title: "Lona",
-    section: "lona",
-    fields: [
-      { key: 'precoMinimo', label: 'Preço Mínimo', unit: 'unid' },
-    ]
-  },
-  {
-    title: "Placa ACM",
-    section: "placaACM",
-    fields: []
-  },
-  {
     title: "Nota Fiscal",
     section: "notaFiscal",
     fields: [
