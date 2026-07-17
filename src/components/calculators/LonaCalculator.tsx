@@ -10,14 +10,14 @@ import { toast } from 'sonner';
 // (sem_acabamento, R$70/m²) e Reforço + Ilhós (reforcada_ilhos, R$90/m²).
 // Deslocamento por cidade; quantidade por reconstrução (deslocamento uma vez).
 //
-// Laca de Proteção (+R$20/m²): adicional aplicado NO APP (o motor da skill ainda
-// não tem esse parâmetro). Somado por m² à área cotada, com o mesmo fator de
-// nota fiscal do preço base. TODO: migrar para a skill (p_laca) quando possível.
+// Laca de Proteção UV: parâmetro p_laca_uv do motor da skill; o adicional já vem
+// embutido em preco_final/preco_com_nota e detalhado em adicional_laca_uv.
 interface LonaResult {
   tipo_encontrado?: string;
   area_m2?: number | string;
   preco_m2?: number | string;
   adicional_bastao?: number | string;
+  adicional_laca_uv?: number | string;
   custo_deslocamento?: number | string;
   preco_minimo_projeto?: number | string;
   preco_final?: number | string | null;
@@ -30,9 +30,6 @@ interface Opcao {
   nome: string;
   preco_venda_m2: number | string;
 }
-
-// Adicional da laca de proteção, por m² (aplicado no app).
-const LACA_M2 = 20;
 
 // Acabamentos oferecidos nesta aba (ambos existem no motor da skill).
 const TIPOS: { tipo: string; label: string; precoFallback: number }[] = [
@@ -114,7 +111,7 @@ const LonaCalculator: React.FC = () => {
       setError(null);
       try {
         const { data, error } = await supabase.functions.invoke('calc-lona', {
-          body: { tipo: acabamento, bastao: false, largura: larguraNum, altura: alturaNum, cidade },
+          body: { tipo: acabamento, bastao: false, laca, largura: larguraNum, altura: alturaNum, cidade },
         });
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
@@ -127,21 +124,18 @@ const LonaCalculator: React.FC = () => {
       }
     }, 500);
     return () => clearTimeout(timer);
-  }, [acabamento, larguraNum, alturaNum, cidade, entradaValida]);
+  }, [acabamento, laca, larguraNum, alturaNum, cidade, entradaValida]);
 
-  // Quantidade por reconstrução (deslocamento uma vez) + laca por m² (app).
+  // Quantidade por reconstrução (deslocamento uma vez). preco_final já inclui a
+  // laca UV quando marcada (vem do motor da skill).
   const precos = useMemo(() => {
     if (!result || result.preco_final == null) return null;
     const unit = num(result.preco_final);
     const desloc = num(result.custo_deslocamento);
-    const area = num(result.area_m2);
-    const baseSemNota = (unit - desloc) * quantidade + desloc;
-    const lacaUnit = laca ? LACA_M2 * area : 0;
-    const lacaTotal = lacaUnit * quantidade;
-    const semNota = baseSemNota + lacaTotal;
+    const semNota = (unit - desloc) * quantidade + desloc;
     const fatorNF = unit > 0 ? num(result.preco_com_nota) / unit : 1;
-    return { semNota, comNota: semNota * fatorNF, lacaTotal };
-  }, [result, quantidade, laca]);
+    return { semNota, comNota: semNota * fatorNF };
+  }, [result, quantidade]);
 
   const temPreco = !!precos && precos.semNota > 0;
   const acabamentoLabel = TIPOS.find((t) => t.tipo === acabamento)?.label ?? 'Padrão';
@@ -220,7 +214,7 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
 
           <label className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
             <input type="checkbox" checked={laca} onChange={(e) => setLaca(e.target.checked)} className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
-            <span className="text-sm font-medium text-gray-700">Laca de Proteção (+{formatCurrency(LACA_M2)}/m²)</span>
+            <span className="text-sm font-medium text-gray-700">Laca de Proteção (UV)</span>
           </label>
 
           <div>
@@ -274,8 +268,8 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
                     <div className="flex justify-between text-sm text-gray-600"><span>Acabamento:</span><span>{acabamentoLabel}</span></div>
                     <div className="flex justify-between text-sm text-gray-600"><span>Preço/m²:</span><span>{formatCurrency(num(result.preco_m2))}</span></div>
                     <div className="flex justify-between text-sm text-gray-600"><span>Área (un):</span><span>{num(result.area_m2).toFixed(2)} m²</span></div>
-                    {laca && precos.lacaTotal > 0 && (
-                      <div className="flex justify-between text-sm text-gray-600"><span>Laca de proteção (+{formatCurrency(LACA_M2)}/m²):</span><span>{formatCurrency(precos.lacaTotal)}</span></div>
+                    {laca && num(result.adicional_laca_uv) > 0 && (
+                      <div className="flex justify-between text-sm text-gray-600"><span>Laca de proteção UV:</span><span>{formatCurrency(num(result.adicional_laca_uv) * quantidade)}</span></div>
                     )}
                     {num(result.custo_deslocamento) > 0 && (
                       <div className="flex justify-between text-sm text-gray-600"><span>Deslocamento ({cidade}):</span><span>{formatCurrency(num(result.custo_deslocamento))}</span></div>

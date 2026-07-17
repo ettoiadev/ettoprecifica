@@ -51,6 +51,9 @@ Deno.serve(async (req: Request) => {
 
     const tipo = String(body?.tipo ?? "sem_acabamento").trim();
     const bastao = body?.bastao === true;
+    // Laca de proteção UV: sempre enviado ao RPC para desambiguar os dois
+    // overloads de calc_lona (com/sem p_laca_uv) e evitar "function is not unique".
+    const laca = body?.laca === true;
     const largura = Number(body?.largura);
     const altura = Number(body?.altura);
     const cidade = body?.cidade ? String(body.cidade) : "Jacareí";
@@ -64,12 +67,13 @@ Deno.serve(async (req: Request) => {
       altura_m: altura,
       p_tipo: tipo,
       p_bastao: bastao,
+      p_laca_uv: laca,
       p_cidade: cidade,
     });
     if (error) throw error;
 
     const resultado = Array.isArray(data) ? data[0] : data;
-    return json({ tipo, bastao, largura, altura, cidade, resultado });
+    return json({ tipo, bastao, laca, largura, altura, cidade, resultado });
   } catch (e) {
     return json({ error: e instanceof Error ? e.message : String(e) }, 500);
   }
