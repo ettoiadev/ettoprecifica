@@ -14,6 +14,7 @@ interface AdesivoResult {
   aproveitamento_pct?: number | string;
   area_cobrada_m2?: number | string;
   preco_m2?: number | string;
+  adicional_laca_uv?: number | string;
   custo_deslocamento?: number | string;
   preco_minimo_projeto?: number | string;
   preco_final?: number | string | null;
@@ -41,6 +42,7 @@ const AdesivoImpressoCalculator: React.FC = () => {
   const [altura, setAltura] = useState<string>('');
   const [quantidade, setQuantidade] = useState<number>(1);
   const [aproveitamento, setAproveitamento] = useState<string>('100');
+  const [laca, setLaca] = useState<boolean>(false);
 
   const [result, setResult] = useState<AdesivoResult | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
@@ -93,6 +95,7 @@ const AdesivoImpressoCalculator: React.FC = () => {
         const { data, error } = await supabase.functions.invoke('calc-adesivo-impresso', {
           body: {
             acabamento,
+            laca,
             largura: larguraNum,
             altura: alturaNum,
             cidade,
@@ -110,7 +113,7 @@ const AdesivoImpressoCalculator: React.FC = () => {
       }
     }, 500);
     return () => clearTimeout(timer);
-  }, [acabamento, larguraNum, alturaNum, cidade, aproveitamentoNum, entradaValida]);
+  }, [acabamento, laca, larguraNum, alturaNum, cidade, aproveitamentoNum, entradaValida]);
 
   // Quantidade por reconstrução: preço unitário (que já inclui o deslocamento)
   // multiplica pela qtd, e o deslocamento é cobrado uma única vez no pedido.
@@ -128,15 +131,15 @@ const AdesivoImpressoCalculator: React.FC = () => {
 
   const descricao = useMemo(
     () =>
-      `Adesivo impresso ${nomeAcab} ${larguraNum.toFixed(2)}×${alturaNum.toFixed(2)}m${
+      `Adesivo impresso ${nomeAcab}${laca ? ' + laca UV' : ''} ${larguraNum.toFixed(2)}×${alturaNum.toFixed(2)}m${
         quantidade > 1 ? ` (${quantidade}un)` : ''
       }`,
-    [nomeAcab, larguraNum, alturaNum, quantidade]
+    [nomeAcab, laca, larguraNum, alturaNum, quantidade]
   );
 
   const handleCopy = () => {
     if (!temPreco || !precos) return;
-    const texto = `Orçamento Adesivo Impresso — ${nomeAcab}
+    const texto = `Orçamento Adesivo Impresso — ${nomeAcab}${laca ? ' + Laca de Proteção (UV)' : ''}
 Dimensões: ${larguraNum.toFixed(2)} x ${alturaNum.toFixed(2)} m — ${quantidade} un
 Cidade: ${cidade}
 
@@ -212,6 +215,11 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
               </select>
             </div>
           </div>
+
+          <label className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+            <input type="checkbox" checked={laca} onChange={(e) => setLaca(e.target.checked)} className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
+            <span className="text-sm font-medium text-gray-700">Laca de Proteção (UV)</span>
+          </label>
         </div>
 
         <div className="bg-gray-50 rounded-xl border border-gray-200 p-6">
@@ -254,6 +262,9 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
                     <div className="flex justify-between text-sm text-gray-600"><span>Acabamento:</span><span className="text-right">{result.acabamento_encontrado}</span></div>
                     <div className="flex justify-between text-sm text-gray-600"><span>Preço/m²:</span><span>{formatCurrency(num(result.preco_m2))}</span></div>
                     <div className="flex justify-between text-sm text-gray-600"><span>Área cobrada (un):</span><span>{num(result.area_cobrada_m2).toFixed(2)} m²</span></div>
+                    {laca && num(result.adicional_laca_uv) > 0 && (
+                      <div className="flex justify-between text-sm text-gray-600"><span>Laca de proteção UV:</span><span>{formatCurrency(num(result.adicional_laca_uv) * quantidade)}</span></div>
+                    )}
                     {num(result.custo_deslocamento) > 0 && (
                       <div className="flex justify-between text-sm text-gray-600"><span>Deslocamento ({cidade}):</span><span>{formatCurrency(num(result.custo_deslocamento))}</span></div>
                     )}

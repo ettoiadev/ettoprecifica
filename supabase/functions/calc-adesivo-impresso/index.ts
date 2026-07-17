@@ -51,6 +51,10 @@ Deno.serve(async (req: Request) => {
     }
 
     const acabamento = String(body?.acabamento ?? "sem_acabamento").trim();
+    // Laca de proteção UV: sempre enviado ao RPC para desambiguar os dois
+    // overloads de calc_adesivo_impresso (com/sem p_laca_uv) e evitar
+    // "function is not unique".
+    const laca = body?.laca === true;
     const largura = Number(body?.largura);
     const altura = Number(body?.altura);
     const cidade = body?.cidade ? String(body.cidade) : "Jacareí";
@@ -65,12 +69,13 @@ Deno.serve(async (req: Request) => {
       altura_m: altura,
       p_acabamento: acabamento,
       p_aproveitamento_pct: aproveitamento,
+      p_laca_uv: laca,
       p_cidade: cidade,
     });
     if (error) throw error;
 
     const resultado = Array.isArray(data) ? data[0] : data;
-    return json({ acabamento, largura, altura, cidade, resultado });
+    return json({ acabamento, laca, largura, altura, cidade, resultado });
   } catch (e) {
     return json({ error: e instanceof Error ? e.message : String(e) }, 500);
   }
