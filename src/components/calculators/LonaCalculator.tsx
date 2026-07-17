@@ -111,7 +111,16 @@ const LonaCalculator: React.FC = () => {
       setError(null);
       try {
         const { data, error } = await supabase.functions.invoke('calc-lona', {
-          body: { tipo: acabamento, bastao: false, laca, largura: larguraNum, altura: alturaNum, cidade },
+          // Área agregada (área unitária × qtd) enviada como largura×altura, para o
+          // motor aplicar o mínimo de projeto e o deslocamento UMA vez no pedido.
+          body: {
+            tipo: acabamento,
+            bastao: false,
+            laca,
+            largura: larguraNum * alturaNum * (quantidade > 0 ? quantidade : 1),
+            altura: 1,
+            cidade,
+          },
         });
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
@@ -124,18 +133,14 @@ const LonaCalculator: React.FC = () => {
       }
     }, 500);
     return () => clearTimeout(timer);
-  }, [acabamento, laca, larguraNum, alturaNum, cidade, entradaValida]);
+  }, [acabamento, laca, larguraNum, alturaNum, quantidade, cidade, entradaValida]);
 
-  // Quantidade por reconstrução (deslocamento uma vez). preco_final já inclui a
-  // laca UV quando marcada (vem do motor da skill).
+  // O resultado já é o total do pedido (área agregada): preco_final inclui a laca
+  // UV, o mínimo de projeto e o deslocamento, aplicados uma única vez.
   const precos = useMemo(() => {
     if (!result || result.preco_final == null) return null;
-    const unit = num(result.preco_final);
-    const desloc = num(result.custo_deslocamento);
-    const semNota = (unit - desloc) * quantidade + desloc;
-    const fatorNF = unit > 0 ? num(result.preco_com_nota) / unit : 1;
-    return { semNota, comNota: semNota * fatorNF };
-  }, [result, quantidade]);
+    return { semNota: num(result.preco_final), comNota: num(result.preco_com_nota) };
+  }, [result]);
 
   const temPreco = !!precos && precos.semNota > 0;
   const acabamentoLabel = TIPOS.find((t) => t.tipo === acabamento)?.label ?? 'Padrão';
@@ -267,9 +272,9 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
                   <div className="space-y-1">
                     <div className="flex justify-between text-sm text-gray-600"><span>Acabamento:</span><span>{acabamentoLabel}</span></div>
                     <div className="flex justify-between text-sm text-gray-600"><span>Preço/m²:</span><span>{formatCurrency(num(result.preco_m2))}</span></div>
-                    <div className="flex justify-between text-sm text-gray-600"><span>Área (un):</span><span>{num(result.area_m2).toFixed(2)} m²</span></div>
+                    <div className="flex justify-between text-sm text-gray-600"><span>Área (un):</span><span>{(num(result.area_m2) / quantidade).toFixed(2)} m²</span></div>
                     {laca && num(result.adicional_laca_uv) > 0 && (
-                      <div className="flex justify-between text-sm text-gray-600"><span>Laca de proteção UV:</span><span>{formatCurrency(num(result.adicional_laca_uv) * quantidade)}</span></div>
+                      <div className="flex justify-between text-sm text-gray-600"><span>Laca de proteção UV:</span><span>{formatCurrency(num(result.adicional_laca_uv))}</span></div>
                     )}
                     {num(result.custo_deslocamento) > 0 && (
                       <div className="flex justify-between text-sm text-gray-600"><span>Deslocamento ({cidade}):</span><span>{formatCurrency(num(result.custo_deslocamento))}</span></div>

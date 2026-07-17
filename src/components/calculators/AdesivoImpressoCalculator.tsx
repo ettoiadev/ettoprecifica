@@ -96,8 +96,11 @@ const AdesivoImpressoCalculator: React.FC = () => {
           body: {
             acabamento,
             laca,
-            largura: larguraNum,
-            altura: alturaNum,
+            // Área agregada (área unitária × qtd) enviada como largura×altura, para
+            // o motor aplicar o mínimo de projeto e o deslocamento UMA vez no pedido
+            // (evita cobrar o mínimo por unidade). O motor é linear na área.
+            largura: larguraNum * alturaNum * (quantidade > 0 ? quantidade : 1),
+            altura: 1,
             cidade,
             aproveitamento: aproveitamentoNum > 0 ? aproveitamentoNum : undefined,
           },
@@ -113,18 +116,14 @@ const AdesivoImpressoCalculator: React.FC = () => {
       }
     }, 500);
     return () => clearTimeout(timer);
-  }, [acabamento, laca, larguraNum, alturaNum, cidade, aproveitamentoNum, entradaValida]);
+  }, [acabamento, laca, larguraNum, alturaNum, quantidade, cidade, aproveitamentoNum, entradaValida]);
 
-  // Quantidade por reconstrução: preço unitário (que já inclui o deslocamento)
-  // multiplica pela qtd, e o deslocamento é cobrado uma única vez no pedido.
+  // O resultado já é o total do pedido (área agregada). preco_final inclui o
+  // mínimo de projeto e o deslocamento, aplicados uma única vez.
   const precos = useMemo(() => {
     if (!result || result.preco_final == null) return null;
-    const unit = num(result.preco_final);
-    const desloc = num(result.custo_deslocamento);
-    const semNota = (unit - desloc) * quantidade + desloc;
-    const fatorNF = unit > 0 ? num(result.preco_com_nota) / unit : 1;
-    return { semNota, comNota: semNota * fatorNF };
-  }, [result, quantidade]);
+    return { semNota: num(result.preco_final), comNota: num(result.preco_com_nota) };
+  }, [result]);
 
   const temPreco = !!precos && precos.semNota > 0;
   const nomeAcab = opcoes.find((o) => o.acabamento === acabamento)?.nome ?? acabamento;
@@ -261,9 +260,9 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
                   <div className="space-y-1">
                     <div className="flex justify-between text-sm text-gray-600"><span>Acabamento:</span><span className="text-right">{result.acabamento_encontrado}</span></div>
                     <div className="flex justify-between text-sm text-gray-600"><span>Preço/m²:</span><span>{formatCurrency(num(result.preco_m2))}</span></div>
-                    <div className="flex justify-between text-sm text-gray-600"><span>Área cobrada (un):</span><span>{num(result.area_cobrada_m2).toFixed(2)} m²</span></div>
+                    <div className="flex justify-between text-sm text-gray-600"><span>Área cobrada (un):</span><span>{(num(result.area_cobrada_m2) / quantidade).toFixed(2)} m²</span></div>
                     {laca && num(result.adicional_laca_uv) > 0 && (
-                      <div className="flex justify-between text-sm text-gray-600"><span>Laca de proteção UV:</span><span>{formatCurrency(num(result.adicional_laca_uv) * quantidade)}</span></div>
+                      <div className="flex justify-between text-sm text-gray-600"><span>Laca de proteção UV:</span><span>{formatCurrency(num(result.adicional_laca_uv))}</span></div>
                     )}
                     {num(result.custo_deslocamento) > 0 && (
                       <div className="flex justify-between text-sm text-gray-600"><span>Deslocamento ({cidade}):</span><span>{formatCurrency(num(result.custo_deslocamento))}</span></div>

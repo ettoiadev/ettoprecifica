@@ -83,7 +83,14 @@ const PlacaACMCalculator: React.FC = () => {
       setError(null);
       try {
         const { data, error } = await supabase.functions.invoke('calc-placa-acm', {
-          body: { largura: larguraNum, altura: alturaNum, espessura, cidade },
+          // Área agregada (área unitária × qtd) enviada como largura×altura, para o
+          // motor aplicar o mínimo de projeto e o deslocamento UMA vez no pedido.
+          body: {
+            largura: larguraNum * alturaNum * (quantidade > 0 ? quantidade : 1),
+            altura: 1,
+            espessura,
+            cidade,
+          },
         });
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
@@ -96,17 +103,14 @@ const PlacaACMCalculator: React.FC = () => {
       }
     }, 500);
     return () => clearTimeout(timer);
-  }, [larguraNum, alturaNum, espessura, cidade, entradaValida]);
+  }, [larguraNum, alturaNum, quantidade, espessura, cidade, entradaValida]);
 
-  // Quantidade por reconstrução: deslocamento uma vez por pedido.
+  // O resultado já é o total do pedido (área agregada): preco_sem_nota_60 inclui o
+  // mínimo de projeto e o deslocamento, aplicados uma única vez.
   const precos = useMemo(() => {
     if (!result || result.preco_sem_nota_60 == null) return null;
-    const unit = num(result.preco_sem_nota_60);
-    const desloc = num(result.custo_deslocamento);
-    const semNota = (unit - desloc) * quantidade + desloc;
-    const fatorNF = unit > 0 ? num(result.preco_com_nota_60) / unit : 1;
-    return { semNota, comNota: semNota * fatorNF };
-  }, [result, quantidade]);
+    return { semNota: num(result.preco_sem_nota_60), comNota: num(result.preco_com_nota_60) };
+  }, [result]);
 
   const temPreco = !!precos && precos.semNota > 0;
 
@@ -228,7 +232,7 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
                   <div className="space-y-1">
                     <div className="flex justify-between text-sm text-gray-600"><span>Material:</span><span className="text-right">{result.material_encontrado}</span></div>
                     <div className="flex justify-between text-sm text-gray-600"><span>Chapa/m²:</span><span>{formatCurrency(num(result.custo_chapa_m2))}</span></div>
-                    <div className="flex justify-between text-sm text-gray-600"><span>Área (un):</span><span>{num(result.area_m2).toFixed(2)} m²</span></div>
+                    <div className="flex justify-between text-sm text-gray-600"><span>Área (un):</span><span>{(num(result.area_m2) / quantidade).toFixed(2)} m²</span></div>
                     {num(result.custo_deslocamento) > 0 && (
                       <div className="flex justify-between text-sm text-gray-600"><span>Deslocamento ({cidade}):</span><span>{formatCurrency(num(result.custo_deslocamento))}</span></div>
                     )}
