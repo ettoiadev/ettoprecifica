@@ -5,9 +5,10 @@ import { supabase } from '../../lib/supabase/client';
 import { useCotacao } from '../../contexts/CotacaoContext';
 import { toast } from 'sonner';
 
-// Calculadora de Lona/Banner — preço do motor da skill (Edge Function calc-lona
-// → calc_lona). Por m² com tipo de acabamento, bastão opcional e deslocamento
-// por cidade. Quantidade por reconstrução (deslocamento cobrado uma vez).
+// Calculadora de Lona/Banner/Faixa — preço do motor da skill (Edge Function
+// calc-lona → calc_lona). Produto padrão: sempre com acabamento a R$70/m²
+// (tipo fixo "sem_acabamento" no motor), sem opção de tipo nem bastão.
+// Deslocamento por cidade; quantidade por reconstrução (deslocamento uma vez).
 interface LonaResult {
   tipo_encontrado?: string;
   area_m2?: number | string;
@@ -20,22 +21,13 @@ interface LonaResult {
   alerta?: string;
 }
 
-interface Opcao {
-  tipo: string;
-  nome: string;
-  preco_venda_m2: number | string;
-}
-
 const num = (v: number | string | undefined | null): number => Number(v ?? 0);
 
 const inputClass =
   'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent';
 
 const LonaCalculator: React.FC = () => {
-  const [opcoes, setOpcoes] = useState<Opcao[]>([]);
   const [cidades, setCidades] = useState<string[]>([]);
-  const [tipo, setTipo] = useState<string>('');
-  const [bastao, setBastao] = useState<boolean>(false);
   const [cidade, setCidade] = useState<string>('Jacareí');
   const [largura, setLargura] = useState<string>('');
   const [altura, setAltura] = useState<string>('');
@@ -49,8 +41,9 @@ const LonaCalculator: React.FC = () => {
 
   const larguraNum = parseFloat(largura) || 0;
   const alturaNum = parseFloat(altura) || 0;
-  const entradaValida = larguraNum > 0 && alturaNum > 0 && tipo !== '';
+  const entradaValida = larguraNum > 0 && alturaNum > 0;
 
+  // Carrega apenas as cidades (o tipo é fixo — produto padrão a R$70/m²).
   useEffect(() => {
     let ativo = true;
     (async () => {
@@ -59,15 +52,9 @@ const LonaCalculator: React.FC = () => {
           body: { action: 'meta' },
         });
         if (!ativo) return;
-        if (!error && data) {
-          if (Array.isArray(data.opcoes) && data.opcoes.length > 0) {
-            setOpcoes(data.opcoes);
-            setTipo((t) => t || data.opcoes[0].tipo);
-          }
-          if (Array.isArray(data.cidades) && data.cidades.length > 0) {
-            setCidades(data.cidades);
-            setCidade((c) => (data.cidades.includes(c) ? c : data.cidades[0]));
-          }
+        if (!error && Array.isArray(data?.cidades) && data.cidades.length > 0) {
+          setCidades(data.cidades);
+          setCidade((c) => (data.cidades.includes(c) ? c : data.cidades[0]));
         }
       } catch {
         /* sem meta */
@@ -89,7 +76,7 @@ const LonaCalculator: React.FC = () => {
       setError(null);
       try {
         const { data, error } = await supabase.functions.invoke('calc-lona', {
-          body: { tipo, bastao, largura: larguraNum, altura: alturaNum, cidade },
+          body: { tipo: 'sem_acabamento', bastao: false, largura: larguraNum, altura: alturaNum, cidade },
         });
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
@@ -102,7 +89,7 @@ const LonaCalculator: React.FC = () => {
       }
     }, 500);
     return () => clearTimeout(timer);
-  }, [tipo, bastao, larguraNum, alturaNum, cidade, entradaValida]);
+  }, [larguraNum, alturaNum, cidade, entradaValida]);
 
   // Quantidade por reconstrução: deslocamento uma vez por pedido.
   const precos = useMemo(() => {
@@ -115,19 +102,18 @@ const LonaCalculator: React.FC = () => {
   }, [result, quantidade]);
 
   const temPreco = !!precos && precos.semNota > 0;
-  const nomeTipo = opcoes.find((o) => o.tipo === tipo)?.nome ?? tipo;
 
   const descricao = useMemo(
     () =>
-      `Lona ${nomeTipo}${bastao ? ' c/ bastão' : ''} ${larguraNum.toFixed(2)}×${alturaNum.toFixed(2)}m${
+      `Lona/Banner ${larguraNum.toFixed(2)}×${alturaNum.toFixed(2)}m${
         quantidade > 1 ? ` (${quantidade}un)` : ''
       }`,
-    [nomeTipo, bastao, larguraNum, alturaNum, quantidade]
+    [larguraNum, alturaNum, quantidade]
   );
 
   const handleCopy = () => {
     if (!temPreco || !precos) return;
-    const texto = `Orçamento Lona/Banner — ${nomeTipo}${bastao ? ' (com bastão)' : ''}
+    const texto = `Orçamento Lona/Banner
 Dimensões: ${larguraNum.toFixed(2)} x ${alturaNum.toFixed(2)} m — ${quantidade} un
 Cidade: ${cidade}
 
@@ -150,7 +136,7 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Calculadora de Lona</h2>
         <p className="text-gray-600">
-          Lona/banner por m², com acabamento e bastão opcional. Preço do motor de precificação.
+          Lona, banner e faixa com acabamento padrão a R$ 70,00/m². Preço do motor de precificação.
         </p>
       </div>
 
@@ -175,31 +161,13 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
           </div>
 
           <div>
-            <label htmlFor="tipo-lona" className="block text-sm font-medium text-gray-700 mb-3">Tipo de lona</label>
-            <select id="tipo-lona" value={tipo} onChange={(e) => setTipo(e.target.value)} className={inputClass}>
-              {opcoes.length === 0 && <option value="">Carregando…</option>}
-              {opcoes.map((o) => (
-                <option key={o.tipo} value={o.tipo}>
-                  {o.nome} — {formatCurrency(num(o.preco_venda_m2))}/m²
-                </option>
+            <label htmlFor="cidade-lona" className="block text-sm font-medium text-gray-700 mb-3">Cidade (instalação)</label>
+            <select id="cidade-lona" value={cidade} onChange={(e) => setCidade(e.target.value)} className={inputClass}>
+              {cidades.length === 0 && <option value="Jacareí">Jacareí</option>}
+              {cidades.map((c) => (
+                <option key={c} value={c}>{c}</option>
               ))}
             </select>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4 items-end">
-            <label className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
-              <input type="checkbox" checked={bastao} onChange={(e) => setBastao(e.target.checked)} className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
-              <span className="text-sm font-medium text-gray-700">Com bastão (madeira/PVC)</span>
-            </label>
-            <div>
-              <label htmlFor="cidade-lona" className="block text-sm font-medium text-gray-700 mb-3">Cidade (instalação)</label>
-              <select id="cidade-lona" value={cidade} onChange={(e) => setCidade(e.target.value)} className={inputClass}>
-                {cidades.length === 0 && <option value="Jacareí">Jacareí</option>}
-                {cidades.map((c) => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
-            </div>
           </div>
         </div>
 
@@ -207,7 +175,7 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Orçamento</h3>
 
           {!entradaValida ? (
-            <p className="text-sm text-gray-500">Informe as dimensões e o tipo de lona para ver o preço.</p>
+            <p className="text-sm text-gray-500">Informe as dimensões para ver o preço.</p>
           ) : loading ? (
             <div className="flex items-center gap-2 text-sm text-gray-500">
               <Loader2 className="w-4 h-4 animate-spin" /> Calculando…
@@ -240,12 +208,8 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
                   </div>
 
                   <div className="space-y-1">
-                    <div className="flex justify-between text-sm text-gray-600"><span>Tipo:</span><span className="text-right">{result.tipo_encontrado}</span></div>
                     <div className="flex justify-between text-sm text-gray-600"><span>Preço/m²:</span><span>{formatCurrency(num(result.preco_m2))}</span></div>
                     <div className="flex justify-between text-sm text-gray-600"><span>Área (un):</span><span>{num(result.area_m2).toFixed(2)} m²</span></div>
-                    {num(result.adicional_bastao) > 0 && (
-                      <div className="flex justify-between text-sm text-gray-600"><span>Adicional bastão (un):</span><span>{formatCurrency(num(result.adicional_bastao))}</span></div>
-                    )}
                     {num(result.custo_deslocamento) > 0 && (
                       <div className="flex justify-between text-sm text-gray-600"><span>Deslocamento ({cidade}):</span><span>{formatCurrency(num(result.custo_deslocamento))}</span></div>
                     )}
