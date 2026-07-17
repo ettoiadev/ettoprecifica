@@ -6,9 +6,13 @@ import { useCotacao } from '../../contexts/CotacaoContext';
 import { toast } from 'sonner';
 
 // Calculadora de Lona/Banner/Faixa — preço do motor da skill (Edge Function
-// calc-lona → calc_lona). Produto padrão: sempre com acabamento a R$70/m²
-// (tipo fixo "sem_acabamento" no motor), sem opção de tipo nem bastão.
+// calc-lona → calc_lona). Dois acabamentos padrão do motor: Padrão
+// (sem_acabamento, R$70/m²) e Reforço + Ilhós (reforcada_ilhos, R$90/m²).
 // Deslocamento por cidade; quantidade por reconstrução (deslocamento uma vez).
+//
+// Laca de Proteção (+R$20/m²): adicional aplicado NO APP (o motor da skill ainda
+// não tem esse parâmetro). Somado por m² à área cotada, com o mesmo fator de
+// nota fiscal do preço base. TODO: migrar para a skill (p_laca) quando possível.
 interface LonaResult {
   tipo_encontrado?: string;
   area_m2?: number | string;
@@ -21,14 +25,39 @@ interface LonaResult {
   alerta?: string;
 }
 
+interface Opcao {
+  tipo: string;
+  nome: string;
+  preco_venda_m2: number | string;
+}
+
+// Adicional da laca de proteção, por m² (aplicado no app).
+const LACA_M2 = 20;
+
+// Acabamentos oferecidos nesta aba (ambos existem no motor da skill).
+const TIPOS: { tipo: string; label: string; precoFallback: number }[] = [
+  { tipo: 'sem_acabamento', label: 'Padrão', precoFallback: 70 },
+  { tipo: 'reforcada_ilhos', label: 'Reforço + Ilhós', precoFallback: 90 },
+];
+
 const num = (v: number | string | undefined | null): number => Number(v ?? 0);
 
 const inputClass =
   'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent';
 
+const btn = (active: boolean) =>
+  `px-4 py-3 rounded-lg border text-sm font-medium transition-colors ${
+    active
+      ? 'bg-blue-50 border-blue-300 text-blue-700'
+      : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+  }`;
+
 const LonaCalculator: React.FC = () => {
+  const [precoM2Por, setPrecoM2Por] = useState<Record<string, number>>({});
   const [cidades, setCidades] = useState<string[]>([]);
   const [cidade, setCidade] = useState<string>('Jacareí');
+  const [acabamento, setAcabamento] = useState<string>('sem_acabamento');
+  const [laca, setLaca] = useState<boolean>(false);
   const [largura, setLargura] = useState<string>('');
   const [altura, setAltura] = useState<string>('');
   const [quantidade, setQuantidade] = useState<number>(1);
@@ -43,7 +72,7 @@ const LonaCalculator: React.FC = () => {
   const alturaNum = parseFloat(altura) || 0;
   const entradaValida = larguraNum > 0 && alturaNum > 0;
 
-  // Carrega apenas as cidades (o tipo é fixo — produto padrão a R$70/m²).
+  // Carrega preços por acabamento (para os rótulos) e cidades.
   useEffect(() => {
     let ativo = true;
     (async () => {
@@ -52,9 +81,18 @@ const LonaCalculator: React.FC = () => {
           body: { action: 'meta' },
         });
         if (!ativo) return;
-        if (!error && Array.isArray(data?.cidades) && data.cidades.length > 0) {
-          setCidades(data.cidades);
-          setCidade((c) => (data.cidades.includes(c) ? c : data.cidades[0]));
+        if (!error && data) {
+          if (Array.isArray(data.opcoes)) {
+            const mapa: Record<string, number> = {};
+            (data.opcoes as Opcao[]).forEach((o) => {
+              mapa[o.tipo] = num(o.preco_venda_m2);
+            });
+            setPrecoM2Por(mapa);
+          }
+          if (Array.isArray(data.cidades) && data.cidades.length > 0) {
+            setCidades(data.cidades);
+            setCidade((c) => (data.cidades.includes(c) ? c : data.cidades[0]));
+          }
         }
       } catch {
         /* sem meta */
@@ -76,7 +114,7 @@ const LonaCalculator: React.FC = () => {
       setError(null);
       try {
         const { data, error } = await supabase.functions.invoke('calc-lona', {
-          body: { tipo: 'sem_acabamento', bastao: false, largura: larguraNum, altura: alturaNum, cidade },
+          body: { tipo: acabamento, bastao: false, largura: larguraNum, altura: alturaNum, cidade },
         });
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
@@ -89,31 +127,36 @@ const LonaCalculator: React.FC = () => {
       }
     }, 500);
     return () => clearTimeout(timer);
-  }, [larguraNum, alturaNum, cidade, entradaValida]);
+  }, [acabamento, larguraNum, alturaNum, cidade, entradaValida]);
 
-  // Quantidade por reconstrução: deslocamento uma vez por pedido.
+  // Quantidade por reconstrução (deslocamento uma vez) + laca por m² (app).
   const precos = useMemo(() => {
     if (!result || result.preco_final == null) return null;
     const unit = num(result.preco_final);
     const desloc = num(result.custo_deslocamento);
-    const semNota = (unit - desloc) * quantidade + desloc;
+    const area = num(result.area_m2);
+    const baseSemNota = (unit - desloc) * quantidade + desloc;
+    const lacaUnit = laca ? LACA_M2 * area : 0;
+    const lacaTotal = lacaUnit * quantidade;
+    const semNota = baseSemNota + lacaTotal;
     const fatorNF = unit > 0 ? num(result.preco_com_nota) / unit : 1;
-    return { semNota, comNota: semNota * fatorNF };
-  }, [result, quantidade]);
+    return { semNota, comNota: semNota * fatorNF, lacaTotal };
+  }, [result, quantidade, laca]);
 
   const temPreco = !!precos && precos.semNota > 0;
+  const acabamentoLabel = TIPOS.find((t) => t.tipo === acabamento)?.label ?? 'Padrão';
 
   const descricao = useMemo(
     () =>
-      `Lona/Banner ${larguraNum.toFixed(2)}×${alturaNum.toFixed(2)}m${
+      `Lona/Banner ${acabamentoLabel}${laca ? ' + laca' : ''} ${larguraNum.toFixed(2)}×${alturaNum.toFixed(2)}m${
         quantidade > 1 ? ` (${quantidade}un)` : ''
       }`,
-    [larguraNum, alturaNum, quantidade]
+    [acabamentoLabel, laca, larguraNum, alturaNum, quantidade]
   );
 
   const handleCopy = () => {
     if (!temPreco || !precos) return;
-    const texto = `Orçamento Lona/Banner
+    const texto = `Orçamento Lona/Banner — ${acabamentoLabel}${laca ? ' + Laca de Proteção' : ''}
 Dimensões: ${larguraNum.toFixed(2)} x ${alturaNum.toFixed(2)} m — ${quantidade} un
 Cidade: ${cidade}
 
@@ -136,7 +179,8 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Calculadora de Lona</h2>
         <p className="text-gray-600">
-          Lona, banner e faixa com acabamento padrão a R$ 70,00/m². Preço do motor de precificação.
+          Lona, banner e faixa por m². Padrão R$ 70,00/m² ou reforço + ilhós R$ 90,00/m². Preço do
+          motor de precificação.
         </p>
       </div>
 
@@ -159,6 +203,25 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
               </div>
             </div>
           </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-3">Acabamento</label>
+            <div className="grid grid-cols-2 gap-3">
+              {TIPOS.map((t) => {
+                const preco = precoM2Por[t.tipo] ?? t.precoFallback;
+                return (
+                  <button key={t.tipo} type="button" onClick={() => setAcabamento(t.tipo)} className={btn(acabamento === t.tipo)}>
+                    {t.label} — {formatCurrency(preco)}/m²
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <label className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+            <input type="checkbox" checked={laca} onChange={(e) => setLaca(e.target.checked)} className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
+            <span className="text-sm font-medium text-gray-700">Laca de Proteção (+{formatCurrency(LACA_M2)}/m²)</span>
+          </label>
 
           <div>
             <label htmlFor="cidade-lona" className="block text-sm font-medium text-gray-700 mb-3">Cidade (instalação)</label>
@@ -208,8 +271,12 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
                   </div>
 
                   <div className="space-y-1">
+                    <div className="flex justify-between text-sm text-gray-600"><span>Acabamento:</span><span>{acabamentoLabel}</span></div>
                     <div className="flex justify-between text-sm text-gray-600"><span>Preço/m²:</span><span>{formatCurrency(num(result.preco_m2))}</span></div>
                     <div className="flex justify-between text-sm text-gray-600"><span>Área (un):</span><span>{num(result.area_m2).toFixed(2)} m²</span></div>
+                    {laca && precos.lacaTotal > 0 && (
+                      <div className="flex justify-between text-sm text-gray-600"><span>Laca de proteção (+{formatCurrency(LACA_M2)}/m²):</span><span>{formatCurrency(precos.lacaTotal)}</span></div>
+                    )}
                     {num(result.custo_deslocamento) > 0 && (
                       <div className="flex justify-between text-sm text-gray-600"><span>Deslocamento ({cidade}):</span><span>{formatCurrency(num(result.custo_deslocamento))}</span></div>
                     )}
