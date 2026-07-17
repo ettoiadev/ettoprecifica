@@ -179,18 +179,3 @@ export const migrateConfig = (config: PricingConfig): PricingConfig => {
 
   return next;
 };
-
-/**
- * Retorna as opções de uma seção. Usa `variations` quando disponível; caso
- * contrário semeia a partir dos campos base (fallback resiliente à migração).
- */
-export const getProductOptions = (
-  section: OptionListSection,
-  config: PricingConfig,
-): ProductVariation[] => {
-  const sectionConfig = config?.[section] as unknown as Record<string, unknown> | undefined;
-  if (sectionConfig && Array.isArray(sectionConfig.variations)) {
-    return sectionConfig.variations as ProductVariation[];
-  }
-  return seedVariations(section, sectionConfig);
-};
