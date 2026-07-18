@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# Arquivos transitórios do Vite (dump de compilação da config)
+vite.config.ts.timestamp-*.mjs
+
 # Variáveis de ambiente (nunca commitar segredos)
 .env
 .env.*
