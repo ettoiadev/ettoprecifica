@@ -45,8 +45,6 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.0.0",
     "date-fns": "^3.6.0",
-    "drizzle-kit": "^0.31.1",
-    "drizzle-orm": "^0.30.10",
     "embla-carousel-react": "^8.3.0",
     "input-otp": "^1.2.4",
     "lucide-react": "^0.462.0",
