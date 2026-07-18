@@ -85,7 +85,9 @@ const PlacaPSCalculator: React.FC = () => {
       setError(null);
       try {
         const { data, error } = await supabase.functions.invoke('calc-ps', {
-          body: { tipo, largura: larguraNum, altura: alturaNum, percentual },
+          // Área agregada (área por peça × qtd) enviada como largura×altura, para o
+          // motor aplicar o mínimo de projeto UMA vez (evita cobrar o mínimo por peça).
+          body: { tipo, largura: larguraNum * alturaNum * qtd, altura: 1, percentual },
         });
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
@@ -99,16 +101,14 @@ const PlacaPSCalculator: React.FC = () => {
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [tipo, larguraNum, alturaNum, percentual]);
+  }, [tipo, larguraNum, alturaNum, qtd, percentual]);
 
-  // Preço do pedido: preço por peça × quantidade (modelo de mercado, sem custo fixo).
+  // O resultado já é o total do pedido (área agregada): preco_final inclui o
+  // mínimo de projeto, aplicado uma única vez.
   const precos = useMemo(() => {
     if (!result || !result.material_encontrado) return null;
-    return {
-      semNota: num(result.preco_final) * qtd,
-      comNota: num(result.preco_com_nota) * qtd,
-    };
-  }, [result, qtd]);
+    return { semNota: num(result.preco_final), comNota: num(result.preco_com_nota) };
+  }, [result]);
 
   // Motor 2 (fallback de custo) tem colunas de custo preenchidas.
   const isMotor2 = result != null && result.custo_material != null;
@@ -290,7 +290,7 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
                     {num(result.preco_mercado_m2) > 0 && (
                       <div className="mt-1 text-xs text-gray-500">
                         Preço de mercado: {formatCurrency(num(result.preco_mercado_m2))}/m² ·{' '}
-                        {num(result.area_peca_m2).toFixed(2)} m²
+                        {(num(result.area_peca_m2) / qtd).toFixed(2)} m²/peça
                       </div>
                     )}
                     {qtd > 1 && (
@@ -311,7 +311,7 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
                       </div>
                       <div className="flex justify-between text-sm text-gray-600">
                         <span>Área{qtd > 1 ? ' (por peça)' : ''}:</span>
-                        <span>{num(result.area_peca_m2).toFixed(2)} m²</span>
+                        <span>{(num(result.area_peca_m2) / qtd).toFixed(2)} m²</span>
                       </div>
                       {qtd > 1 && (
                         <div className="flex justify-between text-sm text-gray-600">
@@ -334,7 +334,7 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
                         <span>{formatCurrency(num(result.custo_impressao))}</span>
                       </div>
                       <div className="flex justify-between text-sm font-medium text-gray-900 pt-1">
-                        <span>Custo total{qtd > 1 ? ' (por peça)' : ''}:</span>
+                        <span>Custo total do pedido:</span>
                         <span>{formatCurrency(num(result.custo_total_motor2))}</span>
                       </div>
                     </div>
