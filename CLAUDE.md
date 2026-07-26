@@ -56,5 +56,16 @@ curl -s -X POST "https://api.supabase.com/v1/projects/ghyctsclpcsrznrqegrp/datab
 ```
 Deploy de Edge Function: `POST .../v1/projects/<ref>/functions/deploy?slug=<slug>` com `-F metadata=...;type=application/json -F file=@index.ts`. **Nunca** salvar o token; pedir para revogar após uso.
 
-## Estado atual (2026-07-18)
-Todas as 14 abas ligadas e funcionando. Últimas correções: laca UV (Lona/Adesivo via `p_laca_uv`), erro non-2xx do Adesivo (ambiguidade), e o mínimo-por-unidade (Adesivo/Lona/ACM/PS). Sem pendências de bug conhecidas. Pendência do lado da skill: `acm_placa_opcoes` só tem espessura 3mm e `calc_placa_acm` só aceita `p_acabamento='sem_impressao'` — se venderem outras espessuras/impressão, pedir à skill para completar.
+## Estado atual (2026-07-26)
+Reconhecimento completo feito: assinaturas reais de todas as 14 funções `calc_*` no banco (via `pg_proc`/`pg_get_function_arguments`) foram comparadas 1:1 com os `supabase/functions/calc-*/index.ts` e com os componentes React. **Tudo já está sincronizado, nenhuma atualização pendente.** `tsc --noEmit` e `vite build` passam limpos.
+
+Recursos da skill que já estão implementados (não são novidade, mas não estavam documentados nesta tabela):
+- `calc_adesivo_recorte`: suporta 2ª cor de recorte sobreposta (`p_cores`, `p_produto_cor2`, `p_percentual_area_cor2`) e modo área direta (`p_area_m2`) além do modo largura×altura+percentual — UI em AdesivoRecorteCalculator já cobre isso.
+- `calc_laser` e `calc_luminoso`: aceitam `p_forma` ('retangular'/'circular', desambiguam overloads); laser também aceita 2ª camada de material (`p_material_camada2`, `p_percentual_camada2`) — UI já cobre.
+- `calc_letra_caixa`: overload único hoje com `p_tipo_iluminacao` (ex.: `frontal_acrilico`) — UI já cobre.
+- `calc_fachada_lona`: aceita `p_iluminado` (backlight) — UI já cobre.
+- `calc_vidro`: aceita `p_qtd_prolongadores` — UI já cobre.
+- `calc_placa_acm`: já aceita `p_espessura_mm` (não é overload novo, é parâmetro com default 3). Pendência ainda válida do lado da skill: `acm_placa_opcoes` só tem linhas de 3mm e a função só é chamada com `p_acabamento='sem_impressao'` — se a skill passar a vender outras espessuras/impressão, atualizar `calc-placa-acm/index.ts` e o dropdown.
+- `calc_fachada_acm`: tem parâmetros opcionais `qtd_chapas_informada`/`qtd_barras_metalon_informada` (default NULL) para o usuário sobrescrever a quantidade calculada — hoje a Edge Function não os envia (não é bug, é comportamento padrão de auto-cálculo); considerar expor na UI se pedirem controle manual de chapas/metalon.
+
+Sem pendências de bug conhecidas.
