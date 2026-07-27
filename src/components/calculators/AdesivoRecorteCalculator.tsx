@@ -27,6 +27,9 @@ interface RecorteResult {
   custo_deslocamento?: number | string;
   preco_minimo_projeto?: number | string;
   custo_total?: number | string;
+  motor_usado?: string;
+  preco_final?: number | string;
+  preco_final_com_nota?: number | string;
   preco_sem_nota_60?: number | string;
   preco_sem_nota_55?: number | string;
   preco_com_nota_60?: number | string;
@@ -163,19 +166,13 @@ const AdesivoRecorteCalculator: React.FC = () => {
     return () => clearTimeout(timer);
   }, [produto, entradaValida, areaTotal, comMascara, cores, produtoCor2, percentualCor2, cidade]);
 
-  // Aplica o valor mínimo de projeto ao preço exibido (como o resto do app faz).
+  // preco_final/preco_final_com_nota já vêm prontos do motor (mínimo de projeto
+  // e escolha do motor 1 "mercado" vs motor 2 "custo real" já aplicados lá).
   const precos = useMemo(() => {
     if (!result) return null;
-    const base = num(result.preco_sem_nota_60);
-    const minimo = num(result.preco_minimo_projeto);
-    const fatorNota = base > 0 ? num(result.preco_com_nota_60) / base : 1.0931;
-    const aplicouMinimo = minimo > 0 && base < minimo;
-    const semNota = aplicouMinimo ? minimo : base;
     return {
-      semNota,
-      comNota: semNota * fatorNota,
-      aplicouMinimo,
-      minimo,
+      semNota: num(result.preco_final),
+      comNota: num(result.preco_final_com_nota),
     };
   }, [result]);
 
@@ -559,11 +556,6 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
                       <div className="mt-1 text-xs text-gray-500">
                         {qtd} un. · unitário {formatCurrency(precos.semNota / qtd)} (
                         {formatCurrency(precos.comNota / qtd)} c/ nota)
-                      </div>
-                    )}
-                    {precos.aplicouMinimo && (
-                      <div className="mt-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">
-                        Valor mínimo de projeto aplicado ({formatCurrency(precos.minimo)}).
                       </div>
                     )}
                   </div>
