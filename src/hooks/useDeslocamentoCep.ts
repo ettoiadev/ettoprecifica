@@ -8,6 +8,8 @@ import { supabase } from '../lib/supabase/client';
 export interface InfoDeslocamentoCep {
   distanciaIdaKm: number;
   trecho: string;
+  cidadeDestino: string | null;
+  pisoCidadeAplicado: number | null;
 }
 
 export function useDeslocamentoCep() {
@@ -48,7 +50,12 @@ export function useDeslocamentoCep() {
         const r = data?.resultado;
         if (r?.custo_deslocamento_total == null) throw new Error('Resposta inesperada do cálculo de deslocamento.');
         setCustoDeslocamento(String(r.custo_deslocamento_total));
-        setInfoCep({ distanciaIdaKm: Number(r.distancia_ida_km ?? data.distancia_ida_km), trecho: String(r.trecho ?? '') });
+        setInfoCep({
+          distanciaIdaKm: Number(r.distancia_ida_km ?? data.distancia_ida_km),
+          trecho: String(r.trecho ?? ''),
+          cidadeDestino: r.cidade_destino_informada ?? null,
+          pisoCidadeAplicado: r.piso_cidade_aplicado != null ? Number(r.piso_cidade_aplicado) : null,
+        });
       } catch (e) {
         if (!ativo) return;
         setErroCep(e instanceof Error ? e.message : 'Não foi possível calcular o deslocamento pelo CEP.');

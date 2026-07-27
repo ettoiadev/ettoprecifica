@@ -168,6 +168,10 @@ Deno.serve(async (req: Request) => {
       p_tempo_instalacao_horas: tempoInstalacaoHoras,
     };
     if (qtdFuncionarios != null) rpcArgs.p_qtd_funcionarios = qtdFuncionarios;
+    // Cidade do destino (resolvida via ViaCEP) habilita o piso mínimo por
+    // cidade da skill (deslocamento_minimos_cidade) — sem isso a função cobra
+    // só o km puro e ignora o piso (ex: Jacareí R$80, São José dos Campos R$150).
+    if (enderecoDestino.localidade) rpcArgs.p_cidade_destino = enderecoDestino.localidade;
 
     const { data, error } = await supabase.rpc("calc_deslocamento", rpcArgs);
     if (error) throw error;

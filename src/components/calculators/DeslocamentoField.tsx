@@ -76,7 +76,11 @@ const DeslocamentoField: React.FC<UseDeslocamentoCepReturn> = ({
           )}
           {infoCep && !buscandoCep && !erroCep && (
             <p className="text-xs text-gray-500">
-              Distância estimada: {infoCep.distanciaIdaKm.toFixed(2)} km ({infoCep.trecho}) — valor pré-preenchido, revise antes de confirmar.
+              Distância estimada: {infoCep.distanciaIdaKm.toFixed(2)} km ({infoCep.trecho})
+              {infoCep.pisoCidadeAplicado != null && (
+                <> — piso mínimo de {formatCurrency(infoCep.pisoCidadeAplicado)} aplicado para {infoCep.cidadeDestino}</>
+              )}
+              {' '}— valor pré-preenchido, revise antes de confirmar.
             </p>
           )}
 
