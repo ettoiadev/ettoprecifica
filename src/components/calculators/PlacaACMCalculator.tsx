@@ -167,7 +167,7 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
               </div>
               <div>
                 <label className="block text-xs text-gray-500 mb-1">Quantidade</label>
-                <input type="number" min="1" value={quantidade || ''} onChange={(e) => setQuantidade(parseInt(e.target.value) || 1)} className={inputClass} placeholder="1" />
+                <input type="number" min="1" step="1" value={quantidade || ''} onChange={(e) => setQuantidade(parseInt(e.target.value) || 1)} className={inputClass} placeholder="1" />
               </div>
             </div>
           </div>
