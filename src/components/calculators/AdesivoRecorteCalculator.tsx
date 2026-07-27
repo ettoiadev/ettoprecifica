@@ -25,6 +25,7 @@ interface RecorteResult {
   custo_registro_2cores?: number | string;
   subtotal_materiais?: number | string;
   custo_deslocamento?: number | string;
+  deslocamento_incluido?: boolean;
   preco_minimo_projeto?: number | string;
   custo_total?: number | string;
   motor_usado?: string;
@@ -41,11 +42,6 @@ interface Material {
   uso: string;
   largura_rolo_m: number | string;
 }
-
-const CIDADES_FALLBACK = [
-  'Caçapava', 'Guararema', 'Igaratá', 'Jacareí', 'Litoral', 'Paraibuna',
-  'Santa Branca', 'Santa Isabel', 'São José dos Campos', 'São Paulo', 'Taubaté',
-];
 
 // Rótulos amigáveis para o campo "uso" dos materiais.
 const USO_LABEL: Record<string, string> = {
@@ -83,8 +79,8 @@ const AdesivoRecorteCalculator: React.FC = () => {
   const [cores, setCores] = useState<1 | 2>(1);
   const [produtoCor2, setProdutoCor2] = useState<string>('');
   const [percentualCor2, setPercentualCor2] = useState<number>(90);
-  const [cidade, setCidade] = useState<string>('Jacareí');
-  const [cidades, setCidades] = useState<string[]>(CIDADES_FALLBACK);
+  const [incluirDeslocamento, setIncluirDeslocamento] = useState<boolean>(false);
+  const [custoDeslocamento, setCustoDeslocamento] = useState<string>('');
 
   const [result, setResult] = useState<RecorteResult | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
@@ -95,6 +91,7 @@ const AdesivoRecorteCalculator: React.FC = () => {
   const larguraNum = parseFloat(largura) || 0;
   const alturaNum = parseFloat(altura) || 0;
   const areaDiretaNum = parseFloat(areaDireta) || 0;
+  const custoDeslocamentoNum = parseFloat(custoDeslocamento) || 0;
   const qtd = quantidade > 0 ? quantidade : 1;
 
   // Área de vinil de UMA unidade conforme o modo escolhido.
@@ -109,25 +106,21 @@ const AdesivoRecorteCalculator: React.FC = () => {
   const entradaValida =
     modo === 'area' ? areaDiretaNum > 0 : larguraNum > 0 && alturaNum > 0;
 
-  // Carrega materiais e cidades do motor (uma vez); mantém fallback se falhar.
+  // Carrega materiais do motor (uma vez).
   useEffect(() => {
     let ativo = true;
     (async () => {
       try {
-        const [mat, cid] = await Promise.all([
-          supabase.functions.invoke('calc-adesivo-recorte', { body: { action: 'materiais' } }),
-          supabase.functions.invoke('calc-adesivo-recorte', { body: { action: 'cidades' } }),
-        ]);
+        const { data, error } = await supabase.functions.invoke('calc-adesivo-recorte', {
+          body: { action: 'materiais' },
+        });
         if (!ativo) return;
-        if (!mat.error && Array.isArray(mat.data?.materiais) && mat.data.materiais.length > 0) {
-          setMateriais(mat.data.materiais);
-          setProduto((p) => p || mat.data.materiais[0].nome);
-        }
-        if (!cid.error && Array.isArray(cid.data?.cidades) && cid.data.cidades.length > 0) {
-          setCidades(cid.data.cidades);
+        if (!error && Array.isArray(data?.materiais) && data.materiais.length > 0) {
+          setMateriais(data.materiais);
+          setProduto((p) => p || data.materiais[0].nome);
         }
       } catch {
-        /* mantém fallback */
+        /* mantém estado atual */
       }
     })();
     return () => {
@@ -150,7 +143,14 @@ const AdesivoRecorteCalculator: React.FC = () => {
         const cor2 =
           cores === 2 ? { cores: 2, produtoCor2: produtoCor2 || undefined, percentualCor2 } : {};
         // Sempre via área direta (já computada no app com modo + % + quantidade).
-        const body = { produto, area: areaTotal, mascara: comMascara, cidade, ...cor2 };
+        const body = {
+          produto,
+          area: areaTotal,
+          mascara: comMascara,
+          incluirDeslocamento,
+          custoDeslocamento: custoDeslocamentoNum,
+          ...cor2,
+        };
         const { data, error } = await supabase.functions.invoke('calc-adesivo-recorte', { body });
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
@@ -164,7 +164,7 @@ const AdesivoRecorteCalculator: React.FC = () => {
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [produto, entradaValida, areaTotal, comMascara, cores, produtoCor2, percentualCor2, cidade]);
+  }, [produto, entradaValida, areaTotal, comMascara, cores, produtoCor2, percentualCor2, incluirDeslocamento, custoDeslocamentoNum]);
 
   // preco_final/preco_final_com_nota já vêm prontos do motor (mínimo de projeto
   // e escolha do motor 1 "mercado" vs motor 2 "custo real" já aplicados lá).
@@ -200,8 +200,7 @@ const AdesivoRecorteCalculator: React.FC = () => {
 Material: ${result.produto_encontrado ?? produto}${cores === 2 ? `\n2ª cor: ${result.produto_cor2_encontrado ?? (produtoCor2 || result.produto_encontrado)} (${percentualCor2}%)` : ''}
 Quantidade: ${medidaTexto}
 Máscara de transferência: ${comMascara ? 'sim' : 'não'}
-Cidade: ${cidade}
-
+${incluirDeslocamento ? `Deslocamento incluído: ${formatCurrency(custoDeslocamentoNum)}\n` : ''}
 Preço (sem nota fiscal): ${formatCurrency(precos.semNota)}
 Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
     navigator.clipboard.writeText(texto).then(
@@ -497,21 +496,29 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
           </div>
 
           <div>
-            <label htmlFor="cidade-recorte" className="block text-sm font-medium text-gray-700 mb-3">
-              Cidade (instalação)
+            <label className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={incluirDeslocamento}
+                onChange={(e) => setIncluirDeslocamento(e.target.checked)}
+                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              />
+              <span className="text-sm font-medium text-gray-700">Incluir deslocamento</span>
             </label>
-            <select
-              id="cidade-recorte"
-              value={cidade}
-              onChange={(e) => setCidade(e.target.value)}
-              className={inputClass}
-            >
-              {cidades.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
+            {incluirDeslocamento && (
+              <div className="mt-3">
+                <label className="block text-xs text-gray-500 mb-1">Valor do deslocamento (R$)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={custoDeslocamento}
+                  onChange={(e) => setCustoDeslocamento(e.target.value)}
+                  className={inputClass}
+                  placeholder="0.00"
+                />
+              </div>
+            )}
           </div>
         </div>
 

@@ -52,7 +52,10 @@ Deno.serve(async (req: Request) => {
     const tipo = String(body?.tipo ?? "").trim();
     const metros = Number(body?.metros);
     const incluirUber = body?.incluirUber !== false; // default true
-    const cidade = body?.cidade ? String(body.cidade) : "Jacareí";
+    // Deslocamento é opcional (informado manualmente pelo vendedor) — não é mais
+    // resolvido por cidade, a tabela deslocamento_cidades ficou obsoleta.
+    const incluirDeslocamento = body?.incluirDeslocamento === true;
+    const custoDeslocamento = Number(body?.custoDeslocamento) || 0;
 
     if (!tipo) return json({ error: "informe o tipo de DTF" }, 400);
     if (!(metros > 0)) return json({ error: "informe os metros lineares" }, 400);
@@ -62,12 +65,13 @@ Deno.serve(async (req: Request) => {
       p_metros_lineares: metros,
       p_tipo: tipo,
       p_incluir_uber: incluirUber,
-      p_cidade: cidade,
+      p_custo_deslocamento: custoDeslocamento,
+      p_incluir_deslocamento: incluirDeslocamento,
     });
     if (error) throw error;
 
     const resultado = Array.isArray(data) ? data[0] : data;
-    return json({ tipo, metros, incluirUber, resultado });
+    return json({ tipo, metros, incluirUber, incluirDeslocamento, custoDeslocamento, resultado });
   } catch (e) {
     return json({ error: e instanceof Error ? e.message : String(e) }, 500);
   }

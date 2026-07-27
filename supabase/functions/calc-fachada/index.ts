@@ -34,21 +34,13 @@ Deno.serve(async (req: Request) => {
 
     const body = await req.json().catch(() => ({}));
 
-    // Lista de cidades ativas (para o dropdown do app)
-    if (body?.action === "cidades") {
-      const { data, error } = await supabase
-        .from("deslocamento_cidades")
-        .select("cidade")
-        .eq("ativo", true)
-        .order("cidade");
-      if (error) throw error;
-      return json({ cidades: (data ?? []).map((r: { cidade: string }) => r.cidade) });
-    }
-
     const tipo = String(body?.tipo ?? "").toLowerCase();
     const largura = Number(body?.largura);
     const altura = Number(body?.altura);
-    const cidade = String(body?.cidade ?? "Jacareí");
+    // Deslocamento é opcional (informado manualmente pelo vendedor) — não é mais
+    // resolvido por cidade, a tabela deslocamento_cidades ficou obsoleta.
+    const incluirDeslocamento = body?.incluirDeslocamento === true;
+    const custoDeslocamento = Number(body?.custoDeslocamento) || 0;
     // Fixação da lona: 'ilhos' (ilhós + abraçadeiras) ou 'rebite' (cantoneira).
     const fixacao =
       String(body?.fixacao ?? "ilhos").toLowerCase() === "rebite" ? "rebite" : "ilhos";
@@ -71,22 +63,24 @@ Deno.serve(async (req: Request) => {
       ({ data, error } = await supabase.rpc("calc_fachada_acm", {
         largura_m: largura,
         altura_m: altura,
-        p_cidade: cidade,
         p_acabamento: acabamento,
+        p_custo_deslocamento: custoDeslocamento,
+        p_incluir_deslocamento: incluirDeslocamento,
       }));
     } else {
       ({ data, error } = await supabase.rpc("calc_fachada_lona", {
         largura_m: largura,
         altura_m: altura,
-        p_cidade: cidade,
         p_fixacao: fixacao,
         p_iluminado: iluminado,
+        p_custo_deslocamento: custoDeslocamento,
+        p_incluir_deslocamento: incluirDeslocamento,
       }));
     }
     if (error) throw error;
 
     const resultado = Array.isArray(data) ? data[0] : data;
-    return json({ tipo, largura, altura, cidade, fixacao, iluminado, acabamento, resultado });
+    return json({ tipo, largura, altura, fixacao, iluminado, acabamento, incluirDeslocamento, custoDeslocamento, resultado });
   } catch (e) {
     return json({ error: e instanceof Error ? e.message : String(e) }, 500);
   }

@@ -47,22 +47,14 @@ Deno.serve(async (req: Request) => {
       return json({ materiais: data ?? [] });
     }
 
-    // Cidades ativas (para o dropdown do app)
-    if (body?.action === "cidades") {
-      const { data, error } = await supabase
-        .from("deslocamento_cidades")
-        .select("cidade")
-        .eq("ativo", true)
-        .order("cidade");
-      if (error) throw error;
-      return json({ cidades: (data ?? []).map((r: { cidade: string }) => r.cidade) });
-    }
-
     const tipo = String(body?.tipo ?? "").trim();
     const largura = Number(body?.largura);
     const altura = Number(body?.altura);
-    const cidade = String(body?.cidade ?? "Jacareí");
     const prolongadores = Math.max(0, Math.trunc(Number(body?.prolongadores) || 0));
+    // Deslocamento é opcional (informado manualmente pelo vendedor) — não é mais
+    // resolvido por cidade, a tabela deslocamento_cidades ficou obsoleta.
+    const incluirDeslocamento = body?.incluirDeslocamento === true;
+    const custoDeslocamento = Number(body?.custoDeslocamento) || 0;
 
     if (!tipo) {
       return json({ error: "informe o tipo de vidro" }, 400);
@@ -76,12 +68,13 @@ Deno.serve(async (req: Request) => {
       largura_m: largura,
       altura_m: altura,
       p_qtd_prolongadores: prolongadores,
-      p_cidade: cidade,
+      p_custo_deslocamento: custoDeslocamento,
+      p_incluir_deslocamento: incluirDeslocamento,
     });
     if (error) throw error;
 
     const resultado = Array.isArray(data) ? data[0] : data;
-    return json({ tipo, largura, altura, prolongadores, cidade, resultado });
+    return json({ tipo, largura, altura, prolongadores, incluirDeslocamento, custoDeslocamento, resultado });
   } catch (e) {
     return json({ error: e instanceof Error ? e.message : String(e) }, 500);
   }

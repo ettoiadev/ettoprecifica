@@ -14,6 +14,7 @@ interface GivResult {
   quantidade_encontrada?: number | string;
   custo_giv?: number | string;
   custo_deslocamento?: number | string;
+  deslocamento_incluido?: boolean;
   preco_final?: number | string | null;
   preco_com_nota?: number | string | null;
   alerta?: string;
@@ -35,6 +36,8 @@ const GivCalculator: React.FC = () => {
   const [produto, setProduto] = useState<string>('');
   const [tipo, setTipo] = useState<string>('');
   const [quantidade, setQuantidade] = useState<number | ''>('');
+  const [incluirDeslocamento, setIncluirDeslocamento] = useState<boolean>(false);
+  const [custoDeslocamento, setCustoDeslocamento] = useState<string>('');
 
   const [result, setResult] = useState<GivResult | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
@@ -57,6 +60,7 @@ const GivCalculator: React.FC = () => {
   );
 
   const entradaValida = produto !== '' && quantidade !== '';
+  const custoDeslocamentoNum = parseFloat(custoDeslocamento) || 0;
 
   useEffect(() => {
     let ativo = true;
@@ -102,7 +106,13 @@ const GivCalculator: React.FC = () => {
       setError(null);
       try {
         const { data, error } = await supabase.functions.invoke('calc-giv', {
-          body: { produto, tipo: tipo || undefined, quantidade: Number(quantidade) },
+          body: {
+            produto,
+            tipo: tipo || undefined,
+            quantidade: Number(quantidade),
+            incluirDeslocamento,
+            custoDeslocamento: custoDeslocamentoNum,
+          },
         });
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
@@ -115,7 +125,7 @@ const GivCalculator: React.FC = () => {
       }
     }, 500);
     return () => clearTimeout(timer);
-  }, [produto, tipo, quantidade, entradaValida]);
+  }, [produto, tipo, quantidade, incluirDeslocamento, custoDeslocamentoNum, entradaValida]);
 
   const temPreco = !!result && result.preco_final != null && num(result.preco_final) > 0;
 
@@ -215,6 +225,32 @@ Preço (com nota fiscal): ${formatCurrency(num(result.preco_com_nota))}`;
               ))}
             </select>
           </div>
+
+          <div>
+            <label className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={incluirDeslocamento}
+                onChange={(e) => setIncluirDeslocamento(e.target.checked)}
+                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              />
+              <span className="text-sm font-medium text-gray-700">Incluir deslocamento</span>
+            </label>
+            {incluirDeslocamento && (
+              <div className="mt-3">
+                <label className="block text-xs text-gray-500 mb-1">Valor do deslocamento (R$)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={custoDeslocamento}
+                  onChange={(e) => setCustoDeslocamento(e.target.value)}
+                  className={inputClass}
+                  placeholder="0.00"
+                />
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="bg-gray-50 rounded-xl border border-gray-200 p-6">
@@ -275,6 +311,12 @@ Preço (com nota fiscal): ${formatCurrency(num(result.preco_com_nota))}`;
                         <span>
                           {formatCurrency(num(result.preco_final) / num(result.quantidade_encontrada))}
                         </span>
+                      </div>
+                    )}
+                    {incluirDeslocamento && num(result.custo_deslocamento) > 0 && (
+                      <div className="flex justify-between text-sm text-gray-600">
+                        <span>Deslocamento:</span>
+                        <span>{formatCurrency(num(result.custo_deslocamento))}</span>
                       </div>
                     )}
                   </div>

@@ -33,17 +33,6 @@ Deno.serve(async (req: Request) => {
 
     const body = await req.json().catch(() => ({}));
 
-    // Lista de cidades ativas (para o dropdown do app)
-    if (body?.action === "cidades") {
-      const { data, error } = await supabase
-        .from("deslocamento_cidades")
-        .select("cidade")
-        .eq("ativo", true)
-        .order("cidade");
-      if (error) throw error;
-      return json({ cidades: (data ?? []).map((r: { cidade: string }) => r.cidade) });
-    }
-
     const tipoLuz = String(body?.tipo_luz ?? "modulo").toLowerCase();
     const material = String(body?.material ?? "lona").toLowerCase();
     // Forma: 'circular' usa largura como diâmetro (altura é ignorada pela função).
@@ -51,7 +40,10 @@ Deno.serve(async (req: Request) => {
     const faces = Number(body?.faces);
     const largura = Number(body?.largura);
     const altura = forma === "circular" ? Number(body?.largura) : Number(body?.altura);
-    const cidade = String(body?.cidade ?? "Jacareí");
+    // Deslocamento é opcional (informado manualmente pelo vendedor) — não é mais
+    // resolvido por cidade, a tabela deslocamento_cidades ficou obsoleta.
+    const incluirDeslocamento = body?.incluirDeslocamento === true;
+    const custoDeslocamento = Number(body?.custoDeslocamento) || 0;
 
     if (tipoLuz !== "modulo" && tipoLuz !== "tubular") {
       return json({ error: "tipo_luz inválido (use 'modulo' ou 'tubular')" }, 400);
@@ -78,15 +70,16 @@ Deno.serve(async (req: Request) => {
       largura_m: largura,
       altura_m: altura,
       p_tipo_luz: tipoLuz,
-      p_cidade: cidade,
       p_faces: faces,
       p_material: material,
       p_forma: forma,
+      p_custo_deslocamento: custoDeslocamento,
+      p_incluir_deslocamento: incluirDeslocamento,
     });
     if (error) throw error;
 
     const resultado = Array.isArray(data) ? data[0] : data;
-    return json({ tipo_luz: tipoLuz, material, forma, faces, largura, altura, cidade, resultado });
+    return json({ tipo_luz: tipoLuz, material, forma, faces, largura, altura, incluirDeslocamento, custoDeslocamento, resultado });
   } catch (e) {
     return json({ error: e instanceof Error ? e.message : String(e) }, 500);
   }

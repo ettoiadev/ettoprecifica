@@ -31,7 +31,8 @@ interface LuminosoResult {
   minutos_mo?: number | string;
   custo_mo?: number | string;
   custo_deslocamento?: number | string;
-  preco_minimo_cidade?: number | string;
+  deslocamento_incluido?: boolean;
+  preco_minimo_aplicado?: number | string;
   custo_total?: number | string;
   preco_sem_nota_60?: number | string;
   preco_sem_nota_55?: number | string;
@@ -49,11 +50,6 @@ const MATERIAL_LABEL: Record<Material, string> = {
   acrilico: 'Acrílico',
 };
 
-const CIDADES_FALLBACK = [
-  'Caçapava', 'Guararema', 'Igaratá', 'Jacareí', 'Litoral', 'Paraibuna',
-  'Santa Branca', 'Santa Isabel', 'São José dos Campos', 'São Paulo', 'Taubaté',
-];
-
 const num = (v: number | string | undefined): number => Number(v ?? 0);
 
 const inputClass =
@@ -66,8 +62,8 @@ const LuminosoCalculator: React.FC<Props> = () => {
   const [tipoLuz, setTipoLuz] = useState<TipoLuz>('modulo');
   const [largura, setLargura] = useState<string>('');
   const [altura, setAltura] = useState<string>('');
-  const [cidade, setCidade] = useState<string>('Jacareí');
-  const [cidades, setCidades] = useState<string[]>(CIDADES_FALLBACK);
+  const [incluirDeslocamento, setIncluirDeslocamento] = useState<boolean>(false);
+  const [custoDeslocamento, setCustoDeslocamento] = useState<string>('');
 
   const [result, setResult] = useState<LuminosoResult | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
@@ -78,26 +74,7 @@ const LuminosoCalculator: React.FC<Props> = () => {
   const larguraNum = parseFloat(largura) || 0;
   // Circular: largura é o diâmetro e a altura acompanha (a função ignora altura).
   const alturaNum = forma === 'circular' ? larguraNum : parseFloat(altura) || 0;
-
-  // Carrega cidades do motor (uma vez); mantém o fallback se falhar.
-  useEffect(() => {
-    let ativo = true;
-    (async () => {
-      try {
-        const { data, error } = await supabase.functions.invoke('calc-luminoso', {
-          body: { action: 'cidades' },
-        });
-        if (!error && ativo && Array.isArray(data?.cidades) && data.cidades.length > 0) {
-          setCidades(data.cidades);
-        }
-      } catch {
-        /* mantém fallback */
-      }
-    })();
-    return () => {
-      ativo = false;
-    };
-  }, []);
+  const custoDeslocamentoNum = parseFloat(custoDeslocamento) || 0;
 
   // Recalcula (com debounce) quando qualquer entrada muda.
   useEffect(() => {
@@ -119,7 +96,8 @@ const LuminosoCalculator: React.FC<Props> = () => {
             tipo_luz: tipoLuz,
             largura: larguraNum,
             altura: alturaNum,
-            cidade,
+            incluirDeslocamento,
+            custoDeslocamento: custoDeslocamentoNum,
           },
         });
         if (error) throw error;
@@ -134,7 +112,7 @@ const LuminosoCalculator: React.FC<Props> = () => {
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [material, forma, faces, tipoLuz, larguraNum, alturaNum, cidade]);
+  }, [material, forma, faces, tipoLuz, larguraNum, alturaNum, incluirDeslocamento, custoDeslocamentoNum]);
 
   const composicao = useMemo(() => {
     if (!result) return [] as { label: string; valor: string }[];
@@ -173,8 +151,7 @@ const LuminosoCalculator: React.FC<Props> = () => {
     const texto = `Orçamento Luminoso ${MATERIAL_LABEL[material]} (${faces} face${faces > 1 ? 's' : ''})
 Forma: ${forma === 'circular' ? 'Circular' : 'Retangular'} (${dimTexto})
 Iluminação: ${tipoLuz === 'modulo' ? 'Módulo LED' : 'Lâmpada tubular'}
-Cidade: ${cidade}
-
+${incluirDeslocamento ? `Deslocamento incluído: ${formatCurrency(custoDeslocamentoNum)}\n` : ''}
 Preço (sem nota fiscal): ${formatCurrency(num(result.preco_sem_nota_60))}
 Preço (com nota fiscal): ${formatCurrency(num(result.preco_com_nota_60))}`;
     navigator.clipboard.writeText(texto).then(
@@ -322,21 +299,29 @@ Preço (com nota fiscal): ${formatCurrency(num(result.preco_com_nota_60))}`;
           </div>
 
           <div>
-            <label htmlFor="cidade-lum" className="block text-sm font-medium text-gray-700 mb-3">
-              Cidade (instalação)
+            <label className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={incluirDeslocamento}
+                onChange={(e) => setIncluirDeslocamento(e.target.checked)}
+                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              />
+              <span className="text-sm font-medium text-gray-700">Incluir deslocamento</span>
             </label>
-            <select
-              id="cidade-lum"
-              value={cidade}
-              onChange={(e) => setCidade(e.target.value)}
-              className={inputClass}
-            >
-              {cidades.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
+            {incluirDeslocamento && (
+              <div className="mt-3">
+                <label className="block text-xs text-gray-500 mb-1">Valor do deslocamento (R$)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={custoDeslocamento}
+                  onChange={(e) => setCustoDeslocamento(e.target.value)}
+                  className={inputClass}
+                  placeholder="0.00"
+                />
+              </div>
+            )}
           </div>
         </div>
 
@@ -399,10 +384,12 @@ Preço (com nota fiscal): ${formatCurrency(num(result.preco_com_nota_60))}`;
                     <span>{formatCurrency(num(result.custo_mo))}</span>
                   </div>
                 )}
-                <div className="flex justify-between text-sm text-gray-600">
-                  <span>Deslocamento:</span>
-                  <span>{formatCurrency(num(result.custo_deslocamento))}</span>
-                </div>
+                {incluirDeslocamento && num(result.custo_deslocamento) > 0 && (
+                  <div className="flex justify-between text-sm text-gray-600">
+                    <span>Deslocamento:</span>
+                    <span>{formatCurrency(num(result.custo_deslocamento))}</span>
+                  </div>
+                )}
                 <div className="flex justify-between text-sm font-medium text-gray-900 pt-1">
                   <span>Custo total:</span>
                   <span>{formatCurrency(num(result.custo_total))}</span>

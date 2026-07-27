@@ -47,7 +47,10 @@ Deno.serve(async (req: Request) => {
     const produto = String(body?.produto ?? "").trim();
     const quantidade = Math.trunc(Number(body?.quantidade));
     const tipo = body?.tipo ? String(body.tipo).trim() : null;
-    const cidade = body?.cidade ? String(body.cidade) : "Jacareí";
+    // Deslocamento é opcional (informado manualmente pelo vendedor) — não é mais
+    // resolvido por cidade, a tabela deslocamento_cidades ficou obsoleta.
+    const incluirDeslocamento = body?.incluirDeslocamento === true;
+    const custoDeslocamento = Number(body?.custoDeslocamento) || 0;
 
     if (!produto) return json({ error: "informe o produto" }, 400);
     if (!(quantidade > 0)) return json({ error: "informe a quantidade" }, 400);
@@ -56,12 +59,13 @@ Deno.serve(async (req: Request) => {
       p_produto: produto,
       p_quantidade: quantidade,
       p_tipo: tipo,
-      p_cidade: cidade,
+      p_custo_deslocamento: custoDeslocamento,
+      p_incluir_deslocamento: incluirDeslocamento,
     });
     if (error) throw error;
 
     const resultado = Array.isArray(data) ? data[0] : data;
-    return json({ produto, tipo, quantidade, resultado });
+    return json({ produto, tipo, quantidade, incluirDeslocamento, custoDeslocamento, resultado });
   } catch (e) {
     return json({ error: e instanceof Error ? e.message : String(e) }, 500);
   }

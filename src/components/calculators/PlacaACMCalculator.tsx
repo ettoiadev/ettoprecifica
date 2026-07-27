@@ -15,6 +15,7 @@ interface AcmResult {
   custo_adesivo_m2?: number | string;
   custo_total?: number | string;
   custo_deslocamento?: number | string;
+  deslocamento_incluido?: boolean;
   preco_minimo_projeto?: number | string;
   preco_sem_nota_60?: number | string | null;
   preco_com_nota_60?: number | string | null;
@@ -29,8 +30,8 @@ const inputClass =
 const PlacaACMCalculator: React.FC = () => {
   const [espessuras, setEspessuras] = useState<number[]>([3]);
   const [espessura, setEspessura] = useState<number>(3);
-  const [cidades, setCidades] = useState<string[]>([]);
-  const [cidade, setCidade] = useState<string>('Jacareí');
+  const [incluirDeslocamento, setIncluirDeslocamento] = useState<boolean>(false);
+  const [custoDeslocamento, setCustoDeslocamento] = useState<string>('');
   const [largura, setLargura] = useState<string>('');
   const [altura, setAltura] = useState<string>('');
   const [quantidade, setQuantidade] = useState<number>(1);
@@ -43,6 +44,7 @@ const PlacaACMCalculator: React.FC = () => {
 
   const larguraNum = parseFloat(largura) || 0;
   const alturaNum = parseFloat(altura) || 0;
+  const custoDeslocamentoNum = parseFloat(custoDeslocamento) || 0;
   const entradaValida = larguraNum > 0 && alturaNum > 0;
 
   useEffect(() => {
@@ -53,15 +55,9 @@ const PlacaACMCalculator: React.FC = () => {
           body: { action: 'meta' },
         });
         if (!ativo) return;
-        if (!error && data) {
-          if (Array.isArray(data.espessuras) && data.espessuras.length > 0) {
-            setEspessuras(data.espessuras);
-            setEspessura((e) => (data.espessuras.includes(e) ? e : data.espessuras[0]));
-          }
-          if (Array.isArray(data.cidades) && data.cidades.length > 0) {
-            setCidades(data.cidades);
-            setCidade((c) => (data.cidades.includes(c) ? c : data.cidades[0]));
-          }
+        if (!error && data && Array.isArray(data.espessuras) && data.espessuras.length > 0) {
+          setEspessuras(data.espessuras);
+          setEspessura((e) => (data.espessuras.includes(e) ? e : data.espessuras[0]));
         }
       } catch {
         /* sem meta */
@@ -89,7 +85,8 @@ const PlacaACMCalculator: React.FC = () => {
             largura: larguraNum * alturaNum * (quantidade > 0 ? quantidade : 1),
             altura: 1,
             espessura,
-            cidade,
+            incluirDeslocamento,
+            custoDeslocamento: custoDeslocamentoNum,
           },
         });
         if (error) throw error;
@@ -103,7 +100,7 @@ const PlacaACMCalculator: React.FC = () => {
       }
     }, 500);
     return () => clearTimeout(timer);
-  }, [larguraNum, alturaNum, quantidade, espessura, cidade, entradaValida]);
+  }, [larguraNum, alturaNum, quantidade, espessura, incluirDeslocamento, custoDeslocamentoNum, entradaValida]);
 
   // O resultado já é o total do pedido (área agregada): preco_sem_nota_60 inclui o
   // mínimo de projeto e o deslocamento, aplicados uma única vez.
@@ -126,8 +123,7 @@ const PlacaACMCalculator: React.FC = () => {
     if (!temPreco || !precos) return;
     const texto = `Orçamento Placa ACM ${espessura}mm
 Dimensões: ${larguraNum.toFixed(2)} x ${alturaNum.toFixed(2)} m — ${quantidade} un
-Cidade: ${cidade}
-
+${incluirDeslocamento ? `Deslocamento incluído: ${formatCurrency(custoDeslocamentoNum)}\n` : ''}
 Preço (sem nota fiscal): ${formatCurrency(precos.semNota)}
 Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
     navigator.clipboard.writeText(texto).then(
@@ -172,24 +168,39 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="esp-acm" className="block text-sm font-medium text-gray-700 mb-3">Espessura</label>
-              <select id="esp-acm" value={espessura} onChange={(e) => setEspessura(Number(e.target.value))} className={inputClass}>
-                {espessuras.map((mm) => (
-                  <option key={mm} value={mm}>{mm} mm</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label htmlFor="cidade-acm" className="block text-sm font-medium text-gray-700 mb-3">Cidade (instalação)</label>
-              <select id="cidade-acm" value={cidade} onChange={(e) => setCidade(e.target.value)} className={inputClass}>
-                {cidades.length === 0 && <option value="Jacareí">Jacareí</option>}
-                {cidades.map((c) => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
-            </div>
+          <div>
+            <label htmlFor="esp-acm" className="block text-sm font-medium text-gray-700 mb-3">Espessura</label>
+            <select id="esp-acm" value={espessura} onChange={(e) => setEspessura(Number(e.target.value))} className={inputClass}>
+              {espessuras.map((mm) => (
+                <option key={mm} value={mm}>{mm} mm</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={incluirDeslocamento}
+                onChange={(e) => setIncluirDeslocamento(e.target.checked)}
+                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              />
+              <span className="text-sm font-medium text-gray-700">Incluir deslocamento</span>
+            </label>
+            {incluirDeslocamento && (
+              <div className="mt-3">
+                <label className="block text-xs text-gray-500 mb-1">Valor do deslocamento (R$)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={custoDeslocamento}
+                  onChange={(e) => setCustoDeslocamento(e.target.value)}
+                  className={inputClass}
+                  placeholder="0.00"
+                />
+              </div>
+            )}
           </div>
         </div>
 
@@ -233,8 +244,8 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
                     <div className="flex justify-between text-sm text-gray-600"><span>Material:</span><span className="text-right">{result.material_encontrado}</span></div>
                     <div className="flex justify-between text-sm text-gray-600"><span>Chapa/m²:</span><span>{formatCurrency(num(result.custo_chapa_m2))}</span></div>
                     <div className="flex justify-between text-sm text-gray-600"><span>Área (un):</span><span>{(num(result.area_m2) / quantidade).toFixed(2)} m²</span></div>
-                    {num(result.custo_deslocamento) > 0 && (
-                      <div className="flex justify-between text-sm text-gray-600"><span>Deslocamento ({cidade}):</span><span>{formatCurrency(num(result.custo_deslocamento))}</span></div>
+                    {incluirDeslocamento && num(result.custo_deslocamento) > 0 && (
+                      <div className="flex justify-between text-sm text-gray-600"><span>Deslocamento:</span><span>{formatCurrency(num(result.custo_deslocamento))}</span></div>
                     )}
                   </div>
 

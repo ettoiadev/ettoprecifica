@@ -8,7 +8,8 @@ import { toast } from 'sonner';
 // Calculadora de Lona/Banner/Faixa — preço do motor da skill (Edge Function
 // calc-lona → calc_lona). Dois acabamentos padrão do motor: Padrão
 // (sem_acabamento, R$70/m²) e Reforço + Ilhós (reforcada_ilhos, R$90/m²).
-// Deslocamento por cidade; quantidade por reconstrução (deslocamento uma vez).
+// Deslocamento é opcional (valor informado manualmente); quantidade por
+// reconstrução (deslocamento aplicado uma vez).
 //
 // Laca de Proteção UV: parâmetro p_laca_uv do motor da skill; o adicional já vem
 // embutido em preco_final/preco_com_nota e detalhado em adicional_laca_uv.
@@ -19,6 +20,7 @@ interface LonaResult {
   adicional_bastao?: number | string;
   adicional_laca_uv?: number | string;
   custo_deslocamento?: number | string;
+  deslocamento_incluido?: boolean;
   preco_minimo_projeto?: number | string;
   preco_final?: number | string | null;
   preco_com_nota?: number | string | null;
@@ -51,8 +53,8 @@ const btn = (active: boolean) =>
 
 const LonaCalculator: React.FC = () => {
   const [precoM2Por, setPrecoM2Por] = useState<Record<string, number>>({});
-  const [cidades, setCidades] = useState<string[]>([]);
-  const [cidade, setCidade] = useState<string>('Jacareí');
+  const [incluirDeslocamento, setIncluirDeslocamento] = useState<boolean>(false);
+  const [custoDeslocamento, setCustoDeslocamento] = useState<string>('');
   const [acabamento, setAcabamento] = useState<string>('sem_acabamento');
   const [laca, setLaca] = useState<boolean>(false);
   const [largura, setLargura] = useState<string>('');
@@ -67,9 +69,10 @@ const LonaCalculator: React.FC = () => {
 
   const larguraNum = parseFloat(largura) || 0;
   const alturaNum = parseFloat(altura) || 0;
+  const custoDeslocamentoNum = parseFloat(custoDeslocamento) || 0;
   const entradaValida = larguraNum > 0 && alturaNum > 0;
 
-  // Carrega preços por acabamento (para os rótulos) e cidades.
+  // Carrega preços por acabamento (para os rótulos).
   useEffect(() => {
     let ativo = true;
     (async () => {
@@ -78,18 +81,12 @@ const LonaCalculator: React.FC = () => {
           body: { action: 'meta' },
         });
         if (!ativo) return;
-        if (!error && data) {
-          if (Array.isArray(data.opcoes)) {
-            const mapa: Record<string, number> = {};
-            (data.opcoes as Opcao[]).forEach((o) => {
-              mapa[o.tipo] = num(o.preco_venda_m2);
-            });
-            setPrecoM2Por(mapa);
-          }
-          if (Array.isArray(data.cidades) && data.cidades.length > 0) {
-            setCidades(data.cidades);
-            setCidade((c) => (data.cidades.includes(c) ? c : data.cidades[0]));
-          }
+        if (!error && data && Array.isArray(data.opcoes)) {
+          const mapa: Record<string, number> = {};
+          (data.opcoes as Opcao[]).forEach((o) => {
+            mapa[o.tipo] = num(o.preco_venda_m2);
+          });
+          setPrecoM2Por(mapa);
         }
       } catch {
         /* sem meta */
@@ -119,7 +116,8 @@ const LonaCalculator: React.FC = () => {
             laca,
             largura: larguraNum * alturaNum * (quantidade > 0 ? quantidade : 1),
             altura: 1,
-            cidade,
+            incluirDeslocamento,
+            custoDeslocamento: custoDeslocamentoNum,
           },
         });
         if (error) throw error;
@@ -133,7 +131,7 @@ const LonaCalculator: React.FC = () => {
       }
     }, 500);
     return () => clearTimeout(timer);
-  }, [acabamento, laca, larguraNum, alturaNum, quantidade, cidade, entradaValida]);
+  }, [acabamento, laca, larguraNum, alturaNum, quantidade, incluirDeslocamento, custoDeslocamentoNum, entradaValida]);
 
   // O resultado já é o total do pedido (área agregada): preco_final inclui a laca
   // UV, o mínimo de projeto e o deslocamento, aplicados uma única vez.
@@ -157,8 +155,7 @@ const LonaCalculator: React.FC = () => {
     if (!temPreco || !precos) return;
     const texto = `Orçamento Lona/Banner — ${acabamentoLabel}${laca ? ' + Laca de Proteção' : ''}
 Dimensões: ${larguraNum.toFixed(2)} x ${alturaNum.toFixed(2)} m — ${quantidade} un
-Cidade: ${cidade}
-
+${incluirDeslocamento ? `Deslocamento incluído: ${formatCurrency(custoDeslocamentoNum)}\n` : ''}
 Preço (sem nota fiscal): ${formatCurrency(precos.semNota)}
 Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
     navigator.clipboard.writeText(texto).then(
@@ -223,13 +220,29 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
           </label>
 
           <div>
-            <label htmlFor="cidade-lona" className="block text-sm font-medium text-gray-700 mb-3">Cidade (instalação)</label>
-            <select id="cidade-lona" value={cidade} onChange={(e) => setCidade(e.target.value)} className={inputClass}>
-              {cidades.length === 0 && <option value="Jacareí">Jacareí</option>}
-              {cidades.map((c) => (
-                <option key={c} value={c}>{c}</option>
-              ))}
-            </select>
+            <label className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={incluirDeslocamento}
+                onChange={(e) => setIncluirDeslocamento(e.target.checked)}
+                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              />
+              <span className="text-sm font-medium text-gray-700">Incluir deslocamento</span>
+            </label>
+            {incluirDeslocamento && (
+              <div className="mt-3">
+                <label className="block text-xs text-gray-500 mb-1">Valor do deslocamento (R$)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={custoDeslocamento}
+                  onChange={(e) => setCustoDeslocamento(e.target.value)}
+                  className={inputClass}
+                  placeholder="0.00"
+                />
+              </div>
+            )}
           </div>
         </div>
 
@@ -276,8 +289,8 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
                     {laca && num(result.adicional_laca_uv) > 0 && (
                       <div className="flex justify-between text-sm text-gray-600"><span>Laca de proteção UV:</span><span>{formatCurrency(num(result.adicional_laca_uv))}</span></div>
                     )}
-                    {num(result.custo_deslocamento) > 0 && (
-                      <div className="flex justify-between text-sm text-gray-600"><span>Deslocamento ({cidade}):</span><span>{formatCurrency(num(result.custo_deslocamento))}</span></div>
+                    {incluirDeslocamento && num(result.custo_deslocamento) > 0 && (
+                      <div className="flex justify-between text-sm text-gray-600"><span>Deslocamento:</span><span>{formatCurrency(num(result.custo_deslocamento))}</span></div>
                     )}
                   </div>
 

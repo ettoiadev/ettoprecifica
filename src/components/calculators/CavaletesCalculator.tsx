@@ -13,6 +13,7 @@ interface CavResult {
   opcao_painel_encontrada?: string;
   custo_total?: number | string;
   custo_deslocamento?: number | string;
+  deslocamento_incluido?: boolean;
   preco_sem_nota_60?: number | string | null;
   preco_com_nota_60?: number | string | null;
   preco_sem_nota_65?: number | string | null;
@@ -45,6 +46,8 @@ const CavaletesCalculator: React.FC = () => {
   const [combosMadeira, setCombosMadeira] = useState<ComboMadeira[]>([]);
   const [tamanho, setTamanho] = useState<string>('');
   const [opcaoPainel, setOpcaoPainel] = useState<string>('');
+  const [incluirDeslocamento, setIncluirDeslocamento] = useState<boolean>(false);
+  const [custoDeslocamento, setCustoDeslocamento] = useState<string>('');
 
   const [result, setResult] = useState<CavResult | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
@@ -64,6 +67,7 @@ const CavaletesCalculator: React.FC = () => {
   );
 
   const entradaValida = tamanho !== '' && (!isMadeira || opcaoPainel !== '');
+  const custoDeslocamentoNum = parseFloat(custoDeslocamento) || 0;
 
   useEffect(() => {
     let ativo = true;
@@ -108,9 +112,13 @@ const CavaletesCalculator: React.FC = () => {
       setLoading(true);
       setError(null);
       try {
-        const body = isMadeira
-          ? { estrutura, tamanho, opcaoPainel }
-          : { estrutura, tamanho };
+        const body = {
+          estrutura,
+          tamanho,
+          ...(isMadeira ? { opcaoPainel } : {}),
+          incluirDeslocamento,
+          custoDeslocamento: custoDeslocamentoNum,
+        };
         const { data, error } = await supabase.functions.invoke('calc-cavaletes', { body });
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
@@ -123,7 +131,7 @@ const CavaletesCalculator: React.FC = () => {
       }
     }, 500);
     return () => clearTimeout(timer);
-  }, [estrutura, isMadeira, tamanho, opcaoPainel, entradaValida]);
+  }, [estrutura, isMadeira, tamanho, opcaoPainel, incluirDeslocamento, custoDeslocamentoNum, entradaValida]);
 
   // Colunas de preço mudam por estrutura: metalon = margem 60; madeira = 65.
   const precoSemNota = isMadeira ? result?.preco_sem_nota_65 : result?.preco_sem_nota_60;
@@ -221,6 +229,32 @@ Preço (com nota fiscal): ${formatCurrency(num(precoComNota))}`;
               </select>
             </div>
           )}
+
+          <div>
+            <label className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={incluirDeslocamento}
+                onChange={(e) => setIncluirDeslocamento(e.target.checked)}
+                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              />
+              <span className="text-sm font-medium text-gray-700">Incluir deslocamento</span>
+            </label>
+            {incluirDeslocamento && (
+              <div className="mt-3">
+                <label className="block text-xs text-gray-500 mb-1">Valor do deslocamento (R$)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={custoDeslocamento}
+                  onChange={(e) => setCustoDeslocamento(e.target.value)}
+                  className={inputClass}
+                  placeholder="0.00"
+                />
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="bg-gray-50 rounded-xl border border-gray-200 p-6">
@@ -273,6 +307,12 @@ Preço (com nota fiscal): ${formatCurrency(num(precoComNota))}`;
                       <div className="flex justify-between text-sm text-gray-600">
                         <span>Painel:</span>
                         <span className="text-right">{result.opcao_painel_encontrada}</span>
+                      </div>
+                    )}
+                    {incluirDeslocamento && num(result.custo_deslocamento) > 0 && (
+                      <div className="flex justify-between text-sm text-gray-600">
+                        <span>Deslocamento:</span>
+                        <span>{formatCurrency(num(result.custo_deslocamento))}</span>
                       </div>
                     )}
                   </div>

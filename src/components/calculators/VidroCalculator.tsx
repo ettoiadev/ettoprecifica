@@ -17,6 +17,7 @@ interface VidroResult {
   custo_prolongadores?: number | string;
   subtotal_materiais?: number | string;
   custo_deslocamento?: number | string;
+  deslocamento_incluido?: boolean;
   custo_total?: number | string;
   preco_sem_nota_60?: number | string;
   preco_sem_nota_65?: number | string;
@@ -28,11 +29,6 @@ interface Material {
   nome: string;
   custo_unitario: number | string;
 }
-
-const CIDADES_FALLBACK = [
-  'Caçapava', 'Guararema', 'Igaratá', 'Jacareí', 'Litoral', 'Paraibuna',
-  'Santa Branca', 'Santa Isabel', 'São José dos Campos', 'São Paulo', 'Taubaté',
-];
 
 const num = (v: number | string | undefined | null): number => Number(v ?? 0);
 
@@ -46,8 +42,8 @@ const VidroCalculator: React.FC = () => {
   const [altura, setAltura] = useState<string>('');
   const [quantidade, setQuantidade] = useState<number>(1);
   const [prolongadores, setProlongadores] = useState<number>(0);
-  const [cidade, setCidade] = useState<string>('Jacareí');
-  const [cidades, setCidades] = useState<string[]>(CIDADES_FALLBACK);
+  const [incluirDeslocamento, setIncluirDeslocamento] = useState<boolean>(false);
+  const [custoDeslocamento, setCustoDeslocamento] = useState<string>('');
 
   const [result, setResult] = useState<VidroResult | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
@@ -57,27 +53,24 @@ const VidroCalculator: React.FC = () => {
 
   const larguraNum = parseFloat(largura) || 0;
   const alturaNum = parseFloat(altura) || 0;
+  const custoDeslocamentoNum = parseFloat(custoDeslocamento) || 0;
   const qtd = quantidade > 0 ? quantidade : 1;
 
-  // Carrega tipos de vidro e cidades do motor (uma vez); mantém fallback se falhar.
+  // Carrega tipos de vidro do motor (uma vez).
   useEffect(() => {
     let ativo = true;
     (async () => {
       try {
-        const [mat, cid] = await Promise.all([
-          supabase.functions.invoke('calc-vidro', { body: { action: 'materiais' } }),
-          supabase.functions.invoke('calc-vidro', { body: { action: 'cidades' } }),
-        ]);
+        const { data, error } = await supabase.functions.invoke('calc-vidro', {
+          body: { action: 'materiais' },
+        });
         if (!ativo) return;
-        if (!mat.error && Array.isArray(mat.data?.materiais) && mat.data.materiais.length > 0) {
-          setMateriais(mat.data.materiais);
-          setTipo((t) => t || mat.data.materiais[0].nome);
-        }
-        if (!cid.error && Array.isArray(cid.data?.cidades) && cid.data.cidades.length > 0) {
-          setCidades(cid.data.cidades);
+        if (!error && Array.isArray(data?.materiais) && data.materiais.length > 0) {
+          setMateriais(data.materiais);
+          setTipo((t) => t || data.materiais[0].nome);
         }
       } catch {
-        /* mantém fallback */
+        /* mantém estado atual */
       }
     })();
     return () => {
@@ -99,7 +92,14 @@ const VidroCalculator: React.FC = () => {
       setError(null);
       try {
         const { data, error } = await supabase.functions.invoke('calc-vidro', {
-          body: { tipo, largura: larguraNum, altura: alturaNum, prolongadores, cidade },
+          body: {
+            tipo,
+            largura: larguraNum,
+            altura: alturaNum,
+            prolongadores,
+            incluirDeslocamento,
+            custoDeslocamento: custoDeslocamentoNum,
+          },
         });
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
@@ -113,19 +113,19 @@ const VidroCalculator: React.FC = () => {
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [tipo, larguraNum, alturaNum, prolongadores, cidade]);
+  }, [tipo, larguraNum, alturaNum, prolongadores, incluirDeslocamento, custoDeslocamentoNum]);
 
-  // Preço do pedido: variável (vidro + prolongadores) × qtd + deslocamento (uma vez).
+  // Preço do pedido: variável (vidro + prolongadores) × qtd + deslocamento (uma vez, se incluído).
   // Fator de venda/NF derivado do próprio resultado (sem duplicar margem).
   const precos = useMemo(() => {
     if (!result || !result.material_encontrado) return null;
     const custoUnit = num(result.custo_total);
-    const desloc = num(result.custo_deslocamento);
+    const desloc = incluirDeslocamento ? custoDeslocamentoNum : 0;
     const custoPedido = (custoUnit - desloc) * qtd + desloc;
     const fatorSem = custoUnit > 0 ? num(result.preco_sem_nota_60) / custoUnit : 2.5;
     const fatorCom = custoUnit > 0 ? num(result.preco_com_nota_60) / custoUnit : 2.7325;
     return { semNota: custoPedido * fatorSem, comNota: custoPedido * fatorCom };
-  }, [result, qtd]);
+  }, [result, qtd, incluirDeslocamento, custoDeslocamentoNum]);
 
   const qtdPrefixo = qtd > 1 ? `${qtd}x ` : '';
 
@@ -134,8 +134,7 @@ const VidroCalculator: React.FC = () => {
     const texto = `Orçamento Vidro — ${result.material_encontrado}
 Medidas: ${larguraNum.toFixed(2)} x ${alturaNum.toFixed(2)} m${qtd > 1 ? ` — ${qtd} peças` : ''}
 Prolongadores: ${prolongadores}${qtd > 1 ? '/peça' : ''}
-Cidade: ${cidade}
-
+${incluirDeslocamento ? `Deslocamento incluído: ${formatCurrency(custoDeslocamentoNum)}\n` : ''}
 Preço (sem nota fiscal): ${formatCurrency(precos.semNota)}
 Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
     navigator.clipboard.writeText(texto).then(
@@ -262,21 +261,29 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
           </div>
 
           <div>
-            <label htmlFor="vidro-cidade" className="block text-sm font-medium text-gray-700 mb-3">
-              Cidade (instalação, se houver)
+            <label className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={incluirDeslocamento}
+                onChange={(e) => setIncluirDeslocamento(e.target.checked)}
+                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              />
+              <span className="text-sm font-medium text-gray-700">Incluir deslocamento</span>
             </label>
-            <select
-              id="vidro-cidade"
-              value={cidade}
-              onChange={(e) => setCidade(e.target.value)}
-              className={inputClass}
-            >
-              {cidades.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
+            {incluirDeslocamento && (
+              <div className="mt-3">
+                <label className="block text-xs text-gray-500 mb-1">Valor do deslocamento (R$)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={custoDeslocamento}
+                  onChange={(e) => setCustoDeslocamento(e.target.value)}
+                  className={inputClass}
+                  placeholder="0.00"
+                />
+              </div>
+            )}
           </div>
         </div>
 
@@ -362,7 +369,7 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
                         <span>{formatCurrency(num(result.custo_prolongadores))}</span>
                       </div>
                     )}
-                    {num(result.custo_deslocamento) > 0 && (
+                    {incluirDeslocamento && num(result.custo_deslocamento) > 0 && (
                       <div className="flex justify-between text-sm text-gray-600">
                         <span>Deslocamento:</span>
                         <span>{formatCurrency(num(result.custo_deslocamento))}</span>

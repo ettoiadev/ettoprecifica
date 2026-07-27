@@ -32,22 +32,15 @@ Deno.serve(async (req: Request) => {
 
     const body = await req.json().catch(() => ({}));
 
-    // Metadados: acabamentos + cidades (dropdowns do app)
+    // Metadados: acabamentos (dropdown do app)
     if (body?.action === "meta") {
-      const [opc, cid] = await Promise.all([
-        supabase
-          .from("adesivo_impresso_opcoes")
-          .select("acabamento, nome, preco_venda_m2")
-          .eq("ativo", true)
-          .order("preco_venda_m2"),
-        supabase.from("deslocamento_cidades").select("cidade").eq("ativo", true).order("cidade"),
-      ]);
-      if (opc.error) throw opc.error;
-      if (cid.error) throw cid.error;
-      return json({
-        opcoes: opc.data ?? [],
-        cidades: (cid.data ?? []).map((r: { cidade: string }) => r.cidade),
-      });
+      const { data, error } = await supabase
+        .from("adesivo_impresso_opcoes")
+        .select("acabamento, nome, preco_venda_m2")
+        .eq("ativo", true)
+        .order("preco_venda_m2");
+      if (error) throw error;
+      return json({ opcoes: data ?? [] });
     }
 
     const acabamento = String(body?.acabamento ?? "sem_acabamento").trim();
@@ -57,8 +50,11 @@ Deno.serve(async (req: Request) => {
     const laca = body?.laca === true;
     const largura = Number(body?.largura);
     const altura = Number(body?.altura);
-    const cidade = body?.cidade ? String(body.cidade) : "Jacareí";
     const aproveitamento = Number(body?.aproveitamento) > 0 ? Number(body.aproveitamento) : null;
+    // Deslocamento é opcional (informado manualmente pelo vendedor) — não é mais
+    // resolvido por cidade, a tabela deslocamento_cidades ficou obsoleta.
+    const incluirDeslocamento = body?.incluirDeslocamento === true;
+    const custoDeslocamento = Number(body?.custoDeslocamento) || 0;
 
     if (!(largura > 0) || !(altura > 0)) {
       return json({ error: "largura e altura devem ser maiores que zero" }, 400);
@@ -70,12 +66,13 @@ Deno.serve(async (req: Request) => {
       p_acabamento: acabamento,
       p_aproveitamento_pct: aproveitamento,
       p_laca_uv: laca,
-      p_cidade: cidade,
+      p_custo_deslocamento: custoDeslocamento,
+      p_incluir_deslocamento: incluirDeslocamento,
     });
     if (error) throw error;
 
     const resultado = Array.isArray(data) ? data[0] : data;
-    return json({ acabamento, laca, largura, altura, cidade, resultado });
+    return json({ acabamento, laca, largura, altura, incluirDeslocamento, custoDeslocamento, resultado });
   } catch (e) {
     return json({ error: e instanceof Error ? e.message : String(e) }, 500);
   }

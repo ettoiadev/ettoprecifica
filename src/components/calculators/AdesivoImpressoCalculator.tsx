@@ -16,6 +16,7 @@ interface AdesivoResult {
   preco_m2?: number | string;
   adicional_laca_uv?: number | string;
   custo_deslocamento?: number | string;
+  deslocamento_incluido?: boolean;
   preco_minimo_projeto?: number | string;
   preco_final?: number | string | null;
   preco_com_nota?: number | string | null;
@@ -35,9 +36,9 @@ const inputClass =
 
 const AdesivoImpressoCalculator: React.FC = () => {
   const [opcoes, setOpcoes] = useState<Opcao[]>([]);
-  const [cidades, setCidades] = useState<string[]>([]);
   const [acabamento, setAcabamento] = useState<string>('');
-  const [cidade, setCidade] = useState<string>('Jacareí');
+  const [incluirDeslocamento, setIncluirDeslocamento] = useState<boolean>(false);
+  const [custoDeslocamento, setCustoDeslocamento] = useState<string>('');
   const [largura, setLargura] = useState<string>('');
   const [altura, setAltura] = useState<string>('');
   const [quantidade, setQuantidade] = useState<number>(1);
@@ -53,6 +54,7 @@ const AdesivoImpressoCalculator: React.FC = () => {
   const larguraNum = parseFloat(largura) || 0;
   const alturaNum = parseFloat(altura) || 0;
   const aproveitamentoNum = parseFloat(aproveitamento) || 0;
+  const custoDeslocamentoNum = parseFloat(custoDeslocamento) || 0;
   const entradaValida = larguraNum > 0 && alturaNum > 0 && acabamento !== '';
 
   useEffect(() => {
@@ -63,15 +65,9 @@ const AdesivoImpressoCalculator: React.FC = () => {
           body: { action: 'meta' },
         });
         if (!ativo) return;
-        if (!error && data) {
-          if (Array.isArray(data.opcoes) && data.opcoes.length > 0) {
-            setOpcoes(data.opcoes);
-            setAcabamento((a) => a || data.opcoes[0].acabamento);
-          }
-          if (Array.isArray(data.cidades) && data.cidades.length > 0) {
-            setCidades(data.cidades);
-            setCidade((c) => (data.cidades.includes(c) ? c : data.cidades[0]));
-          }
+        if (!error && data && Array.isArray(data.opcoes) && data.opcoes.length > 0) {
+          setOpcoes(data.opcoes);
+          setAcabamento((a) => a || data.opcoes[0].acabamento);
         }
       } catch {
         /* sem meta */
@@ -101,7 +97,8 @@ const AdesivoImpressoCalculator: React.FC = () => {
             // (evita cobrar o mínimo por unidade). O motor é linear na área.
             largura: larguraNum * alturaNum * (quantidade > 0 ? quantidade : 1),
             altura: 1,
-            cidade,
+            incluirDeslocamento,
+            custoDeslocamento: custoDeslocamentoNum,
             aproveitamento: aproveitamentoNum > 0 ? aproveitamentoNum : undefined,
           },
         });
@@ -116,7 +113,7 @@ const AdesivoImpressoCalculator: React.FC = () => {
       }
     }, 500);
     return () => clearTimeout(timer);
-  }, [acabamento, laca, larguraNum, alturaNum, quantidade, cidade, aproveitamentoNum, entradaValida]);
+  }, [acabamento, laca, larguraNum, alturaNum, quantidade, incluirDeslocamento, custoDeslocamentoNum, aproveitamentoNum, entradaValida]);
 
   // O resultado já é o total do pedido (área agregada). preco_final inclui o
   // mínimo de projeto e o deslocamento, aplicados uma única vez.
@@ -140,8 +137,7 @@ const AdesivoImpressoCalculator: React.FC = () => {
     if (!temPreco || !precos) return;
     const texto = `Orçamento Adesivo Impresso — ${nomeAcab}${laca ? ' + Laca de Proteção (UV)' : ''}
 Dimensões: ${larguraNum.toFixed(2)} x ${alturaNum.toFixed(2)} m — ${quantidade} un
-Cidade: ${cidade}
-
+${incluirDeslocamento ? `Deslocamento incluído: ${formatCurrency(custoDeslocamentoNum)}\n` : ''}
 Preço (sem nota fiscal): ${formatCurrency(precos.semNota)}
 Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
     navigator.clipboard.writeText(texto).then(
@@ -198,27 +194,42 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
             </select>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="aprov-ad" className="block text-sm font-medium text-gray-700 mb-3">Aproveitamento do vinil (%)</label>
-              <input id="aprov-ad" type="number" min="1" max="100" step="1" value={aproveitamento} onChange={(e) => setAproveitamento(e.target.value)} className={inputClass} placeholder="100" />
-              <p className="text-xs text-gray-500 mt-1">100% = sólido. Menor % cobra mais área de vinil.</p>
-            </div>
-            <div>
-              <label htmlFor="cidade-ad" className="block text-sm font-medium text-gray-700 mb-3">Cidade (instalação)</label>
-              <select id="cidade-ad" value={cidade} onChange={(e) => setCidade(e.target.value)} className={inputClass}>
-                {cidades.length === 0 && <option value="Jacareí">Jacareí</option>}
-                {cidades.map((c) => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
-            </div>
+          <div>
+            <label htmlFor="aprov-ad" className="block text-sm font-medium text-gray-700 mb-3">Aproveitamento do vinil (%)</label>
+            <input id="aprov-ad" type="number" min="1" max="100" step="1" value={aproveitamento} onChange={(e) => setAproveitamento(e.target.value)} className={inputClass} placeholder="100" />
+            <p className="text-xs text-gray-500 mt-1">100% = sólido. Menor % cobra mais área de vinil.</p>
           </div>
 
           <label className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
             <input type="checkbox" checked={laca} onChange={(e) => setLaca(e.target.checked)} className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
             <span className="text-sm font-medium text-gray-700">Laca de Proteção (UV)</span>
           </label>
+
+          <div>
+            <label className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={incluirDeslocamento}
+                onChange={(e) => setIncluirDeslocamento(e.target.checked)}
+                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              />
+              <span className="text-sm font-medium text-gray-700">Incluir deslocamento</span>
+            </label>
+            {incluirDeslocamento && (
+              <div className="mt-3">
+                <label className="block text-xs text-gray-500 mb-1">Valor do deslocamento (R$)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={custoDeslocamento}
+                  onChange={(e) => setCustoDeslocamento(e.target.value)}
+                  className={inputClass}
+                  placeholder="0.00"
+                />
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="bg-gray-50 rounded-xl border border-gray-200 p-6">
@@ -264,8 +275,8 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
                     {laca && num(result.adicional_laca_uv) > 0 && (
                       <div className="flex justify-between text-sm text-gray-600"><span>Laca de proteção UV:</span><span>{formatCurrency(num(result.adicional_laca_uv))}</span></div>
                     )}
-                    {num(result.custo_deslocamento) > 0 && (
-                      <div className="flex justify-between text-sm text-gray-600"><span>Deslocamento ({cidade}):</span><span>{formatCurrency(num(result.custo_deslocamento))}</span></div>
+                    {incluirDeslocamento && num(result.custo_deslocamento) > 0 && (
+                      <div className="flex justify-between text-sm text-gray-600"><span>Deslocamento:</span><span>{formatCurrency(num(result.custo_deslocamento))}</span></div>
                     )}
                   </div>
 

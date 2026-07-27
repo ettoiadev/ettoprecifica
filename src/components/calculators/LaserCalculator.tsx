@@ -21,6 +21,7 @@ interface LaserResult {
   perimetro_m?: number | string;
   custo_led?: number | string;
   custo_deslocamento?: number | string;
+  deslocamento_incluido?: boolean;
   preco_minimo_projeto?: number | string;
   preco_final?: number | string;
   preco_com_nota?: number | string;
@@ -30,11 +31,6 @@ interface LaserResult {
 type Forma = 'retangular' | 'circular';
 type Complexidade = 'padrao' | 'complexo';
 
-const CIDADES_FALLBACK = [
-  'Caçapava', 'Guararema', 'Igaratá', 'Jacareí', 'Litoral', 'Paraibuna',
-  'Santa Branca', 'Santa Isabel', 'São José dos Campos', 'São Paulo', 'Taubaté',
-];
-
 const num = (v: number | string | undefined | null): number => Number(v ?? 0);
 
 const inputClass =
@@ -42,12 +38,12 @@ const inputClass =
 
 const LaserCalculator: React.FC<Props> = () => {
   const [materiais, setMateriais] = useState<{ nome: string; categoria: string | null }[]>([]);
-  const [cidades, setCidades] = useState<string[]>(CIDADES_FALLBACK);
   const [material, setMaterial] = useState<string>('');
   const [forma, setForma] = useState<Forma>('retangular');
   const [complexidade, setComplexidade] = useState<Complexidade>('padrao');
   const [comLed, setComLed] = useState<boolean>(false);
-  const [cidade, setCidade] = useState<string>('Jacareí');
+  const [incluirDeslocamento, setIncluirDeslocamento] = useState<boolean>(false);
+  const [custoDeslocamento, setCustoDeslocamento] = useState<string>('');
   const [largura, setLargura] = useState<string>('');
   const [altura, setAltura] = useState<string>('');
   const [quantidade, setQuantidade] = useState<number>(1);
@@ -60,23 +56,24 @@ const LaserCalculator: React.FC<Props> = () => {
 
   const larguraNum = parseFloat(largura) || 0;
   const alturaNum = forma === 'circular' ? larguraNum : parseFloat(altura) || 0;
+  const custoDeslocamentoNum = parseFloat(custoDeslocamento) || 0;
   const qtd = quantidade > 0 ? quantidade : 1;
 
-  // Preço do pedido: (material + LED) × qtd + deslocamento (uma vez), com o mínimo
-  // de projeto no total. O fator de NF vem do próprio resultado (qty=1).
+  // Preço do pedido: (material + LED) × qtd + deslocamento (uma vez, se incluído), com
+  // o mínimo de projeto no total. O fator de NF vem do próprio resultado (qty=1).
   const precos = useMemo(() => {
     if (!result || !result.material_encontrado) return null;
     const varUnit = num(result.custo_material_venda) + num(result.custo_led);
-    const desloc = num(result.custo_deslocamento);
+    const desloc = incluirDeslocamento ? custoDeslocamentoNum : 0;
     const minimo = num(result.preco_minimo_projeto);
     const semNota = Math.max(varUnit * qtd + desloc, minimo);
     const fatorNota =
       num(result.preco_final) > 0 ? num(result.preco_com_nota) / num(result.preco_final) : 1.0931;
     return { semNota, comNota: semNota * fatorNota };
-  }, [result, qtd]);
+  }, [result, qtd, incluirDeslocamento, custoDeslocamentoNum]);
   const qtdPrefixo = qtd > 1 ? `${qtd}x ` : '';
 
-  // Carrega materiais + cidades do motor (uma vez).
+  // Carrega materiais do motor (uma vez).
   useEffect(() => {
     let ativo = true;
     (async () => {
@@ -89,11 +86,8 @@ const LaserCalculator: React.FC<Props> = () => {
           setMateriais(data.materiais);
           setMaterial((prev) => prev || data.materiais[0].nome);
         }
-        if (Array.isArray(data?.cidades) && data.cidades.length > 0) {
-          setCidades(data.cidades);
-        }
       } catch {
-        /* mantém fallback */
+        /* mantém estado atual */
       }
     })();
     return () => {
@@ -119,9 +113,10 @@ const LaserCalculator: React.FC<Props> = () => {
             forma,
             complexidade,
             com_led: comLed,
-            cidade,
             largura: larguraNum,
             altura: alturaNum,
+            incluirDeslocamento,
+            custoDeslocamento: custoDeslocamentoNum,
           },
         });
         if (error) throw error;
@@ -136,7 +131,7 @@ const LaserCalculator: React.FC<Props> = () => {
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [material, forma, complexidade, comLed, cidade, larguraNum, alturaNum]);
+  }, [material, forma, complexidade, comLed, larguraNum, alturaNum, incluirDeslocamento, custoDeslocamentoNum]);
 
   // Materiais agrupados por categoria (para os optgroups do select).
   const grupos = useMemo(() => {
@@ -157,8 +152,7 @@ const LaserCalculator: React.FC<Props> = () => {
     const texto = `Orçamento Laser — ${result.material_encontrado}
 Forma: ${forma === 'circular' ? 'Circular' : 'Retangular'} (${dim})${qtd > 1 ? ` — ${qtd} unidades` : ''}
 Complexidade: ${complexidade === 'complexo' ? 'Complexo' : 'Padrão'}${comLed ? ' + LED' : ''}
-Cidade: ${cidade}
-
+${incluirDeslocamento ? `Deslocamento incluído: ${formatCurrency(custoDeslocamentoNum)}\n` : ''}
 Preço (sem nota fiscal): ${formatCurrency(precos.semNota)}
 Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
     navigator.clipboard.writeText(texto).then(
@@ -333,21 +327,29 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
           </div>
 
           <div>
-            <label htmlFor="laser-cidade" className="block text-sm font-medium text-gray-700 mb-3">
-              Cidade (instalação, se houver)
+            <label className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={incluirDeslocamento}
+                onChange={(e) => setIncluirDeslocamento(e.target.checked)}
+                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              />
+              <span className="text-sm font-medium text-gray-700">Incluir deslocamento</span>
             </label>
-            <select
-              id="laser-cidade"
-              value={cidade}
-              onChange={(e) => setCidade(e.target.value)}
-              className={inputClass}
-            >
-              {cidades.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
+            {incluirDeslocamento && (
+              <div className="mt-3">
+                <label className="block text-xs text-gray-500 mb-1">Valor do deslocamento (R$)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={custoDeslocamento}
+                  onChange={(e) => setCustoDeslocamento(e.target.value)}
+                  className={inputClass}
+                  placeholder="0.00"
+                />
+              </div>
+            )}
           </div>
         </div>
 
@@ -437,10 +439,10 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
                         <span>{formatCurrency(num(result.custo_led))}</span>
                       </div>
                     )}
-                    {num(result.custo_deslocamento) > 0 && (
+                    {incluirDeslocamento && custoDeslocamentoNum > 0 && (
                       <div className="flex justify-between text-sm text-gray-600">
                         <span>Deslocamento:</span>
-                        <span>{formatCurrency(num(result.custo_deslocamento))}</span>
+                        <span>{formatCurrency(custoDeslocamentoNum)}</span>
                       </div>
                     )}
                   </div>

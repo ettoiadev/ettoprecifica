@@ -16,6 +16,7 @@ interface FachadaResult {
   preco_final?: number | string;
   preco_final_com_nota?: number | string;
   custo_deslocamento?: number | string;
+  deslocamento_incluido?: boolean;
   preco_minimo_fachada?: number | string;
   alerta?: string;
   // ACM
@@ -35,11 +36,6 @@ const ACABAMENTO_ACM: { value: AcabamentoAcm; label: string }[] = [
   { value: 'recortes_dobras', label: 'Recortes/dobras' },
   { value: 'letra_pvc', label: 'Letra PVC' },
   { value: 'letra_iluminada', label: 'Letra iluminada' },
-];
-
-const CIDADES_FALLBACK = [
-  'Caçapava', 'Guararema', 'Igaratá', 'Jacareí', 'Litoral', 'Paraibuna',
-  'Santa Branca', 'Santa Isabel', 'São José dos Campos', 'São Paulo', 'Taubaté',
 ];
 
 const num = (v: number | string | undefined): number => Number(v ?? 0);
@@ -62,8 +58,8 @@ const FachadaCalculator: React.FC = () => {
   const [iluminadoLona, setIluminadoLona] = useState<boolean>(false);
   const [largura, setLargura] = useState<string>('');
   const [altura, setAltura] = useState<string>('');
-  const [cidade, setCidade] = useState<string>('Jacareí');
-  const [cidades, setCidades] = useState<string[]>(CIDADES_FALLBACK);
+  const [incluirDeslocamento, setIncluirDeslocamento] = useState<boolean>(false);
+  const [custoDeslocamento, setCustoDeslocamento] = useState<string>('');
 
   const [result, setResult] = useState<FachadaResult | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
@@ -73,26 +69,7 @@ const FachadaCalculator: React.FC = () => {
 
   const larguraNum = parseFloat(largura) || 0;
   const alturaNum = parseFloat(altura) || 0;
-
-  // Carrega a lista de cidades do motor (uma vez); mantém o fallback se falhar.
-  useEffect(() => {
-    let ativo = true;
-    (async () => {
-      try {
-        const { data, error } = await supabase.functions.invoke('calc-fachada', {
-          body: { action: 'cidades' },
-        });
-        if (!error && ativo && Array.isArray(data?.cidades) && data.cidades.length > 0) {
-          setCidades(data.cidades);
-        }
-      } catch {
-        /* mantém fallback */
-      }
-    })();
-    return () => {
-      ativo = false;
-    };
-  }, []);
+  const custoDeslocamentoNum = parseFloat(custoDeslocamento) || 0;
 
   // Recalcula (com debounce) sempre que as entradas mudarem.
   useEffect(() => {
@@ -106,10 +83,11 @@ const FachadaCalculator: React.FC = () => {
       setLoading(true);
       setError(null);
       try {
+        const desloc = { incluirDeslocamento, custoDeslocamento: custoDeslocamentoNum };
         const body =
           tipo === 'acm'
-            ? { tipo, acabamento: acabamentoAcm, largura: larguraNum, altura: alturaNum, cidade }
-            : { tipo, fixacao, iluminado: iluminadoLona, largura: larguraNum, altura: alturaNum, cidade };
+            ? { tipo, acabamento: acabamentoAcm, largura: larguraNum, altura: alturaNum, ...desloc }
+            : { tipo, fixacao, iluminado: iluminadoLona, largura: larguraNum, altura: alturaNum, ...desloc };
         const { data, error } = await supabase.functions.invoke('calc-fachada', { body });
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
@@ -123,7 +101,7 @@ const FachadaCalculator: React.FC = () => {
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [tipo, acabamentoAcm, fixacao, iluminadoLona, larguraNum, alturaNum, cidade]);
+  }, [tipo, acabamentoAcm, fixacao, iluminadoLona, larguraNum, alturaNum, incluirDeslocamento, custoDeslocamentoNum]);
 
   // Descrição curta do acabamento para textos/cotação.
   const acabamentoTexto = useMemo(() => {
@@ -159,8 +137,7 @@ const FachadaCalculator: React.FC = () => {
     if (!result) return;
     const texto = `Orçamento Fachada ${tipo.toUpperCase()} (${acabamentoTexto})
 Medidas: ${larguraNum.toFixed(2)} x ${alturaNum.toFixed(2)} m
-Cidade: ${cidade}
-
+${incluirDeslocamento ? `Deslocamento incluído: ${formatCurrency(custoDeslocamentoNum)}\n` : ''}
 Preço (sem nota fiscal): ${formatCurrency(num(result.preco_final))}
 Preço (com nota fiscal): ${formatCurrency(num(result.preco_final_com_nota))}`;
     navigator.clipboard.writeText(texto).then(
@@ -292,21 +269,29 @@ Preço (com nota fiscal): ${formatCurrency(num(result.preco_final_com_nota))}`;
           </div>
 
           <div>
-            <label htmlFor="cidade" className="block text-sm font-medium text-gray-700 mb-3">
-              Cidade (instalação)
+            <label className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={incluirDeslocamento}
+                onChange={(e) => setIncluirDeslocamento(e.target.checked)}
+                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              />
+              <span className="text-sm font-medium text-gray-700">Incluir deslocamento</span>
             </label>
-            <select
-              id="cidade"
-              value={cidade}
-              onChange={(e) => setCidade(e.target.value)}
-              className={inputClass}
-            >
-              {cidades.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
+            {incluirDeslocamento && (
+              <div className="mt-3">
+                <label className="block text-xs text-gray-500 mb-1">Valor do deslocamento (R$)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={custoDeslocamento}
+                  onChange={(e) => setCustoDeslocamento(e.target.value)}
+                  className={inputClass}
+                  placeholder="0.00"
+                />
+              </div>
+            )}
           </div>
         </div>
 
@@ -364,10 +349,10 @@ Preço (com nota fiscal): ${formatCurrency(num(result.preco_final_com_nota))}`;
                 </div>
               </div>
 
-              {num(result.custo_deslocamento) > 0 && (
-                <div className="text-xs text-gray-500 pt-2 border-t border-gray-200">
-                  Deslocamento de {formatCurrency(num(result.custo_deslocamento))} para {cidade} não
-                  está incluído no preço de mercado — some se for cobrar à parte.
+              {incluirDeslocamento && num(result.custo_deslocamento) > 0 && (
+                <div className="flex justify-between text-sm text-gray-600 pt-2 border-t border-gray-200">
+                  <span>Deslocamento:</span>
+                  <span>{formatCurrency(num(result.custo_deslocamento))}</span>
                 </div>
               )}
 

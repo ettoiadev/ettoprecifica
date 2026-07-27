@@ -51,7 +51,10 @@ Deno.serve(async (req: Request) => {
 
     const estrutura = String(body?.estrutura ?? "metalon").toLowerCase();
     const tamanho = String(body?.tamanho ?? "").trim();
-    const cidade = body?.cidade ? String(body.cidade) : "Jacareí";
+    // Deslocamento é opcional (informado manualmente pelo vendedor) — não é mais
+    // resolvido por cidade, a tabela deslocamento_cidades ficou obsoleta.
+    const incluirDeslocamento = body?.incluirDeslocamento === true;
+    const custoDeslocamento = Number(body?.custoDeslocamento) || 0;
 
     if (!tamanho) return json({ error: "informe o tamanho" }, 400);
 
@@ -60,20 +63,22 @@ Deno.serve(async (req: Request) => {
       const { data, error } = await supabase.rpc("calc_cavaletes_madeira", {
         p_tamanho: tamanho,
         p_opcao_painel: opcaoPainel,
-        p_cidade: cidade,
+        p_custo_deslocamento: custoDeslocamento,
+        p_incluir_deslocamento: incluirDeslocamento,
       });
       if (error) throw error;
       const resultado = Array.isArray(data) ? data[0] : data;
-      return json({ estrutura, tamanho, resultado });
+      return json({ estrutura, tamanho, incluirDeslocamento, custoDeslocamento, resultado });
     }
 
     const { data, error } = await supabase.rpc("calc_cavaletes", {
       p_tamanho: tamanho,
-      p_cidade: cidade,
+      p_custo_deslocamento: custoDeslocamento,
+      p_incluir_deslocamento: incluirDeslocamento,
     });
     if (error) throw error;
     const resultado = Array.isArray(data) ? data[0] : data;
-    return json({ estrutura: "metalon", tamanho, resultado });
+    return json({ estrutura: "metalon", tamanho, incluirDeslocamento, custoDeslocamento, resultado });
   } catch (e) {
     return json({ error: e instanceof Error ? e.message : String(e) }, 500);
   }

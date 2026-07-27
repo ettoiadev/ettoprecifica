@@ -33,29 +33,30 @@ Deno.serve(async (req: Request) => {
 
     const body = await req.json().catch(() => ({}));
 
-    // Metadados para os selects do app: materiais + cidades
+    // Metadados para o select do app: materiais
     if (body?.action === "meta") {
-      const [mat, cid] = await Promise.all([
-        supabase.from("laser_materiais").select("nome, categoria").eq("ativo", true).order("categoria").order("nome"),
-        supabase.from("deslocamento_cidades").select("cidade").eq("ativo", true).order("cidade"),
-      ]);
-      if (mat.error) throw mat.error;
-      if (cid.error) throw cid.error;
-      return json({
-        materiais: mat.data ?? [],
-        cidades: (cid.data ?? []).map((r: { cidade: string }) => r.cidade),
-      });
+      const { data, error } = await supabase
+        .from("laser_materiais")
+        .select("nome, categoria")
+        .eq("ativo", true)
+        .order("categoria")
+        .order("nome");
+      if (error) throw error;
+      return json({ materiais: data ?? [] });
     }
 
     const material = String(body?.material ?? "");
     const forma = String(body?.forma ?? "retangular").toLowerCase();
     const complexidade = String(body?.complexidade ?? "padrao").toLowerCase();
     const comLed = Boolean(body?.com_led);
-    const cidade = String(body?.cidade ?? "Jacareí");
     const largura = Number(body?.largura);
     const altura = forma === "circular" ? Number(body?.largura) : Number(body?.altura);
     const materialCamada2 = body?.material_camada2 ? String(body.material_camada2) : null;
     const percentualCamada2 = body?.percentual_camada2 != null ? Number(body.percentual_camada2) : 100;
+    // Deslocamento é opcional (informado manualmente pelo vendedor) — não é mais
+    // resolvido por cidade, a tabela deslocamento_cidades ficou obsoleta.
+    const incluirDeslocamento = body?.incluirDeslocamento === true;
+    const custoDeslocamento = Number(body?.custoDeslocamento) || 0;
 
     if (!material) return json({ error: "material é obrigatório" }, 400);
     if (forma !== "retangular" && forma !== "circular") {
@@ -73,16 +74,17 @@ Deno.serve(async (req: Request) => {
       largura_m: largura,
       altura_m: altura,
       p_complexidade: complexidade,
-      p_cidade: cidade,
       p_com_led: comLed,
       p_material_camada2: materialCamada2,
       p_percentual_camada2: percentualCamada2,
       p_forma: forma,
+      p_custo_deslocamento: custoDeslocamento,
+      p_incluir_deslocamento: incluirDeslocamento,
     });
     if (error) throw error;
 
     const resultado = Array.isArray(data) ? data[0] : data;
-    return json({ material, forma, complexidade, com_led: comLed, cidade, largura, altura, resultado });
+    return json({ material, forma, complexidade, com_led: comLed, largura, altura, incluirDeslocamento, custoDeslocamento, resultado });
   } catch (e) {
     return json({ error: e instanceof Error ? e.message : String(e) }, 500);
   }

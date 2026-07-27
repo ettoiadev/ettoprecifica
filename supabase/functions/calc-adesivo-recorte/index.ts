@@ -46,22 +46,14 @@ Deno.serve(async (req: Request) => {
       return json({ materiais: data ?? [] });
     }
 
-    // Cidades ativas (para o dropdown do app)
-    if (body?.action === "cidades") {
-      const { data, error } = await supabase
-        .from("deslocamento_cidades")
-        .select("cidade")
-        .eq("ativo", true)
-        .order("cidade");
-      if (error) throw error;
-      return json({ cidades: (data ?? []).map((r: { cidade: string }) => r.cidade) });
-    }
-
     const produto = String(body?.produto ?? "").trim();
     const largura = Number(body?.largura);
     const altura = Number(body?.altura);
-    const cidade = String(body?.cidade ?? "Jacareí");
     const area = Number(body?.area); // modo área direta (m²)
+    // Deslocamento é opcional (informado manualmente pelo vendedor) — não é mais
+    // resolvido por cidade, a tabela deslocamento_cidades ficou obsoleta.
+    const incluirDeslocamento = body?.incluirDeslocamento === true;
+    const custoDeslocamento = Number(body?.custoDeslocamento) || 0;
     const comMascara = body?.mascara === true; // máscara de transferência (papel)
     let percentual = Number(body?.percentual);
     if (!(percentual > 0) || percentual > 100) percentual = 25;
@@ -91,16 +83,18 @@ Deno.serve(async (req: Request) => {
       ? {
           p_produto: produto,
           p_area_m2: area,
-          p_cidade: cidade,
           p_com_mascara: comMascara,
+          p_custo_deslocamento: custoDeslocamento,
+          p_incluir_deslocamento: incluirDeslocamento,
         }
       : {
           p_produto: produto,
           largura_m: largura,
           altura_m: altura,
           p_percentual_area: percentual,
-          p_cidade: cidade,
           p_com_mascara: comMascara,
+          p_custo_deslocamento: custoDeslocamento,
+          p_incluir_deslocamento: incluirDeslocamento,
         };
 
     if (cores === 2) {
@@ -123,7 +117,8 @@ Deno.serve(async (req: Request) => {
       mascara: comMascara,
       cores,
       percentualCor2,
-      cidade,
+      incluirDeslocamento,
+      custoDeslocamento,
       resultado,
     });
   } catch (e) {

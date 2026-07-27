@@ -32,31 +32,27 @@ Deno.serve(async (req: Request) => {
 
     const body = await req.json().catch(() => ({}));
 
-    // Metadados: espessuras disponiveis + cidades
+    // Metadados: espessuras disponiveis
     if (body?.action === "meta") {
-      const [opc, cid] = await Promise.all([
-        supabase
-          .from("acm_placa_opcoes")
-          .select("espessura_mm")
-          .eq("ativo", true)
-          .order("espessura_mm"),
-        supabase.from("deslocamento_cidades").select("cidade").eq("ativo", true).order("cidade"),
-      ]);
-      if (opc.error) throw opc.error;
-      if (cid.error) throw cid.error;
+      const { data, error } = await supabase
+        .from("acm_placa_opcoes")
+        .select("espessura_mm")
+        .eq("ativo", true)
+        .order("espessura_mm");
+      if (error) throw error;
       const espessuras = [
-        ...new Set((opc.data ?? []).map((r: { espessura_mm: number | string }) => Number(r.espessura_mm))),
+        ...new Set((data ?? []).map((r: { espessura_mm: number | string }) => Number(r.espessura_mm))),
       ];
-      return json({
-        espessuras,
-        cidades: (cid.data ?? []).map((r: { cidade: string }) => r.cidade),
-      });
+      return json({ espessuras });
     }
 
     const largura = Number(body?.largura);
     const altura = Number(body?.altura);
     const espessura = Number(body?.espessura) > 0 ? Number(body.espessura) : 3;
-    const cidade = body?.cidade ? String(body.cidade) : "Jacareí";
+    // Deslocamento é opcional (informado manualmente pelo vendedor) — não é mais
+    // resolvido por cidade, a tabela deslocamento_cidades ficou obsoleta.
+    const incluirDeslocamento = body?.incluirDeslocamento === true;
+    const custoDeslocamento = Number(body?.custoDeslocamento) || 0;
 
     if (!(largura > 0) || !(altura > 0)) {
       return json({ error: "largura e altura devem ser maiores que zero" }, 400);
@@ -67,12 +63,13 @@ Deno.serve(async (req: Request) => {
       altura_m: altura,
       p_acabamento: "sem_impressao",
       p_espessura_mm: espessura,
-      p_cidade: cidade,
+      p_custo_deslocamento: custoDeslocamento,
+      p_incluir_deslocamento: incluirDeslocamento,
     });
     if (error) throw error;
 
     const resultado = Array.isArray(data) ? data[0] : data;
-    return json({ largura, altura, espessura, cidade, resultado });
+    return json({ largura, altura, espessura, incluirDeslocamento, custoDeslocamento, resultado });
   } catch (e) {
     return json({ error: e instanceof Error ? e.message : String(e) }, 500);
   }
