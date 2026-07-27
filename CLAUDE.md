@@ -21,7 +21,8 @@ SPA React de precificação usada por vendedores de uma empresa de comunicação
 - Tabelas/funções da skill têm **RLS ligado e 0 policies** (trancadas de propósito). O app não acessa direto.
 - **Edge Functions** (`supabase/functions/calc-*`) usam `SUPABASE_SERVICE_ROLE_KEY` interno para bypassar RLS e chamar `calc_*`. São `verify_jwt=true`, CORS, **somente leitura**. `action:'meta'`/`'materiais'`/`'cidades'` servem os dropdowns.
 - O app chama via `supabase.functions.invoke('calc-xxx', { body })`.
-- A NF (×1,0931) já vem embutida em `preco_com_nota`; o deslocamento vem de `deslocamento_cidades`. **Não** re-aplicar taxas no app.
+- A NF (×1,0931) já vem embutida em `preco_com_nota`. **Não** re-aplicar taxas no app.
+- **Deslocamento (26/07/26 em diante): opcional, não mais por cidade.** `deslocamento_cidades` está **obsoleta** (todas as linhas `ativo=false`) — nenhuma `calc_*` a lê mais. 12 das 14 funções trocaram `p_cidade` por `p_custo_deslocamento numeric DEFAULT 0` + `p_incluir_deslocamento boolean DEFAULT false`: o app manda um checkbox "Incluir deslocamento" (desmarcado por padrão) + valor manual em R$; a função só soma ao preço final quando `p_incluir_deslocamento=true`. `calc_letra_caixa` e `calc_ps_adesivado` ainda usam `p_cidade` (não migradas, mas essas duas nunca dependeram de fato de `deslocamento_cidades` — `p_cidade` é vestigial nelas). Existe uma função nova `calc_deslocamento(p_distancia_km, ...)` que calcula o custo a partir de km — mas a integração da API de rota (CEP→CEP) que forneceria essa distância é trabalho do **Devin**, ainda pendente; até lá o valor de deslocamento é sempre digitado manualmente pelo vendedor.
 
 ## Abas → Edge Function → função da skill (14 abas, todas no motor)
 | Aba | Edge Function | Função |
@@ -42,7 +43,8 @@ SPA React de precificação usada por vendedores de uma empresa de comunicação
 | Cavaletes | calc-cavaletes | `calc_cavaletes` / `calc_cavaletes_madeira` |
 
 ## Gotchas / padrões (aprendidos na marra)
-1. **Overloads ambíguos** ("function is not unique"): quando a skill adiciona um parâmetro novo, cria um 2º overload e a chamada antiga fica ambígua → Edge Function retorna non-2xx. **Sempre passar o parâmetro novo** para desambiguar. Hoje têm 2 overloads (todos já tratados): `calc_dtf` (passar `p_incluir_uber`), `calc_letra_caixa` (`p_tipo_iluminacao`), `calc_lona` (`p_laca_uv`), `calc_adesivo_impresso` (`p_laca_uv`).
+1. **Overloads ambíguos** ("function is not unique"): quando a skill adiciona um parâmetro novo, cria um 2º overload e a chamada antiga fica ambígua → Edge Function retorna non-2xx. **Sempre passar o parâmetro novo** para desambiguar. Hoje têm 2 overloads (todos já tratados): `calc_dtf` (passar `p_incluir_uber`), `calc_lona` (`p_laca_uv`), `calc_adesivo_impresso` (`p_laca_uv`).
+1b. **Parâmetro removido é pior que overload** (26/07/26): a skill trocou `p_cidade` por `p_custo_deslocamento`/`p_incluir_deslocamento` em 12 funções **sem manter overload de compatibilidade** — não virou ambiguidade, virou `function does not exist` (erro 42883), quebrando a precificação em produção até o app ser atualizado. Sempre que a skill mexer num parâmetro, testar a chamada real via SQL (`SELECT * FROM calc_x(...)`) antes de assumir que só "ganhou um novo overload".
 2. **Quantidade + mínimo de projeto**: NÃO reconstruir por unidade (`preco_final × qtd` cobra o mínimo por peça). Enviar a **área agregada** (área unitária × qtd) como `largura = area_total, altura = 1`; o motor aplica mínimo/deslocamento uma vez. Aplicado em Adesivo, Lona, Placa ACM, Placa PS, Recorte. Laser aplica o mínimo ao pedido (`max(varUnit*qtd+desloc, minimo)`); Vidro não tem mínimo.
 3. Abas são **self-contained** (sem o antigo `BudgetSummaryExtended`, já removido). Estado + cotação + copiar orçamento em cada componente.
 4. Configurações só tem "Geral" (status do banco + observações). Nenhum preço é editável no app.
@@ -56,16 +58,11 @@ curl -s -X POST "https://api.supabase.com/v1/projects/ghyctsclpcsrznrqegrp/datab
 ```
 Deploy de Edge Function: `POST .../v1/projects/<ref>/functions/deploy?slug=<slug>` com `-F metadata=...;type=application/json -F file=@index.ts`. **Nunca** salvar o token; pedir para revogar após uso.
 
-## Estado atual (2026-07-26)
-Reconhecimento completo feito: assinaturas reais de todas as 14 funções `calc_*` no banco (via `pg_proc`/`pg_get_function_arguments`) foram comparadas 1:1 com os `supabase/functions/calc-*/index.ts` e com os componentes React. **Tudo já está sincronizado, nenhuma atualização pendente.** `tsc --noEmit` e `vite build` passam limpos.
+## Estado atual (2026-07-27)
+**Migração de deslocamento concluída no app** (skill já tinha mudado o contrato — ver gotcha 1b): as 12 Edge Functions afetadas (`calc-adesivo-impresso`, `calc-adesivo-recorte`, `calc-cavaletes`, `calc-dtf`, `calc-etiquetas`, `calc-fachada`, `calc-giv`, `calc-laser`, `calc-lona`, `calc-luminoso`, `calc-placa-acm`, `calc-vidro`) foram atualizadas e **deployadas** (Management API, já que o MCP Supabase estava fora do ar) pra usar `p_custo_deslocamento`/`p_incluir_deslocamento` em vez de `p_cidade`. Cada calculadora trocou o dropdown de cidade por um checkbox "Incluir deslocamento" (off por padrão) + input de valor manual em R$. `tsc --noEmit` e `vite build` limpos, commitado e pushado (`c52d6c4`).
 
-Recursos da skill que já estão implementados (não são novidade, mas não estavam documentados nesta tabela):
-- `calc_adesivo_recorte`: suporta 2ª cor de recorte sobreposta (`p_cores`, `p_produto_cor2`, `p_percentual_area_cor2`) e modo área direta (`p_area_m2`) além do modo largura×altura+percentual — UI em AdesivoRecorteCalculator já cobre isso.
-- `calc_laser` e `calc_luminoso`: aceitam `p_forma` ('retangular'/'circular', desambiguam overloads); laser também aceita 2ª camada de material (`p_material_camada2`, `p_percentual_camada2`) — UI já cobre.
-- `calc_letra_caixa`: overload único hoje com `p_tipo_iluminacao` (ex.: `frontal_acrilico`) — UI já cobre.
-- `calc_fachada_lona`: aceita `p_iluminado` (backlight) — UI já cobre.
-- `calc_vidro`: aceita `p_qtd_prolongadores` — UI já cobre.
-- `calc_placa_acm`: já aceita `p_espessura_mm` (não é overload novo, é parâmetro com default 3). Pendência ainda válida do lado da skill: `acm_placa_opcoes` só tem linhas de 3mm e a função só é chamada com `p_acabamento='sem_impressao'` — se a skill passar a vender outras espessuras/impressão, atualizar `calc-placa-acm/index.ts` e o dropdown.
-- `calc_fachada_acm`: tem parâmetros opcionais `qtd_chapas_informada`/`qtd_barras_metalon_informada` (default NULL) para o usuário sobrescrever a quantidade calculada — hoje a Edge Function não os envia (não é bug, é comportamento padrão de auto-cálculo); considerar expor na UI se pedirem controle manual de chapas/metalon.
+**Pendência aberta**: a API de rota (CEP→CEP) que alimentaria `calc_deslocamento` com a distância real é trabalho do Devin, ainda não integrada — até lá o valor de deslocamento continua 100% manual (o vendedor digita). Quando essa API existir, dá pra either (a) auto-preencher o campo de valor a partir de `calc_deslocamento(distancia_km)`, ou (b) o Devin decidir de outra forma — reconfirmar com a skill antes de mexer.
 
-Sem pendências de bug conhecidas.
+`calc_letra_caixa` e `calc_ps_adesivado` não foram tocadas (ainda usam `p_cidade`, que é vestigial nelas — nunca dependeram de `deslocamento_cidades` de fato).
+
+Sem pendências de bug conhecidas além da integração de rota acima.
