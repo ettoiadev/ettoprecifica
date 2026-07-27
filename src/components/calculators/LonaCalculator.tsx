@@ -3,6 +3,8 @@ import { Loader2, AlertTriangle, Copy, PlusCircle } from 'lucide-react';
 import { formatCurrency } from '../../types/pricing';
 import { supabase } from '../../lib/supabase/client';
 import { useCotacao } from '../../contexts/CotacaoContext';
+import { useDeslocamentoCep } from '../../hooks/useDeslocamentoCep';
+import DeslocamentoField from './DeslocamentoField';
 import { toast } from 'sonner';
 
 // Calculadora de Lona/Banner/Faixa — preço do motor da skill (Edge Function
@@ -53,8 +55,8 @@ const btn = (active: boolean) =>
 
 const LonaCalculator: React.FC = () => {
   const [precoM2Por, setPrecoM2Por] = useState<Record<string, number>>({});
-  const [incluirDeslocamento, setIncluirDeslocamento] = useState<boolean>(false);
-  const [custoDeslocamento, setCustoDeslocamento] = useState<string>('');
+  const deslocamento = useDeslocamentoCep();
+  const { incluirDeslocamento, custoDeslocamento } = deslocamento;
   const [acabamento, setAcabamento] = useState<string>('sem_acabamento');
   const [laca, setLaca] = useState<boolean>(false);
   const [largura, setLargura] = useState<string>('');
@@ -219,31 +221,7 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
             <span className="text-sm font-medium text-gray-700">Laca de Proteção (UV)</span>
           </label>
 
-          <div>
-            <label className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={incluirDeslocamento}
-                onChange={(e) => setIncluirDeslocamento(e.target.checked)}
-                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-              />
-              <span className="text-sm font-medium text-gray-700">Incluir deslocamento</span>
-            </label>
-            {incluirDeslocamento && (
-              <div className="mt-3">
-                <label className="block text-xs text-gray-500 mb-1">Valor do deslocamento (R$)</label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={custoDeslocamento}
-                  onChange={(e) => setCustoDeslocamento(e.target.value)}
-                  className={inputClass}
-                  placeholder="0.00"
-                />
-              </div>
-            )}
-          </div>
+          <DeslocamentoField {...deslocamento} />
         </div>
 
         <div className="bg-gray-50 rounded-xl border border-gray-200 p-6">

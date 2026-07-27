@@ -3,6 +3,8 @@ import { Loader2, AlertTriangle, Copy, PlusCircle } from 'lucide-react';
 import { formatCurrency } from '../../types/pricing';
 import { supabase } from '../../lib/supabase/client';
 import { useCotacao } from '../../contexts/CotacaoContext';
+import { useDeslocamentoCep } from '../../hooks/useDeslocamentoCep';
+import DeslocamentoField from './DeslocamentoField';
 import { toast } from 'sonner';
 
 // Resultado da função calc_vidro (via Edge Function calc-vidro).
@@ -42,8 +44,8 @@ const VidroCalculator: React.FC = () => {
   const [altura, setAltura] = useState<string>('');
   const [quantidade, setQuantidade] = useState<number>(1);
   const [prolongadores, setProlongadores] = useState<number>(0);
-  const [incluirDeslocamento, setIncluirDeslocamento] = useState<boolean>(false);
-  const [custoDeslocamento, setCustoDeslocamento] = useState<string>('');
+  const deslocamento = useDeslocamentoCep();
+  const { incluirDeslocamento, custoDeslocamento } = deslocamento;
 
   const [result, setResult] = useState<VidroResult | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
@@ -260,31 +262,7 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
             </div>
           </div>
 
-          <div>
-            <label className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={incluirDeslocamento}
-                onChange={(e) => setIncluirDeslocamento(e.target.checked)}
-                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-              />
-              <span className="text-sm font-medium text-gray-700">Incluir deslocamento</span>
-            </label>
-            {incluirDeslocamento && (
-              <div className="mt-3">
-                <label className="block text-xs text-gray-500 mb-1">Valor do deslocamento (R$)</label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={custoDeslocamento}
-                  onChange={(e) => setCustoDeslocamento(e.target.value)}
-                  className={inputClass}
-                  placeholder="0.00"
-                />
-              </div>
-            )}
-          </div>
+          <DeslocamentoField {...deslocamento} />
         </div>
 
         {/* Resultado */}
