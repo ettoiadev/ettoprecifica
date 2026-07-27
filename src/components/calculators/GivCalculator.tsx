@@ -269,6 +269,14 @@ Preço (com nota fiscal): ${formatCurrency(num(result.preco_com_nota))}`;
                       <span>Quantidade:</span>
                       <span>{num(result.quantidade_encontrada)} un</span>
                     </div>
+                    {num(result.preco_final) > 0 && num(result.quantidade_encontrada) > 0 && (
+                      <div className="flex justify-between text-sm text-gray-600">
+                        <span>Unitário:</span>
+                        <span>
+                          {formatCurrency(num(result.preco_final) / num(result.quantidade_encontrada))}
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   <div className="space-y-2">
