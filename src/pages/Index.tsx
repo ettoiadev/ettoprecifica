@@ -11,7 +11,6 @@ import LuminosoCalculator from '../components/calculators/LuminosoCalculator';
 import LaserCalculator from '../components/calculators/LaserCalculator';
 import DtfCalculator from '../components/calculators/DtfCalculator';
 import EtiquetasCalculator from '../components/calculators/EtiquetasCalculator';
-import GivCalculator from '../components/calculators/GivCalculator';
 import CavaletesCalculator from '../components/calculators/CavaletesCalculator';
 import SettingsPanel from '../components/SettingsPanel';
 import ModernHeader from '../components/ModernHeader';
@@ -119,7 +118,6 @@ const Index = () => {
       'laser': 'Calculadora de Laser',
       'dtf': 'Calculadora de DTF',
       'etiquetas': 'Calculadora de Etiquetas / Rótulos',
-      'giv': 'Calculadora de Gráfica (GIV)',
       'cavaletes': 'Calculadora de Cavaletes',
     };
     return titles[activeTab];
@@ -149,8 +147,6 @@ const Index = () => {
         return <DtfCalculator />;
       case 'etiquetas':
         return <EtiquetasCalculator />;
-      case 'giv':
-        return <GivCalculator />;
       case 'cavaletes':
         return <CavaletesCalculator />;
       default:
