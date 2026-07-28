@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import AdesivoImpressoCalculator from '../components/calculators/AdesivoImpressoCalculator';
-import AdesivoRecorteCalculator from '../components/calculators/AdesivoRecorteCalculator';
+import AdesivosCalculator from '../components/calculators/AdesivosCalculator';
 import LonaCalculator from '../components/calculators/LonaCalculator';
 import PlacasCalculator from '../components/calculators/PlacasCalculator';
 import FachadaCalculator from '../components/calculators/FachadaCalculator';
@@ -25,7 +24,7 @@ import { toast } from 'sonner';
 
 const Index = () => {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState('adesivo');
+  const [activeTab, setActiveTab] = useState('adesivos');
   const [showSettings, setShowSettings] = useState(false);
   const [config, setConfig] = useState<PricingConfig>(migrateConfig(defaultConfig));
 
@@ -107,8 +106,7 @@ const Index = () => {
 
   const getTabTitle = () => {
     const titles: Record<string, string> = {
-      'adesivo': 'Calculadora de Adesivo Impresso',
-      'adesivo-recorte': 'Calculadora de Adesivo de Recorte',
+      'adesivos': 'Calculadora de Adesivos',
       'lona': 'Calculadora de Lona',
       'placas': 'Calculadora de Placas',
       'fachada': 'Calculadora de Fachada Simples',
@@ -125,10 +123,8 @@ const Index = () => {
 
   const renderCalculator = () => {
     switch (activeTab) {
-      case 'adesivo':
-        return <AdesivoImpressoCalculator />;
-      case 'adesivo-recorte':
-        return <AdesivoRecorteCalculator />;
+      case 'adesivos':
+        return <AdesivosCalculator />;
       case 'lona':
         return <LonaCalculator />;
       case 'placas':
@@ -150,7 +146,7 @@ const Index = () => {
       case 'cavaletes':
         return <CavaletesCalculator />;
       default:
-        return <AdesivoImpressoCalculator />;
+        return <AdesivosCalculator />;
     }
   };
 
