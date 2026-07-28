@@ -11,16 +11,17 @@ import { toast } from 'sonner';
 // (Edge Function calc-placa-acm → calc_placa_acm). Por m² com espessura e
 // deslocamento por cidade. Quantidade por reconstrução (deslocamento uma vez).
 interface AcmResult {
+  motor_usado?: string;
   material_encontrado?: string;
   area_m2?: number | string;
   custo_chapa_m2?: number | string;
   custo_adesivo_m2?: number | string;
-  custo_total?: number | string;
+  custo_total_motor2?: number | string;
   custo_deslocamento?: number | string;
   deslocamento_incluido?: boolean;
   preco_minimo_projeto?: number | string;
-  preco_sem_nota_60?: number | string | null;
-  preco_com_nota_60?: number | string | null;
+  preco_final?: number | string | null;
+  preco_com_nota?: number | string | null;
   alerta?: string;
 }
 
@@ -104,11 +105,11 @@ const PlacaACMCalculator: React.FC = () => {
     return () => clearTimeout(timer);
   }, [larguraNum, alturaNum, quantidade, espessura, incluirDeslocamento, custoDeslocamentoNum, entradaValida]);
 
-  // O resultado já é o total do pedido (área agregada): preco_sem_nota_60 inclui o
+  // O resultado já é o total do pedido (área agregada): preco_final inclui o
   // mínimo de projeto e o deslocamento, aplicados uma única vez.
   const precos = useMemo(() => {
-    if (!result || result.preco_sem_nota_60 == null) return null;
-    return { semNota: num(result.preco_sem_nota_60), comNota: num(result.preco_com_nota_60) };
+    if (!result || result.preco_final == null) return null;
+    return { semNota: num(result.preco_final), comNota: num(result.preco_com_nota) };
   }, [result]);
 
   const temPreco = !!precos && precos.semNota > 0;

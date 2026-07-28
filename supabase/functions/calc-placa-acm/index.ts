@@ -58,10 +58,14 @@ Deno.serve(async (req: Request) => {
       return json({ error: "largura e altura devem ser maiores que zero" }, 400);
     }
 
+    // p_acabamento="com_adesivo": placa avulsa pronta pro cliente (com adesivo
+    // aplicado), preço de mercado (motor 1). "sem_impressao" é a chapa crua
+    // sem adesivo, usada internamente como material de fachada — não é o
+    // produto vendido nesta aba (skill confirmou via alerta em 28/07/26).
     const { data, error } = await supabase.rpc("calc_placa_acm", {
       largura_m: largura,
       altura_m: altura,
-      p_acabamento: "sem_impressao",
+      p_acabamento: "com_adesivo",
       p_espessura_mm: espessura,
       p_custo_deslocamento: custoDeslocamento,
       p_incluir_deslocamento: incluirDeslocamento,
