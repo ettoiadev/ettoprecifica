@@ -210,9 +210,9 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
                   <div className="bg-white rounded-lg border border-gray-200 p-4">
                     <div className="text-xs uppercase tracking-wide text-gray-500">Preço de venda (sem nota fiscal)</div>
                     <div className="text-3xl font-bold text-blue-600">{formatCurrency(precos.semNota)}</div>
-                    <div className="mt-1 text-sm text-gray-600">Com nota fiscal: {formatCurrency(precos.comNota)}</div>
+                    <div className="mt-1 text-sm text-orange-600 font-medium">Com nota fiscal: {formatCurrency(precos.comNota)}</div>
                     {quantidade > 1 && (
-                      <div className="mt-1 text-xs text-gray-500">
+                      <div className="mt-1 text-xs text-green-600 font-medium">
                         {quantidade} un · unitário {formatCurrency(precos.semNota / quantidade)} ({formatCurrency(precos.comNota / quantidade)} c/ nota)
                       </div>
                     )}

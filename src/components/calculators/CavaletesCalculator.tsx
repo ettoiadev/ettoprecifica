@@ -267,7 +267,7 @@ Preço (com nota fiscal): ${formatCurrency(num(precoComNota))}`;
                     <div className="text-3xl font-bold text-blue-600">
                       {formatCurrency(num(precoSemNota))}
                     </div>
-                    <div className="mt-1 text-sm text-gray-600">
+                    <div className="mt-1 text-sm text-orange-600 font-medium">
                       Com nota fiscal: {formatCurrency(num(precoComNota))}
                     </div>
                   </div>

@@ -301,11 +301,11 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
                     <div className="text-3xl font-bold text-blue-600">
                       {formatCurrency(precos.semNota)}
                     </div>
-                    <div className="mt-1 text-sm text-gray-600">
+                    <div className="mt-1 text-sm text-orange-600 font-medium">
                       Com nota fiscal: {formatCurrency(precos.comNota)}
                     </div>
                     {qtd > 1 && (
-                      <div className="mt-1 text-xs text-gray-500">
+                      <div className="mt-1 text-xs text-green-600 font-medium">
                         {qtd} peças · unitário {formatCurrency(precos.semNota / qtd)} (
                         {formatCurrency(precos.comNota / qtd)} c/ nota)
                       </div>
