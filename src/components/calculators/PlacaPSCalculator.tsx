@@ -38,7 +38,6 @@ const PlacaPSCalculator: React.FC = () => {
   const [largura, setLargura] = useState<string>('');
   const [altura, setAltura] = useState<string>('');
   const [quantidade, setQuantidade] = useState<number>(1);
-  const [percentual, setPercentual] = useState<number>(100);
 
   const [result, setResult] = useState<PSResult | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
@@ -87,7 +86,10 @@ const PlacaPSCalculator: React.FC = () => {
         const { data, error } = await supabase.functions.invoke('calc-ps', {
           // Área agregada (área por peça × qtd) enviada como largura×altura, para o
           // motor aplicar o mínimo de projeto UMA vez (evita cobrar o mínimo por peça).
-          body: { tipo, largura: larguraNum * alturaNum * qtd, altura: 1, percentual },
+          // percentual de impressão não é mais controlável pelo app: só afeta placas
+          // sem preço de mercado (fallback por custo), e a Edge Function já assume
+          // 100% (sólido) quando omitido.
+          body: { tipo, largura: larguraNum * alturaNum * qtd, altura: 1 },
         });
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
@@ -101,7 +103,7 @@ const PlacaPSCalculator: React.FC = () => {
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [tipo, larguraNum, alturaNum, qtd, percentual]);
+  }, [tipo, larguraNum, alturaNum, qtd]);
 
   // O resultado já é o total do pedido (área agregada): preco_final inclui o
   // mínimo de projeto, aplicado uma única vez.
@@ -206,46 +208,23 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="ps-qtd" className="block text-sm font-medium text-gray-700 mb-3">
-                Quantidade (peças)
-              </label>
-              <input
-                id="ps-qtd"
-                type="number"
-                min="1"
-                step="1"
-                value={quantidade || ''}
-                onChange={(e) => {
-                  const v = parseInt(e.target.value, 10);
-                  setQuantidade(Number.isFinite(v) && v > 0 ? v : 1);
-                }}
-                className={inputClass}
-              />
-            </div>
-            <div>
-              <label htmlFor="ps-perc" className="block text-sm font-medium text-gray-700 mb-3">
-                Impressão (%)
-              </label>
-              <input
-                id="ps-perc"
-                type="number"
-                min="1"
-                max="100"
-                step="1"
-                value={percentual}
-                onChange={(e) => {
-                  const v = parseInt(e.target.value, 10);
-                  setPercentual(Number.isFinite(v) ? Math.min(100, Math.max(1, v)) : 100);
-                }}
-                className={inputClass}
-              />
-            </div>
+          <div>
+            <label htmlFor="ps-qtd" className="block text-sm font-medium text-gray-700 mb-3">
+              Quantidade (peças)
+            </label>
+            <input
+              id="ps-qtd"
+              type="number"
+              min="1"
+              step="1"
+              value={quantidade || ''}
+              onChange={(e) => {
+                const v = parseInt(e.target.value, 10);
+                setQuantidade(Number.isFinite(v) && v > 0 ? v : 1);
+              }}
+              className={inputClass}
+            />
           </div>
-          <p className="-mt-3 text-xs text-gray-500">
-            Impressão (%) só afeta placas sem preço de mercado (cálculo por custo).
-          </p>
         </div>
 
         {/* Resultado */}
