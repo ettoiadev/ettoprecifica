@@ -24,11 +24,10 @@ SPA React de precificação usada por vendedores de uma empresa de comunicação
 - A NF (×1,0931) já vem embutida em `preco_com_nota`. **Não** re-aplicar taxas no app.
 - **Deslocamento (26/07/26 em diante): opcional, não mais por cidade.** `deslocamento_cidades` está **obsoleta** (todas as linhas `ativo=false`) — nenhuma `calc_*` a lê mais. 12 das 14 funções trocaram `p_cidade` por `p_custo_deslocamento numeric DEFAULT 0` + `p_incluir_deslocamento boolean DEFAULT false`: o app manda um checkbox "Incluir deslocamento" (desmarcado por padrão) + valor manual em R$; a função só soma ao preço final quando `p_incluir_deslocamento=true`. `calc_letra_caixa` e `calc_ps_adesivado` ainda usam `p_cidade` (não migradas, mas essas duas nunca dependeram de fato de `deslocamento_cidades` — `p_cidade` é vestigial nelas). Existe uma função nova `calc_deslocamento(p_distancia_km, ...)` que calcula o custo a partir de km — mas a integração da API de rota (CEP→CEP) que forneceria essa distância é trabalho do **Devin**, ainda pendente; até lá o valor de deslocamento é sempre digitado manualmente pelo vendedor.
 
-## Abas → Edge Function → função da skill (12 abas visíveis no menu; 14 funções continuam ativas na skill)
+## Abas → Edge Function → função da skill (11 abas visíveis no menu; 14 funções continuam ativas na skill)
 | Aba | Edge Function | Função |
 |---|---|---|
-| Adesivo (impresso) | calc-adesivo-impresso | `calc_adesivo_impresso` |
-| Recorte | calc-adesivo-recorte | `calc_adesivo_recorte` |
+| Adesivos (Impresso + Recorte, ver abaixo) | calc-adesivo-impresso / calc-adesivo-recorte | `calc_adesivo_impresso` / `calc_adesivo_recorte` |
 | Lona | calc-lona | `calc_lona` |
 | Placas (PS + ACM, ver abaixo) | calc-ps / calc-placa-acm | `calc_ps_adesivado` / `calc_placa_acm` |
 | Fachada | calc-fachada | `calc_fachada_acm` / `calc_fachada_lona` |
@@ -40,7 +39,11 @@ SPA React de precificação usada por vendedores de uma empresa de comunicação
 | Etiquetas | calc-etiquetas | `calc_etiquetas` |
 | Cavaletes | calc-cavaletes | `calc_cavaletes` / `calc_cavaletes_madeira` |
 
-**Placa PS + Placa ACM viraram uma aba única "Placas"** (27/07/26): `PlacasCalculator.tsx` é um wrapper fino com um seletor de tipo (PS/ACM) que renderiza `PlacaPSCalculator`/`PlacaACMCalculator` originais por baixo, sem alterar a lógica de cálculo de nenhum dos dois — cada um continua chamando sua própria Edge Function como sempre.
+**Padrão de abas unificadas por wrapper fino** (27/07/26): quando dois produtos afins tinham abas separadas, a solução foi um componente wrapper com seletor de tipo no topo que renderiza o componente original por baixo, sem tocar na lógica de cálculo de nenhum:
+- **Placas** = Placa PS + Placa ACM → `PlacasCalculator.tsx` renderiza `PlacaPSCalculator`/`PlacaACMCalculator` originais.
+- **Adesivos** = Adesivo Impresso + Recorte → `AdesivosCalculator.tsx` renderiza `AdesivoImpressoCalculator`/`AdesivoRecorteCalculator` originais.
+
+Cada um continua chamando sua própria Edge Function como sempre — nenhuma mudança na skill foi necessária pra nenhuma das duas fusões.
 
 **Gráfica (GIV) foi removida do menu** (27/07/26, a pedido do usuário): `GivCalculator.tsx` foi deletado, e o menu/rota removidos de `ModernTabs.tsx`/`Index.tsx`. A Edge Function `calc-giv` e a função `calc_giv` na skill **não foram tocadas** — só o acesso pelo app foi retirado. Se precisar reativar, é só recriar o componente (padrão idêntico aos outros) e religar no menu; a função do motor continua funcionando.
 
