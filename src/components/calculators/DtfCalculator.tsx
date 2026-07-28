@@ -237,6 +237,11 @@ Preço (com nota fiscal): ${formatCurrency(num(result.preco_com_nota_60))}`;
                     <div className="mt-1 text-sm text-orange-600 font-medium">
                       Com nota fiscal: {formatCurrency(num(result.preco_com_nota_60))}
                     </div>
+                    {metrosNum > 0 && (
+                      <div className="mt-1 text-xs text-green-600 font-medium">
+                        {metrosNum.toFixed(2)}m · unitário {formatCurrency(num(result.preco_sem_nota_60) / metrosNum)}/m
+                      </div>
+                    )}
                   </div>
 
                   <div className="space-y-1">
@@ -254,12 +259,6 @@ Preço (com nota fiscal): ${formatCurrency(num(result.preco_com_nota_60))}`;
                       <span>Custo por metro:</span>
                       <span>{formatCurrency(num(result.custo_metro))}</span>
                     </div>
-                    {metrosNum > 0 && (
-                      <div className="flex justify-between text-sm text-gray-600">
-                        <span>Unitário (venda/metro):</span>
-                        <span>{formatCurrency(num(result.preco_sem_nota_60) / metrosNum)}</span>
-                      </div>
-                    )}
                     <div className="flex justify-between text-sm text-gray-600">
                       <span>Custo do material:</span>
                       <span>{formatCurrency(num(result.custo_material))}</span>

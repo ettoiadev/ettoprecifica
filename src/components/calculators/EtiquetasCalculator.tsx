@@ -232,6 +232,12 @@ Preço (com nota fiscal): ${formatCurrency(num(result.preco_com_nota))}`;
                     <div className="mt-1 text-sm text-orange-600 font-medium">
                       Com nota fiscal: {formatCurrency(num(result.preco_com_nota))}
                     </div>
+                    {num(result.quantidade_encontrada) > 0 && (
+                      <div className="mt-1 text-xs text-green-600 font-medium">
+                        {num(result.quantidade_encontrada)} un · unitário{' '}
+                        {formatCurrency(num(result.preco_final) / num(result.quantidade_encontrada))}
+                      </div>
+                    )}
                   </div>
 
                   <div className="space-y-1">
@@ -243,14 +249,6 @@ Preço (com nota fiscal): ${formatCurrency(num(result.preco_com_nota))}`;
                       <span>Quantidade:</span>
                       <span>{num(result.quantidade_encontrada)} un</span>
                     </div>
-                    {num(result.preco_final) > 0 && num(result.quantidade_encontrada) > 0 && (
-                      <div className="flex justify-between text-sm text-gray-600">
-                        <span>Unitário:</span>
-                        <span>
-                          {formatCurrency(num(result.preco_final) / num(result.quantidade_encontrada))}
-                        </span>
-                      </div>
-                    )}
                     {incluirDeslocamento && num(result.custo_deslocamento) > 0 && (
                       <div className="flex justify-between text-sm text-gray-600">
                         <span>Deslocamento:</span>
