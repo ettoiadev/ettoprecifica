@@ -3,8 +3,7 @@ import React, { useState, useEffect } from 'react';
 import AdesivoImpressoCalculator from '../components/calculators/AdesivoImpressoCalculator';
 import AdesivoRecorteCalculator from '../components/calculators/AdesivoRecorteCalculator';
 import LonaCalculator from '../components/calculators/LonaCalculator';
-import PlacaPSCalculator from '../components/calculators/PlacaPSCalculator';
-import PlacaACMCalculator from '../components/calculators/PlacaACMCalculator';
+import PlacasCalculator from '../components/calculators/PlacasCalculator';
 import FachadaCalculator from '../components/calculators/FachadaCalculator';
 import LetraCaixaCalculator from '../components/calculators/LetraCaixaCalculator';
 import VidroCalculator from '../components/calculators/VidroCalculator';
@@ -112,8 +111,7 @@ const Index = () => {
       'adesivo': 'Calculadora de Adesivo Impresso',
       'adesivo-recorte': 'Calculadora de Adesivo de Recorte',
       'lona': 'Calculadora de Lona',
-      'placa-ps': 'Calculadora de Placa em PS',
-      'placa-acm': 'Calculadora de Placa em ACM',
+      'placas': 'Calculadora de Placas',
       'fachada': 'Calculadora de Fachada Simples',
       'letra-caixa': 'Calculadora de Letra Caixa',
       'vidro': 'Calculadora de Vidro Temperado',
@@ -135,10 +133,8 @@ const Index = () => {
         return <AdesivoRecorteCalculator />;
       case 'lona':
         return <LonaCalculator />;
-      case 'placa-ps':
-        return <PlacaPSCalculator />;
-      case 'placa-acm':
-        return <PlacaACMCalculator />;
+      case 'placas':
+        return <PlacasCalculator />;
       case 'fachada':
         return <FachadaCalculator config={config.fachada} fullConfig={config} />;
       case 'letra-caixa':
