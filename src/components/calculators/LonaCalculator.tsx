@@ -35,12 +35,6 @@ interface Opcao {
   preco_venda_m2: number | string;
 }
 
-// Acabamentos oferecidos nesta aba (ambos existem no motor da skill).
-const TIPOS: { tipo: string; label: string; precoFallback: number }[] = [
-  { tipo: 'sem_acabamento', label: 'Padrão', precoFallback: 70 },
-  { tipo: 'reforcada_ilhos', label: 'Reforço + Ilhós', precoFallback: 90 },
-];
-
 const num = (v: number | string | undefined | null): number => Number(v ?? 0);
 
 const inputClass =
@@ -54,7 +48,7 @@ const btn = (active: boolean) =>
   }`;
 
 const LonaCalculator: React.FC = () => {
-  const [precoM2Por, setPrecoM2Por] = useState<Record<string, number>>({});
+  const [opcoes, setOpcoes] = useState<Opcao[]>([]);
   const deslocamento = useDeslocamentoCep();
   const { incluirDeslocamento, custoDeslocamento } = deslocamento;
   const [acabamento, setAcabamento] = useState<string>('sem_acabamento');
@@ -74,7 +68,7 @@ const LonaCalculator: React.FC = () => {
   const custoDeslocamentoNum = parseFloat(custoDeslocamento) || 0;
   const entradaValida = larguraNum > 0 && alturaNum > 0;
 
-  // Carrega preços por acabamento (para os rótulos).
+  // Carrega os acabamentos ativos do motor (uma vez).
   useEffect(() => {
     let ativo = true;
     (async () => {
@@ -83,12 +77,9 @@ const LonaCalculator: React.FC = () => {
           body: { action: 'meta' },
         });
         if (!ativo) return;
-        if (!error && data && Array.isArray(data.opcoes)) {
-          const mapa: Record<string, number> = {};
-          (data.opcoes as Opcao[]).forEach((o) => {
-            mapa[o.tipo] = num(o.preco_venda_m2);
-          });
-          setPrecoM2Por(mapa);
+        if (!error && data && Array.isArray(data.opcoes) && data.opcoes.length > 0) {
+          setOpcoes(data.opcoes);
+          setAcabamento((a) => (data.opcoes.some((o: Opcao) => o.tipo === a) ? a : data.opcoes[0].tipo));
         }
       } catch {
         /* sem meta */
@@ -143,7 +134,7 @@ const LonaCalculator: React.FC = () => {
   }, [result]);
 
   const temPreco = !!precos && precos.semNota > 0;
-  const acabamentoLabel = TIPOS.find((t) => t.tipo === acabamento)?.label ?? 'Padrão';
+  const acabamentoLabel = opcoes.find((o) => o.tipo === acabamento)?.nome ?? 'Padrão';
 
   const descricao = useMemo(
     () =>
@@ -177,8 +168,7 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Calculadora de Lona</h2>
         <p className="text-gray-600">
-          Lona, banner e faixa por m². Padrão R$ 70,00/m² ou reforço + ilhós R$ 90,00/m². Preço do
-          motor de precificação.
+          Lona, banner e faixa por m², com acabamento. Preço do motor de precificação.
         </p>
       </div>
 
@@ -204,15 +194,15 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-3">Acabamento</label>
-            <div className="grid grid-cols-2 gap-3">
-              {TIPOS.map((t) => {
-                const preco = precoM2Por[t.tipo] ?? t.precoFallback;
-                return (
-                  <button key={t.tipo} type="button" onClick={() => setAcabamento(t.tipo)} className={btn(acabamento === t.tipo)}>
-                    {t.label} — {formatCurrency(preco)}/m²
-                  </button>
-                );
-              })}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {opcoes.length === 0 && (
+                <span className="text-sm text-gray-500">Carregando…</span>
+              )}
+              {opcoes.map((o) => (
+                <button key={o.tipo} type="button" onClick={() => setAcabamento(o.tipo)} className={btn(acabamento === o.tipo)}>
+                  {o.nome} — {formatCurrency(num(o.preco_venda_m2))}/m²
+                </button>
+              ))}
             </div>
           </div>
 
