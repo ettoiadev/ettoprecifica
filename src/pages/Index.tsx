@@ -4,6 +4,7 @@ import AdesivosCalculator from '../components/calculators/AdesivosCalculator';
 import LonaCalculator from '../components/calculators/LonaCalculator';
 import PlacasCalculator from '../components/calculators/PlacasCalculator';
 import FachadaCalculator from '../components/calculators/FachadaCalculator';
+import Acm3dCalculator from '../components/calculators/Acm3dCalculator';
 import LetraCaixaCalculator from '../components/calculators/LetraCaixaCalculator';
 import VidroCalculator from '../components/calculators/VidroCalculator';
 import LuminosoCalculator from '../components/calculators/LuminosoCalculator';
@@ -109,6 +110,7 @@ const Index = () => {
       'lona': 'Calculadora de Lona',
       'placas': 'Calculadora de Placas',
       'fachada': 'Calculadora de Fachada Simples',
+      'acm3d': 'Cotação de Fachada em ACM 3D',
       'letra-caixa': 'Calculadora de Letra Caixa',
       'vidro': 'Calculadora de Vidro Temperado',
       'luminoso': 'Calculadora de Luminoso',
@@ -129,6 +131,8 @@ const Index = () => {
         return <PlacasCalculator />;
       case 'fachada':
         return <FachadaCalculator config={config.fachada} fullConfig={config} />;
+      case 'acm3d':
+        return <Acm3dCalculator />;
       case 'letra-caixa':
         return <LetraCaixaCalculator />;
       case 'vidro':
