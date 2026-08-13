@@ -59,7 +59,7 @@ export const settingsConfig: ConfigSectionData[] = [
     title: 'Lona',
     section: 'lona',
     fields: [
-      { key: 'bannerSemAcabamento', label: 'Banner ou Lona sem acabamento', unit: 'm²' },
+      { key: 'bannerSemAcabamento', label: 'Banner / Faixa', unit: 'm²' },
       { key: 'reforcoIlhos', label: 'Lona reforço e ilhós', unit: 'm²' },
       { key: 'lonaGrande', label: 'Lona grande (maior que 1,80 largura)', unit: 'm²' },
       { key: 'lonaTranslucida', label: 'Lona translúcida', unit: 'm²' },

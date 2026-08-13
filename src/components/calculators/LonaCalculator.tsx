@@ -46,7 +46,7 @@ const LonaCalculator: React.FC<Props> = ({ config }) => {
   // Opções de acabamento (preços manuais vindos de Configurações).
   const opcoes = useMemo<Opcao[]>(
     () => [
-      { id: 'bannerSemAcabamento', nome: 'Banner ou Lona sem acabamento', preco: config.bannerSemAcabamento },
+      { id: 'bannerSemAcabamento', nome: 'Banner / Faixa', preco: config.bannerSemAcabamento },
       { id: 'reforcoIlhos', nome: 'Lona reforço e ilhós', preco: config.reforcoIlhos },
       { id: 'lonaGrande', nome: 'Lona grande (maior que 1,80 largura)', preco: config.lonaGrande },
       { id: 'lonaTranslucida', nome: 'Lona translúcida', preco: config.lonaTranslucida },
