@@ -27,11 +27,12 @@ interface Opcao {
 const inputClass =
   'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent';
 
+// Boxes com preenchimento pastel (tonalidade suave) para facilitar a leitura.
 const btn = (active: boolean) =>
   `text-left px-4 py-3 rounded-lg border text-sm font-medium transition-colors ${
     active
-      ? 'bg-blue-50 border-blue-300 text-blue-700'
-      : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+      ? 'bg-indigo-100 border-indigo-400 text-indigo-800 shadow-sm'
+      : 'bg-indigo-50/60 border-indigo-200 text-gray-700 hover:bg-indigo-100/70'
   }`;
 
 const AdesivoManualCalculator: React.FC<Props> = ({ config }) => {
@@ -56,6 +57,7 @@ const AdesivoManualCalculator: React.FC<Props> = ({ config }) => {
       { id: 'jateado', nome: 'Adesivo Jateado', descricao: 'Para vidros', preco: config.jateado },
       { id: 'blackout', nome: 'Adesivo Black-out', descricao: 'Cola cinza', preco: config.blackout },
       { id: 'translucido', nome: 'Adesivo Translúcido', descricao: 'Para plaquinhas de luminoso', preco: config.translucido },
+      { id: 'imaCarroAdesivado', nome: 'Imã de Carro Adesivado', descricao: 'Imã para carros', preco: config.imaCarroAdesivado },
     ],
     [config]
   );

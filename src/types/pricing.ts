@@ -27,6 +27,7 @@ export interface AdesivoConfig {
   jateado: number;
   blackout: number;
   translucido: number;
+  imaCarroAdesivado: number;
   notaFiscalPercentual: number;
 }
 
@@ -207,6 +208,7 @@ export const defaultConfig: PricingConfig = {
     jateado: 150.0,
     blackout: 130.0,
     translucido: 130.0,
+    imaCarroAdesivado: 420.0,
     notaFiscalPercentual: 20.0,
   },
   lona: {
