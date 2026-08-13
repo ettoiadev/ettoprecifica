@@ -26,7 +26,7 @@ export interface AdesivoConfig {
   recorte2Cores: number;
   jateado: number;
   blackout: number;
-  translucido: number;
+  refletivo: number;
   imaCarroAdesivado: number;
   notaFiscalPercentual: number;
 }
@@ -207,7 +207,7 @@ export const defaultConfig: PricingConfig = {
     recorte2Cores: 380.0,
     jateado: 150.0,
     blackout: 130.0,
-    translucido: 130.0,
+    refletivo: 130.0,
     imaCarroAdesivado: 420.0,
     notaFiscalPercentual: 20.0,
   },

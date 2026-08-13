@@ -56,7 +56,7 @@ const AdesivoManualCalculator: React.FC<Props> = ({ config }) => {
       { id: 'recorte2Cores', nome: 'Adesivo Recorte 2 Cores', descricao: 'Recorte Gold Max', preco: config.recorte2Cores },
       { id: 'jateado', nome: 'Adesivo Jateado', descricao: 'Para vidros', preco: config.jateado },
       { id: 'blackout', nome: 'Adesivo Black-out', descricao: 'Cola cinza', preco: config.blackout },
-      { id: 'translucido', nome: 'Adesivo Translúcido', descricao: 'Para plaquinhas de luminoso', preco: config.translucido },
+      { id: 'refletivo', nome: 'Adesivo Refletivo', descricao: 'Alta visibilidade / sinalização', preco: config.refletivo },
       { id: 'imaCarroAdesivado', nome: 'Imã de Carro Adesivado', descricao: 'Imã para carros', preco: config.imaCarroAdesivado },
     ],
     [config]

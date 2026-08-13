@@ -28,7 +28,7 @@ export const settingsConfig: ConfigSectionData[] = [
       { key: 'recorte2Cores', label: 'Adesivo Recorte 2 Cores', unit: 'm²' },
       { key: 'jateado', label: 'Adesivo Jateado', unit: 'm²' },
       { key: 'blackout', label: 'Adesivo Black-out', unit: 'm²' },
-      { key: 'translucido', label: 'Adesivo Translúcido', unit: 'm²' },
+      { key: 'refletivo', label: 'Adesivo Refletivo', unit: 'm²' },
       { key: 'imaCarroAdesivado', label: 'Imã de Carro Adesivado', unit: 'm²' },
       { key: 'notaFiscalPercentual', label: 'Percentual de nota fiscal', unit: '%' },
     ],
