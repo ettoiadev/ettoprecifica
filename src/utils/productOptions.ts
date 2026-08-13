@@ -14,11 +14,9 @@ import { PricingConfig, ProductVariation } from '../types/pricing';
  */
 
 export type OptionListSection =
-  | 'placaPS'
   | 'letraCaixa'
   | 'vidro'
   | 'laser'
-  | 'placaACM'
   | 'instalacao';
 
 interface BaseOptionDef {
@@ -42,13 +40,6 @@ interface SectionOptionsDef {
 }
 
 export const SECTION_OPTIONS: Record<OptionListSection, SectionOptionsDef> = {
-  placaPS: {
-    baseOptions: [
-      { id: 'espessura1mm', label: 'Espessura 1mm', priceKey: 'espessura1mm' },
-      { id: 'espessura2mm', label: 'Espessura 2mm', priceKey: 'espessura2mm' },
-    ],
-    foldLegacyCustomVariations: false,
-  },
   letraCaixa: {
     baseOptions: [
       { id: '10mm', label: 'Espessura 10mm', priceKey: 'espessura10mm' },
@@ -93,10 +84,6 @@ export const SECTION_OPTIONS: Record<OptionListSection, SectionOptionsDef> = {
       { id: 'espelhadoPrata2mm', label: 'Espelhado Prata 2mm', priceKey: 'espelhadoPrata2mm', category: 'Outros Materiais' },
       { id: 'espelhadoPrataDourado3mm', label: 'Espelhado Prata/Dourado 3mm', priceKey: 'espelhadoPrataDourado3mm', category: 'Outros Materiais' },
     ],
-    foldLegacyCustomVariations: false,
-  },
-  placaACM: {
-    baseOptions: [{ id: 'padrao', label: 'Placa ACM', priceKey: 'preco' }],
     foldLegacyCustomVariations: false,
   },
   instalacao: {

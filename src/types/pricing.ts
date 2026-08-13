@@ -43,16 +43,24 @@ export interface LonaConfig {
   notaFiscalPercentual: number;
 }
 
+// Placas (PS e ACM) também têm preço MANUAL, editável em Configurações (como Lona
+// e Adesivos). Preços padrão = os preços de venda/m² que já vinham do motor da
+// skill (lidos via SQL em 30/07/26); o preço com nota sai de um percentual único
+// (a NF do motor era ×1,0931 = 9,31%).
 export interface PlacaPSConfig {
-  espessura1mm: number;
-  espessura2mm: number;
-  customVariations?: ProductVariation[];
-  variations?: ProductVariation[];
+  branco1mm: number;
+  branco2mm: number;
+  branco3mm: number;
+  cristal15mm: number;
+  cristal2mm: number;
+  cristal3mm: number;
+  notaFiscalPercentual: number;
 }
 
 export interface PlacaACMConfig {
-  preco: number;
-  variations?: ProductVariation[];
+  brancoBrilho3mm: number;
+  madeira3mm: number;
+  notaFiscalPercentual: number;
 }
 
 export interface FachadaConfig {
@@ -220,11 +228,18 @@ export const defaultConfig: PricingConfig = {
     notaFiscalPercentual: 20.0,
   },
   placaPS: {
-    espessura1mm: 30.0,
-    espessura2mm: 35.0,
+    branco1mm: 180.0,
+    branco2mm: 220.0,
+    branco3mm: 250.0,
+    cristal15mm: 290.0,
+    cristal2mm: 330.0,
+    cristal3mm: 390.0,
+    notaFiscalPercentual: 9.31,
   },
   placaACM: {
-    preco: 45.0,
+    brancoBrilho3mm: 280.0,
+    madeira3mm: 280.0,
+    notaFiscalPercentual: 9.31,
   },
   fachada: {
     lona: 20.0,

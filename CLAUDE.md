@@ -7,7 +7,7 @@
 > 4. **Priorize a skill**: antes de criar qualquer objeto no banco ou calcular preço no app, cheque se a skill já tem a função/dado. O app só **consome**, nunca escreve preço.
 
 ## O que é
-SPA React de precificação usada por vendedores de uma empresa de comunicação visual. Cada aba é uma calculadora de um produto. **Quase todo preço vem do "motor" da skill orcamentista-cv** (funções `calc_*` no banco Supabase `tabelapreco`, ref `ghyctsclpcsrznrqegrp`), consumido via **Edge Functions read-only**. **Exceções (29/07/26): as abas Lona e Adesivos voltaram a ter preço MANUAL, editável em Configurações** — ver "Estado atual". Fora Lona e Adesivos, não há precificação local.
+SPA React de precificação usada por vendedores de uma empresa de comunicação visual. Cada aba é uma calculadora de um produto. **Quase todo preço vem do "motor" da skill orcamentista-cv** (funções `calc_*` no banco Supabase `tabelapreco`, ref `ghyctsclpcsrznrqegrp`), consumido via **Edge Functions read-only**. **Exceções (29–30/07/26): as abas Lona, Adesivos e Placas (PS + ACM) voltaram a ter preço MANUAL, editável em Configurações** — ver "Estado atual". Fora dessas, não há precificação local.
 
 ## Stack e build
 - React 18.3 + TypeScript 5.5 + Vite 5.4 (SWC — **não faz typecheck no build**).
@@ -29,7 +29,7 @@ SPA React de precificação usada por vendedores de uma empresa de comunicação
 |---|---|---|
 | Adesivos (manual) + Etiquetas (motor), ver abaixo | **(Adesivos: preço manual local)** / calc-etiquetas | ~~`calc_adesivo_impresso`/`calc_adesivo_recorte`~~ (intactas, não chamadas) / `calc_etiquetas` |
 | Lona | **(preço manual local — não usa Edge Function)** | ~~`calc_lona`~~ (intacta na skill, mas não é mais chamada) |
-| Placas (PS + ACM, ver abaixo) | calc-ps / calc-placa-acm | `calc_ps_adesivado` / `calc_placa_acm` |
+| Placas (PS + ACM, ver abaixo) | **(preço manual local — não usa Edge Function)** | ~~`calc_ps_adesivado`/`calc_placa_acm`~~ (intactas, não chamadas) |
 | Fachada | calc-fachada | `calc_fachada_acm` / `calc_fachada_lona` |
 | Letra Caixa | calc-letra-caixa | `calc_letra_caixa` |
 | Vidro | calc-vidro | `calc_vidro` |
@@ -39,7 +39,7 @@ SPA React de precificação usada por vendedores de uma empresa de comunicação
 | Cavaletes | calc-cavaletes | `calc_cavaletes` / `calc_cavaletes_madeira` |
 
 **Padrão de abas unificadas por wrapper fino** (27/07/26): quando produtos afins tinham abas separadas, a solução foi um componente wrapper com seletor de tipo no topo que renderiza o componente original por baixo, sem tocar na lógica de cálculo de nenhum:
-- **Placas** = Placa PS + Placa ACM → `PlacasCalculator.tsx` renderiza `PlacaPSCalculator`/`PlacaACMCalculator` originais.
+- **Placas** = Placa PS + Placa ACM → `PlacasCalculator.tsx` renderiza `PlacaPSManualCalculator`/`PlacaACMManualCalculator` (preço manual, ver "Estado atual"). Os componentes antigos `PlacaPSCalculator`/`PlacaACMCalculator` (motor) ficaram no repo mas não são mais importados.
 - **Adesivos** = Adesivos (manual) + Etiquetas → `AdesivosCalculator.tsx` renderiza `AdesivoManualCalculator` (preço manual, ver "Estado atual") e `EtiquetasCalculator` (motor). Antes eram 3 sub-abas pelo motor (`AdesivoImpressoCalculator`/`AdesivoRecorteCalculator`/`EtiquetasCalculator`); Impresso+Recorte viraram a lista manual, os dois componentes antigos ficaram no repo mas não são mais importados.
 
 Cada um continua chamando sua própria Edge Function como sempre — nenhuma mudança na skill foi necessária pra nenhuma dessas fusões.
@@ -64,8 +64,12 @@ curl -s -X POST "https://api.supabase.com/v1/projects/ghyctsclpcsrznrqegrp/datab
 ```
 Deploy de Edge Function: `POST .../v1/projects/<ref>/functions/deploy?slug=<slug>` com `-F metadata=...;type=application/json -F file=@index.ts`. **Nunca** salvar o token; pedir para revogar após uso.
 
-## Lona e Adesivos voltaram a ter preço MANUAL (29/07/26) — quebram o padrão "app só consome"
-A pedido do Étto, as **abas Lona e Adesivos deixaram de usar o motor da skill** e passaram a ser precificadas localmente, com preços editáveis em **Configurações > Produtos** (ele quer controlar o m² na mão, a partir das planilhas dele). São as **únicas** exceções ao "todo preço vem da skill" — todo o resto continua no motor. As duas seguem exatamente o mesmo padrão (schema em `pricing.ts` → calculadora recebe `config` via `Index.tsx` → seção em `settingsConfig.ts` → percentual de NF tratado em `ConfigSection.tsx`/`configUtils.ts` → seção removida de `productOptions.ts`).
+## Lona, Adesivos e Placas voltaram a ter preço MANUAL (29–30/07/26) — quebram o padrão "app só consome"
+A pedido do Étto, as **abas Lona, Adesivos e Placas (PS + ACM) deixaram de usar o motor da skill** e passaram a ser precificadas localmente, com preços editáveis em **Configurações > Produtos** (ele quer controlar o m² na mão). São as **únicas** exceções ao "todo preço vem da skill" — todo o resto continua no motor. Todas seguem exatamente o mesmo padrão (schema em `pricing.ts` → calculadora recebe `config` via `Index.tsx` → seção em `settingsConfig.ts` → percentual de NF tratado em `ConfigSection.tsx`/`configUtils.ts`, hoje genérico: qualquer campo `notaFiscalPercentual` é % → seção removida de `productOptions.ts` → materiais em botões pastel índigo).
+
+**Placas** (30/07/26): a aba continua wrapper de 2 sub-tipos — **Placa PS** (`PlacaPSManualCalculator`, sem deslocamento) e **Placa ACM** (`PlacaACMManualCalculator`, com deslocamento por CEP). Preços padrão = **os preços de venda/m² reais que estavam no motor** (lidos via SQL com PAT temporário do Étto): PS `ps_placas_materiais.preco_mercado_m2` → Branco 1mm 180 / 2mm 220 / 3mm 250, Cristal 1,5mm 290 / 2mm 330 / 3mm 390; ACM via `calc_placa_acm(...,'com_adesivo',3,...)` = **R$280/m²** para qualquer espessura (o motor sempre resolve "ACM Branco Brilho 3mm" — 2/3/4/6mm todos caem em 280). Como o motor não diferencia material de ACM, semeei **Madeira 3mm também em 280** (o Étto pode subir, já que o custo da chapa madeira é bem maior — 96,72 vs 63,93). NF por **percentual único = 9,31%** (a NF do motor era ×1,0931, confirmado nos dois: 280→306,07 e 180→196,76). `PlacaPSConfig`/`PlacaACMConfig` reescritas; `calc_ps_adesivado`/`calc_placa_acm`/`calc-ps`/`calc-placa-acm` **intactos, só não são mais chamados**. Se pedir mais espessuras/materiais: campo em config+default+settingsConfig+array `opcoes` do respectivo calculator.
+
+**Adesivos:**
 
 **Adesivos** (mesma decisão que a Lona, feita depois): a aba virou wrapper de 2 sub-tipos — **"Adesivos"** (`AdesivoManualCalculator`, preço manual) + **"Etiquetas"** (`EtiquetasCalculator`, ainda no motor, intacto). `AdesivoConfig` reescrita com 9 tipos da planilha (`digital` 100, `digitalPeliculaTransparente` 150, `transparente` 120, `perfurado` 200, `recorte1Cor` 250, `recorte2Cores` 380, `jateado` 150, `blackout` 130, `translucido` 130) + `notaFiscalPercentual` (20). **Sem laca** (não estava na planilha de adesivo). NF por **percentual único** (a NF da planilha varia 12–25%, não bate com % único — o Étto aceitou a troca). Deslocamento como custo de repasse (sem NF), via CEP. `calc-adesivo-impresso`/`calc-adesivo-recorte`/`calc_adesivo_impresso`/`calc_adesivo_recorte` **intactos, só não são mais chamados**. Se pedir mais tipos: campo em `AdesivoConfig`+`defaultConfig`+`settingsConfig`+array `opcoes` do `AdesivoManualCalculator`.
 

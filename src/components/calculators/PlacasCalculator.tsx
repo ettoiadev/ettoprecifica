@@ -1,12 +1,17 @@
 import React, { useState } from 'react';
-import PlacaPSCalculator from './PlacaPSCalculator';
-import PlacaACMCalculator from './PlacaACMCalculator';
+import { PlacaPSConfig, PlacaACMConfig } from '../../types/pricing';
+import PlacaPSManualCalculator from './PlacaPSManualCalculator';
+import PlacaACMManualCalculator from './PlacaACMManualCalculator';
 
-// Aba unificada "Placas": agrupa Placa PS e Placa ACM sob um único menu, com
-// um seletor de tipo no topo. Cada opção continua sendo o componente
-// original, intacto (chama calc-ps ou calc-placa-acm como sempre) — este
-// componente só decide qual dos dois renderizar.
+// Aba unificada "Placas": um seletor de tipo no topo escolhe entre Placa PS e
+// Placa ACM, ambas com preço MANUAL definido em Configurações (não mais pelo
+// motor da skill). calc-ps/calc-placa-acm ficam intactos, só não são chamados.
 type TipoPlaca = 'ps' | 'acm';
+
+interface Props {
+  configPS: PlacaPSConfig;
+  configACM: PlacaACMConfig;
+}
 
 const btn = (active: boolean) =>
   `px-4 py-3 rounded-lg border text-sm font-medium transition-colors ${
@@ -15,7 +20,7 @@ const btn = (active: boolean) =>
       : 'border-gray-300 text-gray-700 hover:bg-gray-50'
   }`;
 
-const PlacasCalculator: React.FC = () => {
+const PlacasCalculator: React.FC<Props> = ({ configPS, configACM }) => {
   const [tipoPlaca, setTipoPlaca] = useState<TipoPlaca>('ps');
 
   return (
@@ -32,7 +37,11 @@ const PlacasCalculator: React.FC = () => {
         </div>
       </div>
 
-      {tipoPlaca === 'ps' ? <PlacaPSCalculator /> : <PlacaACMCalculator />}
+      {tipoPlaca === 'ps' ? (
+        <PlacaPSManualCalculator config={configPS} />
+      ) : (
+        <PlacaACMManualCalculator config={configACM} />
+      )}
     </div>
   );
 };

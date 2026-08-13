@@ -34,6 +34,28 @@ export const settingsConfig: ConfigSectionData[] = [
     ],
   },
   {
+    title: 'Placa PS',
+    section: 'placaPS',
+    fields: [
+      { key: 'branco1mm', label: 'Placa PS Branco 1mm', unit: 'm²' },
+      { key: 'branco2mm', label: 'Placa PS Branco 2mm', unit: 'm²' },
+      { key: 'branco3mm', label: 'Placa PS Branco 3mm', unit: 'm²' },
+      { key: 'cristal15mm', label: 'PS Cristal 1,5mm', unit: 'm²' },
+      { key: 'cristal2mm', label: 'PS Cristal 2mm', unit: 'm²' },
+      { key: 'cristal3mm', label: 'PS Cristal 3mm', unit: 'm²' },
+      { key: 'notaFiscalPercentual', label: 'Percentual de nota fiscal', unit: '%' },
+    ],
+  },
+  {
+    title: 'Placa ACM',
+    section: 'placaACM',
+    fields: [
+      { key: 'brancoBrilho3mm', label: 'ACM Branco Brilho 3mm', unit: 'm²' },
+      { key: 'madeira3mm', label: 'ACM Madeira 3mm', unit: 'm²' },
+      { key: 'notaFiscalPercentual', label: 'Percentual de nota fiscal', unit: '%' },
+    ],
+  },
+  {
     title: 'Lona',
     section: 'lona',
     fields: [

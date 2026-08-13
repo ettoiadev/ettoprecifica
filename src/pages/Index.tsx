@@ -128,7 +128,7 @@ const Index = () => {
       case 'lona':
         return <LonaCalculator config={config.lona} />;
       case 'placas':
-        return <PlacasCalculator />;
+        return <PlacasCalculator configPS={config.placaPS} configACM={config.placaACM} />;
       case 'fachada':
         return <FachadaCalculator config={config.fachada} fullConfig={config} />;
       case 'acm3d':

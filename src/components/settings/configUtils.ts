@@ -7,8 +7,8 @@ const isPercentageField = (section: string, field: string) => {
     return true;
   }
 
-  // Percentual de nota fiscal dos produtos com preço manual (Lona e Adesivos)
-  if ((section === 'lona' || section === 'adesivo') && field === 'notaFiscalPercentual') {
+  // Percentual de nota fiscal dos produtos com preço manual (Lona, Adesivos, Placas)
+  if (field === 'notaFiscalPercentual') {
     return true;
   }
 
