@@ -55,8 +55,8 @@ const ConfigSection = React.memo<ConfigSectionProps>(({ title, section, fields, 
       return true;
     }
 
-    // Percentual de nota fiscal da Lona (preço manual)
-    if (sectionName === 'lona' && fieldKey === 'notaFiscalPercentual') {
+    // Percentual de nota fiscal dos produtos com preço manual (Lona e Adesivos)
+    if ((sectionName === 'lona' || sectionName === 'adesivo') && fieldKey === 'notaFiscalPercentual') {
       return true;
     }
 

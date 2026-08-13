@@ -22,7 +22,7 @@ const GERAL = '__geral__';
 // é editável no app. A EXCEÇÃO é a Lona, cujo preço é manual (seção "Lona"). A
 // seção "Geral" traz status do banco + observações de orçamento.
 const SECTION_GROUPS: { label: string; sections: string[] }[] = [
-  { label: 'Produtos', sections: ['lona'] },
+  { label: 'Produtos', sections: ['adesivo', 'lona'] },
   { label: 'Geral', sections: [GERAL] },
 ];
 
@@ -31,7 +31,7 @@ const PRODUTO_SECTIONS: string[] = [];
 const SettingsPanel: React.FC<Props> = ({ config, onSave, onClose }) => {
   const [editConfig, setEditConfig] = useState(convertConfigToCurrency(config));
   const [search, setSearch] = useState('');
-  const [activeSection, setActiveSection] = useState('lona');
+  const [activeSection, setActiveSection] = useState('adesivo');
 
   const handleSave = () => {
     const numericConfig = convertCurrencyToNumbers(editConfig);

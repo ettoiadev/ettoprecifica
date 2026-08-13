@@ -124,7 +124,7 @@ const Index = () => {
   const renderCalculator = () => {
     switch (activeTab) {
       case 'adesivos':
-        return <AdesivosCalculator />;
+        return <AdesivosCalculator config={config.adesivo} />;
       case 'lona':
         return <LonaCalculator config={config.lona} />;
       case 'placas':
@@ -146,7 +146,7 @@ const Index = () => {
       case 'cavaletes':
         return <CavaletesCalculator />;
       default:
-        return <AdesivosCalculator />;
+        return <AdesivosCalculator config={config.adesivo} />;
     }
   };
 

@@ -7,7 +7,7 @@
 > 4. **Priorize a skill**: antes de criar qualquer objeto no banco ou calcular preço no app, cheque se a skill já tem a função/dado. O app só **consome**, nunca escreve preço.
 
 ## O que é
-SPA React de precificação usada por vendedores de uma empresa de comunicação visual. Cada aba é uma calculadora de um produto. **Quase todo preço vem do "motor" da skill orcamentista-cv** (funções `calc_*` no banco Supabase `tabelapreco`, ref `ghyctsclpcsrznrqegrp`), consumido via **Edge Functions read-only**. **Exceção (29/07/26): a aba Lona voltou a ter preço MANUAL, editável em Configurações** — ver "Estado atual". Fora Lona, não há precificação local.
+SPA React de precificação usada por vendedores de uma empresa de comunicação visual. Cada aba é uma calculadora de um produto. **Quase todo preço vem do "motor" da skill orcamentista-cv** (funções `calc_*` no banco Supabase `tabelapreco`, ref `ghyctsclpcsrznrqegrp`), consumido via **Edge Functions read-only**. **Exceções (29/07/26): as abas Lona e Adesivos voltaram a ter preço MANUAL, editável em Configurações** — ver "Estado atual". Fora Lona e Adesivos, não há precificação local.
 
 ## Stack e build
 - React 18.3 + TypeScript 5.5 + Vite 5.4 (SWC — **não faz typecheck no build**).
@@ -27,7 +27,7 @@ SPA React de precificação usada por vendedores de uma empresa de comunicação
 ## Abas → Edge Function → função da skill (10 abas visíveis no menu; 14 funções continuam ativas na skill)
 | Aba | Edge Function | Função |
 |---|---|---|
-| Adesivos (Impresso + Recorte + Etiquetas, ver abaixo) | calc-adesivo-impresso / calc-adesivo-recorte / calc-etiquetas | `calc_adesivo_impresso` / `calc_adesivo_recorte` / `calc_etiquetas` |
+| Adesivos (manual) + Etiquetas (motor), ver abaixo | **(Adesivos: preço manual local)** / calc-etiquetas | ~~`calc_adesivo_impresso`/`calc_adesivo_recorte`~~ (intactas, não chamadas) / `calc_etiquetas` |
 | Lona | **(preço manual local — não usa Edge Function)** | ~~`calc_lona`~~ (intacta na skill, mas não é mais chamada) |
 | Placas (PS + ACM, ver abaixo) | calc-ps / calc-placa-acm | `calc_ps_adesivado` / `calc_placa_acm` |
 | Fachada | calc-fachada | `calc_fachada_acm` / `calc_fachada_lona` |
@@ -40,7 +40,7 @@ SPA React de precificação usada por vendedores de uma empresa de comunicação
 
 **Padrão de abas unificadas por wrapper fino** (27/07/26): quando produtos afins tinham abas separadas, a solução foi um componente wrapper com seletor de tipo no topo que renderiza o componente original por baixo, sem tocar na lógica de cálculo de nenhum:
 - **Placas** = Placa PS + Placa ACM → `PlacasCalculator.tsx` renderiza `PlacaPSCalculator`/`PlacaACMCalculator` originais.
-- **Adesivos** = Adesivo Impresso + Recorte + Etiquetas → `AdesivosCalculator.tsx` renderiza `AdesivoImpressoCalculator`/`AdesivoRecorteCalculator`/`EtiquetasCalculator` originais.
+- **Adesivos** = Adesivos (manual) + Etiquetas → `AdesivosCalculator.tsx` renderiza `AdesivoManualCalculator` (preço manual, ver "Estado atual") e `EtiquetasCalculator` (motor). Antes eram 3 sub-abas pelo motor (`AdesivoImpressoCalculator`/`AdesivoRecorteCalculator`/`EtiquetasCalculator`); Impresso+Recorte viraram a lista manual, os dois componentes antigos ficaram no repo mas não são mais importados.
 
 Cada um continua chamando sua própria Edge Function como sempre — nenhuma mudança na skill foi necessária pra nenhuma dessas fusões.
 
@@ -64,8 +64,12 @@ curl -s -X POST "https://api.supabase.com/v1/projects/ghyctsclpcsrznrqegrp/datab
 ```
 Deploy de Edge Function: `POST .../v1/projects/<ref>/functions/deploy?slug=<slug>` com `-F metadata=...;type=application/json -F file=@index.ts`. **Nunca** salvar o token; pedir para revogar após uso.
 
-## Lona voltou a ter preço MANUAL (29/07/26) — quebra o padrão "app só consome"
-A pedido do Étto, a **aba Lona deixou de usar o motor da skill** e passou a ser precificada localmente, com preços editáveis em **Configurações > Lona** (ele quer controlar o m² na mão, a partir da planilha dele). É a **única** exceção ao "todo preço vem da skill" — todo o resto continua no motor.
+## Lona e Adesivos voltaram a ter preço MANUAL (29/07/26) — quebram o padrão "app só consome"
+A pedido do Étto, as **abas Lona e Adesivos deixaram de usar o motor da skill** e passaram a ser precificadas localmente, com preços editáveis em **Configurações > Produtos** (ele quer controlar o m² na mão, a partir das planilhas dele). São as **únicas** exceções ao "todo preço vem da skill" — todo o resto continua no motor. As duas seguem exatamente o mesmo padrão (schema em `pricing.ts` → calculadora recebe `config` via `Index.tsx` → seção em `settingsConfig.ts` → percentual de NF tratado em `ConfigSection.tsx`/`configUtils.ts` → seção removida de `productOptions.ts`).
+
+**Adesivos** (mesma decisão que a Lona, feita depois): a aba virou wrapper de 2 sub-tipos — **"Adesivos"** (`AdesivoManualCalculator`, preço manual) + **"Etiquetas"** (`EtiquetasCalculator`, ainda no motor, intacto). `AdesivoConfig` reescrita com 9 tipos da planilha (`digital` 100, `digitalPeliculaTransparente` 150, `transparente` 120, `perfurado` 200, `recorte1Cor` 250, `recorte2Cores` 380, `jateado` 150, `blackout` 130, `translucido` 130) + `notaFiscalPercentual` (20). **Sem laca** (não estava na planilha de adesivo). NF por **percentual único** (a NF da planilha varia 12–25%, não bate com % único — o Étto aceitou a troca). Deslocamento como custo de repasse (sem NF), via CEP. `calc-adesivo-impresso`/`calc-adesivo-recorte`/`calc_adesivo_impresso`/`calc_adesivo_recorte` **intactos, só não são mais chamados**. Se pedir mais tipos: campo em `AdesivoConfig`+`defaultConfig`+`settingsConfig`+array `opcoes` do `AdesivoManualCalculator`.
+
+**Lona:**
 - **Schema** (`src/types/pricing.ts`): `LonaConfig` reescrita para 4 acabamentos fixos + laca + NF %: `bannerSemAcabamento` (100), `reforcoIlhos` (130), `lonaGrande` (150), `lonaTranslucida` (130), `lacaProtecaoM2` (30, adicional opcional por m²), `notaFiscalPercentual` (20). Defaults da planilha do Étto; ele ajusta em Configurações.
 - **Cálculo** (`LonaCalculator.tsx`, agora recebe `config: LonaConfig` via `Index.tsx`): `semNota = (precoM² + laca?×lacaM²) × área × qtd + deslocamento`; `comNota = produto × (1 + NF%/100) + deslocamento`. Escolha entre **percentual único de NF** (não valor por linha) e **laca por m²** foi decisão explícita do usuário. O **deslocamento é somado como custo de repasse (sem incidir NF)** e continua vindo do fluxo por CEP (`useDeslocamentoCep`/`DeslocamentoField`) — "mantenha o deslocamento como está".
 - **Configurações**: `settingsConfig.ts` ganhou a seção `lona`; `SettingsPanel.tsx` mostra o grupo "Produtos" → Lona (default ao abrir). `lona.notaFiscalPercentual` foi ensinado como campo de porcentagem em `ConfigSection.tsx` e `configUtils.ts` (senão viraria moeda).

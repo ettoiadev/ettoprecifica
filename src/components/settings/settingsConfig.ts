@@ -17,6 +17,22 @@ export interface ConfigSectionData {
 // fiscal sai de um percentual único aplicado sobre o preço por m².
 export const settingsConfig: ConfigSectionData[] = [
   {
+    title: 'Adesivos',
+    section: 'adesivo',
+    fields: [
+      { key: 'digital', label: 'Adesivo Digital (impressão sem corte)', unit: 'm²' },
+      { key: 'digitalPeliculaTransparente', label: 'Adesivo Digital c/ Película Transparente', unit: 'm²' },
+      { key: 'transparente', label: 'Adesivo Transparente', unit: 'm²' },
+      { key: 'perfurado', label: 'Adesivo Perfurado', unit: 'm²' },
+      { key: 'recorte1Cor', label: 'Adesivo Recorte 1 Cor', unit: 'm²' },
+      { key: 'recorte2Cores', label: 'Adesivo Recorte 2 Cores', unit: 'm²' },
+      { key: 'jateado', label: 'Adesivo Jateado', unit: 'm²' },
+      { key: 'blackout', label: 'Adesivo Black-out', unit: 'm²' },
+      { key: 'translucido', label: 'Adesivo Translúcido', unit: 'm²' },
+      { key: 'notaFiscalPercentual', label: 'Percentual de nota fiscal', unit: '%' },
+    ],
+  },
+  {
     title: 'Lona',
     section: 'lona',
     fields: [

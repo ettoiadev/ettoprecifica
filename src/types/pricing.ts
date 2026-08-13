@@ -13,14 +13,21 @@ export interface ProductVariation {
   minPrice?: number;
 }
 
+// Adesivos (impresso + recorte) também têm preço MANUAL, definido em
+// Configurações (como a Lona). Nove tipos da planilha do Étto, cada um com preço
+// por m²; o preço com nota fiscal sai de um percentual único. Etiquetas NÃO entra
+// aqui — continua no motor da skill (sub-aba própria).
 export interface AdesivoConfig {
-  corteEspecial: number;
-  soRefile: number;
-  laminado: number;
-  adesivoPerfurado: number;
-  imantado: number;
-  customVariations?: ProductVariation[];
-  variations?: ProductVariation[];
+  digital: number;
+  digitalPeliculaTransparente: number;
+  transparente: number;
+  perfurado: number;
+  recorte1Cor: number;
+  recorte2Cores: number;
+  jateado: number;
+  blackout: number;
+  translucido: number;
+  notaFiscalPercentual: number;
 }
 
 // Lona é o único produto com preço MANUAL (definido em Configurações), não pelo
@@ -191,11 +198,16 @@ export interface PricingConfig {
 
 export const defaultConfig: PricingConfig = {
   adesivo: {
-    corteEspecial: 25.0,
-    soRefile: 15.0,
-    laminado: 35.0,
-    adesivoPerfurado: 30.0,
-    imantado: 40.0,
+    digital: 100.0,
+    digitalPeliculaTransparente: 150.0,
+    transparente: 120.0,
+    perfurado: 200.0,
+    recorte1Cor: 250.0,
+    recorte2Cores: 380.0,
+    jateado: 150.0,
+    blackout: 130.0,
+    translucido: 130.0,
+    notaFiscalPercentual: 20.0,
   },
   lona: {
     bannerSemAcabamento: 100.0,

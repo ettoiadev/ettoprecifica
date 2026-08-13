@@ -1,15 +1,19 @@
 import React, { useState } from 'react';
-import AdesivoImpressoCalculator from './AdesivoImpressoCalculator';
-import AdesivoRecorteCalculator from './AdesivoRecorteCalculator';
+import { AdesivoConfig } from '../../types/pricing';
+import AdesivoManualCalculator from './AdesivoManualCalculator';
 import EtiquetasCalculator from './EtiquetasCalculator';
 
-// Aba unificada "Adesivos": agrupa Adesivo Impresso, Adesivo de Recorte e
-// Etiquetas/Rótulos sob um único menu, com um seletor de tipo no topo. Cada
-// opção continua sendo o componente original, intacto (chama
-// calc-adesivo-impresso, calc-adesivo-recorte ou calc-etiquetas como
-// sempre) — este componente só decide qual dos três renderizar. Mesmo
-// padrão do PlacasCalculator.
-type TipoAdesivo = 'impresso' | 'recorte' | 'etiquetas';
+// Aba unificada "Adesivos": um seletor de tipo no topo escolhe entre
+// "Adesivos" (impresso + recorte, com preço MANUAL definido em Configurações —
+// AdesivoManualCalculator) e "Etiquetas/Rótulos" (que continua no motor da skill,
+// via calc-etiquetas, intacto). Antes eram três sub-abas (Impresso/Recorte/
+// Etiquetas, todas pelo motor); Impresso e Recorte foram fundidos numa única
+// lista manual a pedido do Étto. Mesmo padrão do PlacasCalculator.
+type TipoAdesivo = 'adesivo' | 'etiquetas';
+
+interface Props {
+  config: AdesivoConfig;
+}
 
 const btn = (active: boolean) =>
   `px-4 py-3 rounded-lg border text-sm font-medium transition-colors ${
@@ -18,19 +22,16 @@ const btn = (active: boolean) =>
       : 'border-gray-300 text-gray-700 hover:bg-gray-50'
   }`;
 
-const AdesivosCalculator: React.FC = () => {
-  const [tipoAdesivo, setTipoAdesivo] = useState<TipoAdesivo>('impresso');
+const AdesivosCalculator: React.FC<Props> = ({ config }) => {
+  const [tipoAdesivo, setTipoAdesivo] = useState<TipoAdesivo>('adesivo');
 
   return (
     <div>
       <div className="px-6 pt-6">
-        <label className="block text-sm font-medium text-gray-700 mb-3">Tipo de adesivo</label>
-        <div className="grid grid-cols-3 gap-3 max-w-lg">
-          <button type="button" onClick={() => setTipoAdesivo('impresso')} className={btn(tipoAdesivo === 'impresso')}>
-            Impresso
-          </button>
-          <button type="button" onClick={() => setTipoAdesivo('recorte')} className={btn(tipoAdesivo === 'recorte')}>
-            Recorte
+        <label className="block text-sm font-medium text-gray-700 mb-3">Tipo</label>
+        <div className="grid grid-cols-2 gap-3 max-w-sm">
+          <button type="button" onClick={() => setTipoAdesivo('adesivo')} className={btn(tipoAdesivo === 'adesivo')}>
+            Adesivos
           </button>
           <button type="button" onClick={() => setTipoAdesivo('etiquetas')} className={btn(tipoAdesivo === 'etiquetas')}>
             Etiquetas
@@ -38,8 +39,7 @@ const AdesivosCalculator: React.FC = () => {
         </div>
       </div>
 
-      {tipoAdesivo === 'impresso' && <AdesivoImpressoCalculator />}
-      {tipoAdesivo === 'recorte' && <AdesivoRecorteCalculator />}
+      {tipoAdesivo === 'adesivo' && <AdesivoManualCalculator config={config} />}
       {tipoAdesivo === 'etiquetas' && <EtiquetasCalculator />}
     </div>
   );

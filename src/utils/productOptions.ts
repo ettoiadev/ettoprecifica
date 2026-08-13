@@ -14,7 +14,6 @@ import { PricingConfig, ProductVariation } from '../types/pricing';
  */
 
 export type OptionListSection =
-  | 'adesivo'
   | 'placaPS'
   | 'letraCaixa'
   | 'vidro'
@@ -43,16 +42,6 @@ interface SectionOptionsDef {
 }
 
 export const SECTION_OPTIONS: Record<OptionListSection, SectionOptionsDef> = {
-  adesivo: {
-    baseOptions: [
-      { id: 'soRefile', label: 'Só Refile', priceKey: 'soRefile' },
-      { id: 'corteEspecial', label: 'Corte Especial', priceKey: 'corteEspecial' },
-      { id: 'laminado', label: 'Laminado', priceKey: 'laminado' },
-      { id: 'adesivoPerfurado', label: 'Adesivo Perfurado', priceKey: 'adesivoPerfurado' },
-      { id: 'imantado', label: 'Imantado', priceKey: 'imantado' },
-    ],
-    foldLegacyCustomVariations: true,
-  },
   placaPS: {
     baseOptions: [
       { id: 'espessura1mm', label: 'Espessura 1mm', priceKey: 'espessura1mm' },
