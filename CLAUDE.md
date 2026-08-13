@@ -7,7 +7,7 @@
 > 4. **Priorize a skill**: antes de criar qualquer objeto no banco ou calcular preço no app, cheque se a skill já tem a função/dado. O app só **consome**, nunca escreve preço.
 
 ## O que é
-SPA React de precificação usada por vendedores de uma empresa de comunicação visual. Cada aba é uma calculadora de um produto. **Todo preço vem do "motor" da skill orcamentista-cv** (funções `calc_*` no banco Supabase `tabelapreco`, ref `ghyctsclpcsrznrqegrp`), consumido via **Edge Functions read-only**. Não há mais precificação local.
+SPA React de precificação usada por vendedores de uma empresa de comunicação visual. Cada aba é uma calculadora de um produto. **Quase todo preço vem do "motor" da skill orcamentista-cv** (funções `calc_*` no banco Supabase `tabelapreco`, ref `ghyctsclpcsrznrqegrp`), consumido via **Edge Functions read-only**. **Exceção (29/07/26): a aba Lona voltou a ter preço MANUAL, editável em Configurações** — ver "Estado atual". Fora Lona, não há precificação local.
 
 ## Stack e build
 - React 18.3 + TypeScript 5.5 + Vite 5.4 (SWC — **não faz typecheck no build**).
@@ -28,7 +28,7 @@ SPA React de precificação usada por vendedores de uma empresa de comunicação
 | Aba | Edge Function | Função |
 |---|---|---|
 | Adesivos (Impresso + Recorte + Etiquetas, ver abaixo) | calc-adesivo-impresso / calc-adesivo-recorte / calc-etiquetas | `calc_adesivo_impresso` / `calc_adesivo_recorte` / `calc_etiquetas` |
-| Lona | calc-lona | `calc_lona` |
+| Lona | **(preço manual local — não usa Edge Function)** | ~~`calc_lona`~~ (intacta na skill, mas não é mais chamada) |
 | Placas (PS + ACM, ver abaixo) | calc-ps / calc-placa-acm | `calc_ps_adesivado` / `calc_placa_acm` |
 | Fachada | calc-fachada | `calc_fachada_acm` / `calc_fachada_lona` |
 | Letra Caixa | calc-letra-caixa | `calc_letra_caixa` |
@@ -63,6 +63,15 @@ curl -s -X POST "https://api.supabase.com/v1/projects/ghyctsclpcsrznrqegrp/datab
   -d @payload.json   # {"query":"SELECT ..."}
 ```
 Deploy de Edge Function: `POST .../v1/projects/<ref>/functions/deploy?slug=<slug>` com `-F metadata=...;type=application/json -F file=@index.ts`. **Nunca** salvar o token; pedir para revogar após uso.
+
+## Lona voltou a ter preço MANUAL (29/07/26) — quebra o padrão "app só consome"
+A pedido do Étto, a **aba Lona deixou de usar o motor da skill** e passou a ser precificada localmente, com preços editáveis em **Configurações > Lona** (ele quer controlar o m² na mão, a partir da planilha dele). É a **única** exceção ao "todo preço vem da skill" — todo o resto continua no motor.
+- **Schema** (`src/types/pricing.ts`): `LonaConfig` reescrita para 4 acabamentos fixos + laca + NF %: `bannerSemAcabamento` (100), `reforcoIlhos` (130), `lonaGrande` (150), `lonaTranslucida` (130), `lacaProtecaoM2` (30, adicional opcional por m²), `notaFiscalPercentual` (20). Defaults da planilha do Étto; ele ajusta em Configurações.
+- **Cálculo** (`LonaCalculator.tsx`, agora recebe `config: LonaConfig` via `Index.tsx`): `semNota = (precoM² + laca?×lacaM²) × área × qtd + deslocamento`; `comNota = produto × (1 + NF%/100) + deslocamento`. Escolha entre **percentual único de NF** (não valor por linha) e **laca por m²** foi decisão explícita do usuário. O **deslocamento é somado como custo de repasse (sem incidir NF)** e continua vindo do fluxo por CEP (`useDeslocamentoCep`/`DeslocamentoField`) — "mantenha o deslocamento como está".
+- **Configurações**: `settingsConfig.ts` ganhou a seção `lona`; `SettingsPanel.tsx` mostra o grupo "Produtos" → Lona (default ao abrir). `lona.notaFiscalPercentual` foi ensinado como campo de porcentagem em `ConfigSection.tsx` e `configUtils.ts` (senão viraria moeda).
+- **`productOptions.ts`**: `lona` removida de `OptionListSection`/`SECTION_OPTIONS` (não é mais lista CRUD semeada; são 4 campos fixos editáveis). Configs salvas antigas com `lona.variations`/chaves velhas não quebram (deep-merge preserva; calculadora lê só as chaves novas, que vêm do default).
+- **Skill intacta**: `calc-lona`/`calc_lona` **não foram tocadas**, só deixaram de ser chamadas (mesmo padrão do GIV). Reverter = repassar preço da skill de novo.
+- Se o Étto pedir mais acabamentos de Lona, é adicionar campo em `LonaConfig`+`defaultConfig`+`settingsConfig`+array `opcoes` do `LonaCalculator` (4 lugares) — não é lista dinâmica.
 
 ## Estado atual (2026-07-27)
 **Migração de deslocamento concluída no app** (skill já tinha mudado o contrato — ver gotcha 1b): as 12 Edge Functions afetadas (`calc-adesivo-impresso`, `calc-adesivo-recorte`, `calc-cavaletes`, `calc-dtf`, `calc-etiquetas`, `calc-fachada`, `calc-giv`, `calc-laser`, `calc-lona`, `calc-luminoso`, `calc-placa-acm`, `calc-vidro`) foram atualizadas e **deployadas** (Management API, já que o MCP Supabase estava fora do ar) pra usar `p_custo_deslocamento`/`p_incluir_deslocamento` em vez de `p_cidade`. Cada calculadora trocou o dropdown de cidade por um checkbox "Incluir deslocamento" (off por padrão) + input de valor manual em R$. `tsc --noEmit` e `vite build` limpos, commitado e pushado (`c52d6c4`).
