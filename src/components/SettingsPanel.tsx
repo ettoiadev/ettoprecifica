@@ -22,7 +22,7 @@ const GERAL = '__geral__';
 // é editável no app. A EXCEÇÃO é a Lona, cujo preço é manual (seção "Lona"). A
 // seção "Geral" traz status do banco + observações de orçamento.
 const SECTION_GROUPS: { label: string; sections: string[] }[] = [
-  { label: 'Produtos', sections: ['adesivo', 'lona', 'placaPS', 'placaACM'] },
+  { label: 'Produtos', sections: ['adesivo', 'lona', 'placaPS', 'placaACM', 'laser'] },
   { label: 'Geral', sections: [GERAL] },
 ];
 

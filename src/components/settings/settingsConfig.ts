@@ -56,6 +56,27 @@ export const settingsConfig: ConfigSectionData[] = [
     ],
   },
   {
+    title: 'Laser',
+    section: 'laser',
+    fields: [
+      { key: 'acrilicoColorido3mm', label: 'Acrílico Colorido 3mm', unit: 'm²' },
+      { key: 'acrilicoCristal2mm', label: 'Acrílico Cristal 2mm', unit: 'm²' },
+      { key: 'acrilicoCristal3mm', label: 'Acrílico Cristal 3mm', unit: 'm²' },
+      { key: 'acrilicoCristal5mm', label: 'Acrílico Cristal 5mm', unit: 'm²' },
+      { key: 'acrilicoCristal8mm', label: 'Acrílico Cristal 8mm', unit: 'm²' },
+      { key: 'acrilicoCristal10mm', label: 'Acrílico Cristal 10mm', unit: 'm²' },
+      { key: 'espelhadoDourado2mm', label: 'Acrílico Espelhado Dourado 2mm', unit: 'm²' },
+      { key: 'espelhadoPrata2mm', label: 'Acrílico Espelhado Prata 2mm', unit: 'm²' },
+      { key: 'espelhadoRose2mm', label: 'Acrílico Espelhado Rosé 2mm', unit: 'm²' },
+      { key: 'mdf3mm', label: 'MDF 3mm', unit: 'm²' },
+      { key: 'mdf6mm', label: 'MDF 6mm', unit: 'm²' },
+      { key: 'mdf9mm', label: 'MDF 9mm', unit: 'm²' },
+      { key: 'psCristal2mm', label: 'PS Cristal 2mm', unit: 'm²' },
+      { key: 'psCristal3mm', label: 'PS Cristal 3mm', unit: 'm²' },
+      { key: 'notaFiscalPercentual', label: 'Percentual de nota fiscal', unit: '%' },
+    ],
+  },
+  {
     title: 'Lona',
     section: 'lona',
     fields: [

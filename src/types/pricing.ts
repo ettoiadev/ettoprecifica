@@ -115,42 +115,29 @@ export interface LuminosoConfig {
   };
 }
 
+// Laser também tem preço MANUAL (como Lona/Adesivos/Placas). Lista curada pelo
+// Étto (só os materiais dos prints), com os preços de venda/m² reais que vinham
+// da skill (tabela laser_materiais, lidos via SQL em 30/07/26). Agrupados por
+// categoria só para a UI. O preço com nota sai de um percentual único (9,31%).
 export interface LaserConfig {
-  // Acrílico Cristal
+  // Acrílico
+  acrilicoColorido3mm: number;
   acrilicoCristal2mm: number;
   acrilicoCristal3mm: number;
   acrilicoCristal5mm: number;
   acrilicoCristal8mm: number;
   acrilicoCristal10mm: number;
-  // Acrílico Colorido
-  acrilicoColorido3mm: number;
-  acrilicoColorido5mm: number;
-  acrilicoColorido8mm: number;
-  acrilicoColorido10mm: number;
-  // Acrílico Preto/Fumê
-  acrilicoPretoFume3mm: number;
-  acrilicoPretoFume5mm: number;
-  acrilicoPretoFume8mm: number;
-  // PS Cristal
-  psCristal1mm: number;
-  psCristal2mm: number;
-  psCristal3mm: number;
-  // PSAI Branco
-  psaiBranco1mm: number;
-  psaiBranco2mm: number;
-  psaiBranco3mm: number;
-  // PSAI Colorido
-  psaiColorido2mm: number;
-  // MDF
+  // Acrílico Espelhado
+  espelhadoDourado2mm: number;
+  espelhadoPrata2mm: number;
+  espelhadoRose2mm: number;
+  // Outros
   mdf3mm: number;
   mdf6mm: number;
   mdf9mm: number;
-  // Outros
-  pe3mm: number;
-  petg3mm: number;
-  espelhadoPrata2mm: number;
-  espelhadoPrataDourado3mm: number;
-  variations?: ProductVariation[];
+  psCristal2mm: number;
+  psCristal3mm: number;
+  notaFiscalPercentual: number;
 }
 
 // Novas configurações solicitadas
@@ -284,32 +271,21 @@ export const defaultConfig: PricingConfig = {
     },
   },
   laser: {
-    acrilicoCristal2mm: 200.0,
-    acrilicoCristal3mm: 280.0,
-    acrilicoCristal5mm: 450.0,
-    acrilicoCristal8mm: 850.0,
-    acrilicoCristal10mm: 950.0,
-    acrilicoColorido3mm: 290.0,
-    acrilicoColorido5mm: 340.0,
-    acrilicoColorido8mm: 800.0,
-    acrilicoColorido10mm: 1190.0,
-    acrilicoPretoFume3mm: 150.0,
-    acrilicoPretoFume5mm: 180.0,
-    acrilicoPretoFume8mm: 830.0,
-    psCristal1mm: 110.0,
-    psCristal2mm: 180.0,
-    psCristal3mm: 350.0,
-    psaiBranco1mm: 150.0,
-    psaiBranco2mm: 120.0,
-    psaiBranco3mm: 160.0,
-    psaiColorido2mm: 180.0,
-    mdf3mm: 130.0,
-    mdf6mm: 90.0,
-    mdf9mm: 90.0,
-    pe3mm: 130.0,
-    petg3mm: 260.0,
-    espelhadoPrata2mm: 300.0,
-    espelhadoPrataDourado3mm: 360.0,
+    acrilicoColorido3mm: 390.0,
+    acrilicoCristal2mm: 380.0,
+    acrilicoCristal3mm: 430.0,
+    acrilicoCristal5mm: 600.0,
+    acrilicoCristal8mm: 980.0,
+    acrilicoCristal10mm: 1250.0,
+    espelhadoDourado2mm: 590.0,
+    espelhadoPrata2mm: 540.0,
+    espelhadoRose2mm: 590.0,
+    mdf3mm: 260.0,
+    mdf6mm: 380.0,
+    mdf9mm: 520.0,
+    psCristal2mm: 380.0,
+    psCristal3mm: 490.0,
+    notaFiscalPercentual: 9.31,
   },
   notaFiscal: {
     percentual: 15.0,

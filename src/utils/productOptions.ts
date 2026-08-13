@@ -16,7 +16,6 @@ import { PricingConfig, ProductVariation } from '../types/pricing';
 export type OptionListSection =
   | 'letraCaixa'
   | 'vidro'
-  | 'laser'
   | 'instalacao';
 
 interface BaseOptionDef {
@@ -52,37 +51,6 @@ export const SECTION_OPTIONS: Record<OptionListSection, SectionOptionsDef> = {
     baseOptions: [
       { id: '6mm', label: '6mm', priceKey: 'espessura6mm' },
       { id: '8mm', label: '8mm', priceKey: 'espessura8mm' },
-    ],
-    foldLegacyCustomVariations: false,
-  },
-  laser: {
-    baseOptions: [
-      { id: 'acrilicoCristal2mm', label: 'Acrílico Cristal 2mm', priceKey: 'acrilicoCristal2mm', category: 'Acrílico Cristal' },
-      { id: 'acrilicoCristal3mm', label: 'Acrílico Cristal 3mm', priceKey: 'acrilicoCristal3mm', category: 'Acrílico Cristal' },
-      { id: 'acrilicoCristal5mm', label: 'Acrílico Cristal 5mm', priceKey: 'acrilicoCristal5mm', category: 'Acrílico Cristal' },
-      { id: 'acrilicoCristal8mm', label: 'Acrílico Cristal 8mm', priceKey: 'acrilicoCristal8mm', category: 'Acrílico Cristal' },
-      { id: 'acrilicoCristal10mm', label: 'Acrílico Cristal 10mm', priceKey: 'acrilicoCristal10mm', category: 'Acrílico Cristal' },
-      { id: 'acrilicoColorido3mm', label: 'Acrílico Colorido 3mm', priceKey: 'acrilicoColorido3mm', category: 'Acrílico Colorido' },
-      { id: 'acrilicoColorido5mm', label: 'Acrílico Colorido 5mm', priceKey: 'acrilicoColorido5mm', category: 'Acrílico Colorido' },
-      { id: 'acrilicoColorido8mm', label: 'Acrílico Colorido 8mm', priceKey: 'acrilicoColorido8mm', category: 'Acrílico Colorido' },
-      { id: 'acrilicoColorido10mm', label: 'Acrílico Colorido 10mm', priceKey: 'acrilicoColorido10mm', category: 'Acrílico Colorido' },
-      { id: 'acrilicoPretoFume3mm', label: 'Acrílico Preto/Fumê 3mm', priceKey: 'acrilicoPretoFume3mm', category: 'Acrílico Preto/Fumê' },
-      { id: 'acrilicoPretoFume5mm', label: 'Acrílico Preto/Fumê 5mm', priceKey: 'acrilicoPretoFume5mm', category: 'Acrílico Preto/Fumê' },
-      { id: 'acrilicoPretoFume8mm', label: 'Acrílico Preto/Fumê 8mm', priceKey: 'acrilicoPretoFume8mm', category: 'Acrílico Preto/Fumê' },
-      { id: 'psCristal1mm', label: 'PS Cristal 1mm', priceKey: 'psCristal1mm', category: 'PS Cristal' },
-      { id: 'psCristal2mm', label: 'PS Cristal 2mm', priceKey: 'psCristal2mm', category: 'PS Cristal' },
-      { id: 'psCristal3mm', label: 'PS Cristal 3mm', priceKey: 'psCristal3mm', category: 'PS Cristal' },
-      { id: 'psaiBranco1mm', label: 'PSAI Branco 1mm/0mm', priceKey: 'psaiBranco1mm', category: 'PSAI Branco' },
-      { id: 'psaiBranco2mm', label: 'PSAI Branco 2mm', priceKey: 'psaiBranco2mm', category: 'PSAI Branco' },
-      { id: 'psaiBranco3mm', label: 'PSAI Branco 3mm', priceKey: 'psaiBranco3mm', category: 'PSAI Branco' },
-      { id: 'psaiColorido2mm', label: 'PSAI Colorido 2mm', priceKey: 'psaiColorido2mm', category: 'PSAI Colorido' },
-      { id: 'mdf3mm', label: 'MDF 3mm', priceKey: 'mdf3mm', category: 'MDF' },
-      { id: 'mdf6mm', label: 'MDF 6mm', priceKey: 'mdf6mm', category: 'MDF' },
-      { id: 'mdf9mm', label: 'MDF 9mm', priceKey: 'mdf9mm', category: 'MDF' },
-      { id: 'pe3mm', label: 'PE 3mm', priceKey: 'pe3mm', category: 'Outros Materiais' },
-      { id: 'petg3mm', label: 'PETG 3mm', priceKey: 'petg3mm', category: 'Outros Materiais' },
-      { id: 'espelhadoPrata2mm', label: 'Espelhado Prata 2mm', priceKey: 'espelhadoPrata2mm', category: 'Outros Materiais' },
-      { id: 'espelhadoPrataDourado3mm', label: 'Espelhado Prata/Dourado 3mm', priceKey: 'espelhadoPrataDourado3mm', category: 'Outros Materiais' },
     ],
     foldLegacyCustomVariations: false,
   },

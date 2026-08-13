@@ -8,7 +8,7 @@ import Acm3dCalculator from '../components/calculators/Acm3dCalculator';
 import LetraCaixaCalculator from '../components/calculators/LetraCaixaCalculator';
 import VidroCalculator from '../components/calculators/VidroCalculator';
 import LuminosoCalculator from '../components/calculators/LuminosoCalculator';
-import LaserCalculator from '../components/calculators/LaserCalculator';
+import LaserManualCalculator from '../components/calculators/LaserManualCalculator';
 import DtfCalculator from '../components/calculators/DtfCalculator';
 import CavaletesCalculator from '../components/calculators/CavaletesCalculator';
 import SettingsPanel from '../components/SettingsPanel';
@@ -140,7 +140,7 @@ const Index = () => {
       case 'luminoso':
         return <LuminosoCalculator config={config.luminoso} fullConfig={config} />;
       case 'laser':
-        return <LaserCalculator config={config.laser} fullConfig={config} />;
+        return <LaserManualCalculator config={config.laser} />;
       case 'dtf':
         return <DtfCalculator />;
       case 'cavaletes':

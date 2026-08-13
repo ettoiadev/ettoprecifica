@@ -7,7 +7,7 @@
 > 4. **Priorize a skill**: antes de criar qualquer objeto no banco ou calcular preço no app, cheque se a skill já tem a função/dado. O app só **consome**, nunca escreve preço.
 
 ## O que é
-SPA React de precificação usada por vendedores de uma empresa de comunicação visual. Cada aba é uma calculadora de um produto. **Quase todo preço vem do "motor" da skill orcamentista-cv** (funções `calc_*` no banco Supabase `tabelapreco`, ref `ghyctsclpcsrznrqegrp`), consumido via **Edge Functions read-only**. **Exceções (29–30/07/26): as abas Lona, Adesivos e Placas (PS + ACM) voltaram a ter preço MANUAL, editável em Configurações** — ver "Estado atual". Fora dessas, não há precificação local.
+SPA React de precificação usada por vendedores de uma empresa de comunicação visual. Cada aba é uma calculadora de um produto. **Quase todo preço vem do "motor" da skill orcamentista-cv** (funções `calc_*` no banco Supabase `tabelapreco`, ref `ghyctsclpcsrznrqegrp`), consumido via **Edge Functions read-only**. **Exceções (29–30/07/26): as abas Lona, Adesivos, Placas (PS + ACM) e Laser voltaram a ter preço MANUAL, editável em Configurações** — ver "Estado atual". Fora dessas, não há precificação local.
 
 ## Stack e build
 - React 18.3 + TypeScript 5.5 + Vite 5.4 (SWC — **não faz typecheck no build**).
@@ -34,7 +34,7 @@ SPA React de precificação usada por vendedores de uma empresa de comunicação
 | Letra Caixa | calc-letra-caixa | `calc_letra_caixa` |
 | Vidro | calc-vidro | `calc_vidro` |
 | Luminoso | calc-luminoso | `calc_luminoso` |
-| Laser | calc-laser | `calc_laser` |
+| Laser | **(preço manual local — não usa Edge Function)** | ~~`calc_laser`~~ (intacta, não chamada) |
 | DTF | calc-dtf | `calc_dtf` |
 | Cavaletes | calc-cavaletes | `calc_cavaletes` / `calc_cavaletes_madeira` |
 
@@ -64,8 +64,10 @@ curl -s -X POST "https://api.supabase.com/v1/projects/ghyctsclpcsrznrqegrp/datab
 ```
 Deploy de Edge Function: `POST .../v1/projects/<ref>/functions/deploy?slug=<slug>` com `-F metadata=...;type=application/json -F file=@index.ts`. **Nunca** salvar o token; pedir para revogar após uso.
 
-## Lona, Adesivos e Placas voltaram a ter preço MANUAL (29–30/07/26) — quebram o padrão "app só consome"
-A pedido do Étto, as **abas Lona, Adesivos e Placas (PS + ACM) deixaram de usar o motor da skill** e passaram a ser precificadas localmente, com preços editáveis em **Configurações > Produtos** (ele quer controlar o m² na mão). São as **únicas** exceções ao "todo preço vem da skill" — todo o resto continua no motor. Todas seguem exatamente o mesmo padrão (schema em `pricing.ts` → calculadora recebe `config` via `Index.tsx` → seção em `settingsConfig.ts` → percentual de NF tratado em `ConfigSection.tsx`/`configUtils.ts`, hoje genérico: qualquer campo `notaFiscalPercentual` é % → seção removida de `productOptions.ts` → materiais em botões pastel índigo).
+## Lona, Adesivos, Placas e Laser voltaram a ter preço MANUAL (29–30/07/26) — quebram o padrão "app só consome"
+A pedido do Étto, as **abas Lona, Adesivos, Placas (PS + ACM) e Laser deixaram de usar o motor da skill** e passaram a ser precificadas localmente, com preços editáveis em **Configurações > Produtos** (ele quer controlar o m² na mão). São as **únicas** exceções ao "todo preço vem da skill" — todo o resto continua no motor. Todas seguem exatamente o mesmo padrão (schema em `pricing.ts` → calculadora recebe `config` via `Index.tsx` → seção em `settingsConfig.ts` → percentual de NF tratado em `ConfigSection.tsx`/`configUtils.ts`, hoje genérico: qualquer campo `notaFiscalPercentual` é % → seção removida de `productOptions.ts` → materiais em botões pastel índigo).
+
+**Laser** (30/07/26): `LaserManualCalculator` substitui o `LaserCalculator` (motor). A pedido do Étto, **simplificado como os demais** — os recursos que só o Laser tinha (forma retangular/circular com perda de chapa, multiplicador de complexidade, LED) **foram removidos**; ficou material (botões pastel agrupados por categoria) + medidas + qtd + deslocamento, preço = área × R$/m². **Lista curada** (só os materiais dos prints do Étto — 14 de 32 ativos), preços de venda/m² reais lidos da `laser_materiais.preco_venda_m2`: Acrílico Colorido 3mm 390 · Cristal 2/3/5/8/10mm 380/430/600/980/1250 · Espelhado Dourado 2mm 590 / Prata 2mm 540 / Rosé 2mm 590 · MDF 3/6/9mm 260/380/520 · PS Cristal 2/3mm 380/490. NF 9,31%. `calc_laser`/`calc-laser` intactos, não chamados. Adicionar material = campo em config+default+settingsConfig+array `opcoes` (com `categoria`) do `LaserManualCalculator`.
 
 **Placas** (30/07/26): a aba continua wrapper de 2 sub-tipos — **Placa PS** (`PlacaPSManualCalculator`, sem deslocamento) e **Placa ACM** (`PlacaACMManualCalculator`, com deslocamento por CEP). Preços padrão = **os preços de venda/m² reais que estavam no motor** (lidos via SQL com PAT temporário do Étto): PS `ps_placas_materiais.preco_mercado_m2` → Branco 1mm 180 / 2mm 220 / 3mm 250, Cristal 1,5mm 290 / 2mm 330 / 3mm 390; ACM via `calc_placa_acm(...,'com_adesivo',3,...)` = **R$280/m²** para qualquer espessura (o motor sempre resolve "ACM Branco Brilho 3mm" — 2/3/4/6mm todos caem em 280). Como o motor não diferencia material de ACM, semeei **Madeira 3mm também em 280** (o Étto pode subir, já que o custo da chapa madeira é bem maior — 96,72 vs 63,93). NF por **percentual único = 9,31%** (a NF do motor era ×1,0931, confirmado nos dois: 280→306,07 e 180→196,76). `PlacaPSConfig`/`PlacaACMConfig` reescritas; `calc_ps_adesivado`/`calc_placa_acm`/`calc-ps`/`calc-placa-acm` **intactos, só não são mais chamados**. Se pedir mais espessuras/materiais: campo em config+default+settingsConfig+array `opcoes` do respectivo calculator.
 
