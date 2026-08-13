@@ -126,7 +126,7 @@ const Index = () => {
       case 'adesivos':
         return <AdesivosCalculator />;
       case 'lona':
-        return <LonaCalculator />;
+        return <LonaCalculator config={config.lona} />;
       case 'placas':
         return <PlacasCalculator />;
       case 'fachada':

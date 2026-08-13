@@ -1,41 +1,26 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Loader2, AlertTriangle, Copy, PlusCircle } from 'lucide-react';
-import { formatCurrency } from '../../types/pricing';
-import { supabase } from '../../lib/supabase/client';
+import React, { useMemo, useState } from 'react';
+import { Copy, PlusCircle } from 'lucide-react';
+import { formatCurrency, LonaConfig } from '../../types/pricing';
 import { useCotacao } from '../../contexts/CotacaoContext';
 import { useDeslocamentoCep } from '../../hooks/useDeslocamentoCep';
 import DeslocamentoField from './DeslocamentoField';
 import { toast } from 'sonner';
 
-// Calculadora de Lona/Banner/Faixa — preço do motor da skill (Edge Function
-// calc-lona → calc_lona). Dois acabamentos padrão do motor: Padrão
-// (sem_acabamento, R$70/m²) e Reforço + Ilhós (reforcada_ilhos, R$90/m²).
-// Deslocamento é opcional (valor informado manualmente); quantidade por
-// reconstrução (deslocamento aplicado uma vez).
-//
-// Laca de Proteção UV: parâmetro p_laca_uv do motor da skill; o adicional já vem
-// embutido em preco_final/preco_com_nota e detalhado em adicional_laca_uv.
-interface LonaResult {
-  tipo_encontrado?: string;
-  area_m2?: number | string;
-  preco_m2?: number | string;
-  adicional_bastao?: number | string;
-  adicional_laca_uv?: number | string;
-  custo_deslocamento?: number | string;
-  deslocamento_incluido?: boolean;
-  preco_minimo_projeto?: number | string;
-  preco_final?: number | string | null;
-  preco_com_nota?: number | string | null;
-  alerta?: string;
+// Calculadora de Lona/Banner/Faixa — ÚNICO produto com preço MANUAL, definido em
+// Configurações (config.lona), NÃO pelo motor da skill. Cada acabamento tem um
+// preço por m²; a Laca de Proteção é um adicional opcional por m²; o preço com
+// nota fiscal sai de um percentual único sobre o preço do produto. O deslocamento
+// continua opcional e vem do fluxo por CEP (useDeslocamentoCep), somado à parte,
+// como um custo de repasse (sem incidência de nota fiscal).
+interface Props {
+  config: LonaConfig;
 }
 
 interface Opcao {
-  tipo: string;
+  id: keyof LonaConfig;
   nome: string;
-  preco_venda_m2: number | string;
+  preco: number;
 }
-
-const num = (v: number | string | undefined | null): number => Number(v ?? 0);
 
 const inputClass =
   'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent';
@@ -47,110 +32,69 @@ const btn = (active: boolean) =>
       : 'border-gray-300 text-gray-700 hover:bg-gray-50'
   }`;
 
-const LonaCalculator: React.FC = () => {
-  const [opcoes, setOpcoes] = useState<Opcao[]>([]);
+const LonaCalculator: React.FC<Props> = ({ config }) => {
   const deslocamento = useDeslocamentoCep();
   const { incluirDeslocamento, custoDeslocamento } = deslocamento;
-  const [acabamento, setAcabamento] = useState<string>('sem_acabamento');
+  const [acabamento, setAcabamento] = useState<keyof LonaConfig>('bannerSemAcabamento');
   const [laca, setLaca] = useState<boolean>(false);
   const [largura, setLargura] = useState<string>('');
   const [altura, setAltura] = useState<string>('');
   const [quantidade, setQuantidade] = useState<number>(1);
 
-  const [result, setResult] = useState<LonaResult | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
-
   const { addItem } = useCotacao();
+
+  // Opções de acabamento (preços manuais vindos de Configurações).
+  const opcoes = useMemo<Opcao[]>(
+    () => [
+      { id: 'bannerSemAcabamento', nome: 'Banner ou Lona sem acabamento', preco: config.bannerSemAcabamento },
+      { id: 'reforcoIlhos', nome: 'Lona reforço e ilhós', preco: config.reforcoIlhos },
+      { id: 'lonaGrande', nome: 'Lona grande (maior que 1,80 largura)', preco: config.lonaGrande },
+      { id: 'lonaTranslucida', nome: 'Lona translúcida', preco: config.lonaTranslucida },
+    ],
+    [config]
+  );
 
   const larguraNum = parseFloat(largura) || 0;
   const alturaNum = parseFloat(altura) || 0;
+  const qtd = quantidade > 0 ? quantidade : 1;
   const custoDeslocamentoNum = parseFloat(custoDeslocamento) || 0;
   const entradaValida = larguraNum > 0 && alturaNum > 0;
 
-  // Carrega os acabamentos ativos do motor (uma vez).
-  useEffect(() => {
-    let ativo = true;
-    (async () => {
-      try {
-        const { data, error } = await supabase.functions.invoke('calc-lona', {
-          body: { action: 'meta' },
-        });
-        if (!ativo) return;
-        if (!error && data && Array.isArray(data.opcoes) && data.opcoes.length > 0) {
-          setOpcoes(data.opcoes);
-          setAcabamento((a) => (data.opcoes.some((o: Opcao) => o.tipo === a) ? a : data.opcoes[0].tipo));
-        }
-      } catch {
-        /* sem meta */
-      }
-    })();
-    return () => {
-      ativo = false;
-    };
-  }, []);
+  const opcaoSel = opcoes.find((o) => o.id === acabamento) ?? opcoes[0];
+  const precoM2Base = opcaoSel.preco;
+  const precoM2Laca = laca ? config.lacaProtecaoM2 : 0;
+  const precoM2 = precoM2Base + precoM2Laca;
+  const pct = config.notaFiscalPercentual || 0;
 
-  useEffect(() => {
-    if (!entradaValida) {
-      setResult(null);
-      setError(null);
-      return;
-    }
-    const timer = setTimeout(async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const { data, error } = await supabase.functions.invoke('calc-lona', {
-          // Área agregada (área unitária × qtd) enviada como largura×altura, para o
-          // motor aplicar o mínimo de projeto e o deslocamento UMA vez no pedido.
-          body: {
-            tipo: acabamento,
-            bastao: false,
-            laca,
-            largura: larguraNum * alturaNum * (quantidade > 0 ? quantidade : 1),
-            altura: 1,
-            incluirDeslocamento,
-            custoDeslocamento: custoDeslocamentoNum,
-          },
-        });
-        if (error) throw error;
-        if (data?.error) throw new Error(data.error);
-        setResult((data?.resultado as LonaResult) ?? null);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : 'Erro ao calcular o preço.');
-        setResult(null);
-      } finally {
-        setLoading(false);
-      }
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [acabamento, laca, larguraNum, alturaNum, quantidade, incluirDeslocamento, custoDeslocamentoNum, entradaValida]);
+  // Cálculo local: área agregada × preço/m²; deslocamento (opcional) somado uma
+  // vez ao total, sem incidência de nota fiscal (é custo de repasse).
+  const calc = useMemo(() => {
+    if (!entradaValida) return null;
+    const areaUnit = larguraNum * alturaNum;
+    const areaTotal = areaUnit * qtd;
+    const produtoSemNota = precoM2 * areaTotal;
+    const desloc = incluirDeslocamento ? custoDeslocamentoNum : 0;
+    const semNota = produtoSemNota + desloc;
+    const comNota = produtoSemNota * (1 + pct / 100) + desloc;
+    return { areaUnit, areaTotal, produtoSemNota, adicionalLaca: precoM2Laca * areaTotal, desloc, semNota, comNota };
+  }, [entradaValida, larguraNum, alturaNum, qtd, precoM2, precoM2Laca, pct, incluirDeslocamento, custoDeslocamentoNum]);
 
-  // O resultado já é o total do pedido (área agregada): preco_final inclui a laca
-  // UV, o mínimo de projeto e o deslocamento, aplicados uma única vez.
-  const precos = useMemo(() => {
-    if (!result || result.preco_final == null) return null;
-    return { semNota: num(result.preco_final), comNota: num(result.preco_com_nota) };
-  }, [result]);
-
-  const temPreco = !!precos && precos.semNota > 0;
-  const acabamentoLabel = opcoes.find((o) => o.tipo === acabamento)?.nome ?? 'Padrão';
+  const temPreco = !!calc && calc.semNota > 0;
 
   const descricao = useMemo(
     () =>
-      `Lona/Banner ${acabamentoLabel}${laca ? ' + laca' : ''} ${larguraNum.toFixed(2)}×${alturaNum.toFixed(2)}m${
-        quantidade > 1 ? ` (${quantidade}un)` : ''
+      `Lona/Banner ${opcaoSel.nome}${laca ? ' + laca' : ''} ${larguraNum.toFixed(2)}×${alturaNum.toFixed(2)}m${
+        qtd > 1 ? ` (${qtd}un)` : ''
       }`,
-    [acabamentoLabel, laca, larguraNum, alturaNum, quantidade]
+    [opcaoSel.nome, laca, larguraNum, alturaNum, qtd]
   );
 
   const handleCopy = () => {
-    if (!temPreco || !precos) return;
-    const texto = `Orçamento Lona/Banner — ${acabamentoLabel}${laca ? ' + Laca de Proteção' : ''}
-Dimensões: ${larguraNum.toFixed(2)} x ${alturaNum.toFixed(2)} m — ${quantidade} un
-${incluirDeslocamento ? `Deslocamento incluído: ${formatCurrency(custoDeslocamentoNum)}\n` : ''}
-Preço (sem nota fiscal): ${formatCurrency(precos.semNota)}
-Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
+    if (!temPreco || !calc) return;
+    const texto = `Orçamento Lona/Banner — ${opcaoSel.nome}${laca ? ' + Laca de Proteção' : ''}
+Dimensões: ${larguraNum.toFixed(2)} x ${alturaNum.toFixed(2)} m — ${qtd} un
+${incluirDeslocamento ? `Deslocamento incluído: ${formatCurrency(calc.desloc)}\n` : ''}Preço (sem nota fiscal): ${formatCurrency(calc.semNota)}
+Preço (com nota fiscal): ${formatCurrency(calc.comNota)}`;
     navigator.clipboard.writeText(texto).then(
       () => toast.success('Orçamento copiado!'),
       () => toast.error('Não foi possível copiar.')
@@ -158,8 +102,8 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
   };
 
   const handleAddCotacao = () => {
-    if (!temPreco || !precos) return;
-    addItem({ descricao, precoSemNota: precos.semNota, precoComNota: precos.comNota });
+    if (!temPreco || !calc) return;
+    addItem({ descricao, precoSemNota: calc.semNota, precoComNota: calc.comNota });
     toast.success('Adicionado à cotação!');
   };
 
@@ -168,7 +112,7 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Calculadora de Lona</h2>
         <p className="text-gray-600">
-          Lona, banner e faixa por m², com acabamento. Preço do motor de precificação.
+          Lona, banner e faixa por m², com acabamento. Preços definidos manualmente em Configurações.
         </p>
       </div>
 
@@ -195,12 +139,9 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-3">Acabamento</label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {opcoes.length === 0 && (
-                <span className="text-sm text-gray-500">Carregando…</span>
-              )}
               {opcoes.map((o) => (
-                <button key={o.tipo} type="button" onClick={() => setAcabamento(o.tipo)} className={btn(acabamento === o.tipo)}>
-                  {o.nome} — {formatCurrency(num(o.preco_venda_m2))}/m²
+                <button key={o.id} type="button" onClick={() => setAcabamento(o.id)} className={btn(acabamento === o.id)}>
+                  {o.nome} — {formatCurrency(o.preco)}/m²
                 </button>
               ))}
             </div>
@@ -208,7 +149,9 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
 
           <label className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
             <input type="checkbox" checked={laca} onChange={(e) => setLaca(e.target.checked)} className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
-            <span className="text-sm font-medium text-gray-700">Laca de Proteção (UV)</span>
+            <span className="text-sm font-medium text-gray-700">
+              Laca de Proteção (UV) — {formatCurrency(config.lacaProtecaoM2)}/m²
+            </span>
           </label>
 
           <DeslocamentoField {...deslocamento} />
@@ -219,59 +162,42 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
 
           {!entradaValida ? (
             <p className="text-sm text-gray-500">Informe as dimensões para ver o preço.</p>
-          ) : loading ? (
-            <div className="flex items-center gap-2 text-sm text-gray-500">
-              <Loader2 className="w-4 h-4 animate-spin" /> Calculando…
-            </div>
-          ) : error ? (
-            <div className="flex items-start gap-2 text-sm text-red-600">
-              <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
-              <span>{error}</span>
-            </div>
-          ) : result ? (
+          ) : temPreco && calc ? (
             <div className="space-y-4">
-              {result.alerta && result.alerta.trim() !== '' && (
-                <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200 text-sm text-amber-800">
-                  <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
-                  <span>{result.alerta}</span>
-                </div>
-              )}
-
-              {temPreco && precos && (
-                <>
-                  <div className="bg-white rounded-lg border border-gray-200 p-4">
-                    <div className="text-xs uppercase tracking-wide text-gray-500">Preço de venda (sem nota fiscal)</div>
-                    <div className="text-3xl font-bold text-blue-600">{formatCurrency(precos.semNota)}</div>
-                    <div className="mt-1 text-sm text-orange-600 font-medium">Com nota fiscal: {formatCurrency(precos.comNota)}</div>
-                    {quantidade > 1 && (
-                      <div className="mt-1 text-xs text-green-600 font-medium">
-                        {quantidade} un · unitário {formatCurrency(precos.semNota / quantidade)} ({formatCurrency(precos.comNota / quantidade)} c/ nota)
-                      </div>
-                    )}
+              <div className="bg-white rounded-lg border border-gray-200 p-4">
+                <div className="text-xs uppercase tracking-wide text-gray-500">Preço de venda (sem nota fiscal)</div>
+                <div className="text-3xl font-bold text-blue-600">{formatCurrency(calc.semNota)}</div>
+                <div className="mt-1 text-sm text-orange-600 font-medium">Com nota fiscal: {formatCurrency(calc.comNota)}</div>
+                {qtd > 1 && (
+                  <div className="mt-1 text-xs text-green-600 font-medium">
+                    {qtd} un · unitário {formatCurrency(calc.semNota / qtd)} ({formatCurrency(calc.comNota / qtd)} c/ nota)
                   </div>
+                )}
+              </div>
 
-                  <div className="space-y-1">
-                    <div className="flex justify-between text-sm text-gray-600"><span>Acabamento:</span><span>{acabamentoLabel}</span></div>
-                    <div className="flex justify-between text-sm text-gray-600"><span>Preço/m²:</span><span>{formatCurrency(num(result.preco_m2))}</span></div>
-                    <div className="flex justify-between text-sm text-gray-600"><span>Área (un):</span><span>{(num(result.area_m2) / quantidade).toFixed(2)} m²</span></div>
-                    {laca && num(result.adicional_laca_uv) > 0 && (
-                      <div className="flex justify-between text-sm text-gray-600"><span>Laca de proteção UV:</span><span>{formatCurrency(num(result.adicional_laca_uv))}</span></div>
-                    )}
-                    {incluirDeslocamento && num(result.custo_deslocamento) > 0 && (
-                      <div className="flex justify-between text-sm text-gray-600"><span>Deslocamento:</span><span>{formatCurrency(num(result.custo_deslocamento))}</span></div>
-                    )}
-                  </div>
+              <div className="space-y-1">
+                <div className="flex justify-between text-sm text-gray-600"><span>Acabamento:</span><span>{opcaoSel.nome}</span></div>
+                <div className="flex justify-between text-sm text-gray-600"><span>Preço/m²:</span><span>{formatCurrency(precoM2Base)}</span></div>
+                <div className="flex justify-between text-sm text-gray-600"><span>Área (un):</span><span>{calc.areaUnit.toFixed(2)} m²</span></div>
+                {qtd > 1 && (
+                  <div className="flex justify-between text-sm text-gray-600"><span>Área total:</span><span>{calc.areaTotal.toFixed(2)} m²</span></div>
+                )}
+                {laca && calc.adicionalLaca > 0 && (
+                  <div className="flex justify-between text-sm text-gray-600"><span>Laca de proteção UV:</span><span>{formatCurrency(calc.adicionalLaca)}</span></div>
+                )}
+                {incluirDeslocamento && calc.desloc > 0 && (
+                  <div className="flex justify-between text-sm text-gray-600"><span>Deslocamento:</span><span>{formatCurrency(calc.desloc)}</span></div>
+                )}
+              </div>
 
-                  <div className="space-y-2">
-                    <button type="button" onClick={handleAddCotacao} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-blue-600 text-blue-600 text-sm font-medium hover:bg-blue-50 transition-colors">
-                      <PlusCircle className="w-4 h-4" /> Adicionar à cotação
-                    </button>
-                    <button type="button" onClick={handleCopy} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors">
-                      <Copy className="w-4 h-4" /> Copiar orçamento
-                    </button>
-                  </div>
-                </>
-              )}
+              <div className="space-y-2">
+                <button type="button" onClick={handleAddCotacao} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-blue-600 text-blue-600 text-sm font-medium hover:bg-blue-50 transition-colors">
+                  <PlusCircle className="w-4 h-4" /> Adicionar à cotação
+                </button>
+                <button type="button" onClick={handleCopy} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors">
+                  <Copy className="w-4 h-4" /> Copiar orçamento
+                </button>
+              </div>
             </div>
           ) : null}
         </div>

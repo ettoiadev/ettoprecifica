@@ -15,7 +15,6 @@ import { PricingConfig, ProductVariation } from '../types/pricing';
 
 export type OptionListSection =
   | 'adesivo'
-  | 'lona'
   | 'placaPS'
   | 'letraCaixa'
   | 'vidro'
@@ -51,15 +50,6 @@ export const SECTION_OPTIONS: Record<OptionListSection, SectionOptionsDef> = {
       { id: 'laminado', label: 'Laminado', priceKey: 'laminado' },
       { id: 'adesivoPerfurado', label: 'Adesivo Perfurado', priceKey: 'adesivoPerfurado' },
       { id: 'imantado', label: 'Imantado', priceKey: 'imantado' },
-    ],
-    foldLegacyCustomVariations: true,
-  },
-  lona: {
-    baseOptions: [
-      { id: 'bannerFaixa', label: 'Banner/Faixa', priceKey: 'bannerFaixa' },
-      { id: 'reforcoIlhos', label: 'Reforço e Ilhós', priceKey: 'reforcoIlhos' },
-      { id: 'lonaBacklight', label: 'Lona Backlight', priceKey: 'lonaBacklight' },
-      { id: 'soRefile', label: 'Só Refile', priceKey: 'soRefile' },
     ],
     foldLegacyCustomVariations: true,
   },

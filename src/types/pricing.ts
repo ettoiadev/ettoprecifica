@@ -23,14 +23,16 @@ export interface AdesivoConfig {
   variations?: ProductVariation[];
 }
 
+// Lona é o único produto com preço MANUAL (definido em Configurações), não pelo
+// motor da skill. Cada acabamento tem um preço por m²; a Laca de Proteção é um
+// adicional opcional por m²; o preço com nota fiscal sai de um percentual único.
 export interface LonaConfig {
-  bannerFaixa: number;
+  bannerSemAcabamento: number;
   reforcoIlhos: number;
-  lonaBacklight: number;
-  soRefile: number;
-  precoMinimo: number;
-  customVariations?: ProductVariation[];
-  variations?: ProductVariation[];
+  lonaGrande: number;
+  lonaTranslucida: number;
+  lacaProtecaoM2: number;
+  notaFiscalPercentual: number;
 }
 
 export interface PlacaPSConfig {
@@ -196,11 +198,12 @@ export const defaultConfig: PricingConfig = {
     imantado: 40.0,
   },
   lona: {
-    bannerFaixa: 20.0,
-    reforcoIlhos: 25.0,
-    lonaBacklight: 30.0,
-    soRefile: 15.0,
-    precoMinimo: 25.0,
+    bannerSemAcabamento: 100.0,
+    reforcoIlhos: 130.0,
+    lonaGrande: 150.0,
+    lonaTranslucida: 130.0,
+    lacaProtecaoM2: 30.0,
+    notaFiscalPercentual: 20.0,
   },
   placaPS: {
     espessura1mm: 30.0,

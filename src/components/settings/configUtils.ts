@@ -6,12 +6,17 @@ const isPercentageField = (section: string, field: string) => {
   if (section === 'notaFiscal' && field === 'percentual') {
     return true;
   }
-  
+
+  // Percentual de nota fiscal da Lona (preço manual)
+  if (section === 'lona' && field === 'notaFiscalPercentual') {
+    return true;
+  }
+
   // Todos os campos de Cartão de Crédito são porcentagens
   if (section === 'cartaoCredito') {
     return true;
   }
-  
+
   return false;
 };
 
