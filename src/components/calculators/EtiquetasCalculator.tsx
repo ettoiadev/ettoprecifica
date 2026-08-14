@@ -64,7 +64,7 @@ const EtiquetasCalculator: React.FC<Props> = ({ config }) => {
     const precoUnit = Math.max(precoUnitCalc, minUn);
     const semNota = precoUnit * qtd;
     const comNota = semNota * (1 + pct / 100);
-    return { areaUnit, precoUnit, pisoAplicado, semNota, comNota };
+    return { areaUnit, precoUnitCalc, precoUnit, pisoAplicado, semNota, comNota };
   }, [entradaValida, larguraCm, alturaCm, qtd, precoM2, minUn, pct]);
 
   const temPreco = !!calc && calc.semNota > 0;
@@ -177,6 +177,13 @@ Preço (com nota fiscal): ${formatCurrency(calc.comNota)}`;
               <div className="space-y-1">
                 <div className="flex justify-between text-sm text-gray-600"><span>Tamanho:</span><span>{larguraCm}×{alturaCm} cm</span></div>
                 <div className="flex justify-between text-sm text-gray-600"><span>Área (un):</span><span>{calc.areaUnit.toFixed(4)} m²</span></div>
+                <div className="flex justify-between text-sm text-gray-600">
+                  <span>Preço por área:</span>
+                  <span className={calc.pisoAplicado ? 'line-through text-gray-400' : ''}>{formatCurrency(calc.precoUnitCalc)}/un</span>
+                </div>
+                {calc.pisoAplicado && (
+                  <div className="flex justify-between text-sm text-amber-600 font-medium"><span>Mínimo por unidade:</span><span>{formatCurrency(minUn)}/un</span></div>
+                )}
                 <div className="flex justify-between text-sm text-gray-600"><span>Quantidade:</span><span>{qtd} un</span></div>
               </div>
 
