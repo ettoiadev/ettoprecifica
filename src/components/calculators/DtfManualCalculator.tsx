@@ -2,16 +2,14 @@ import React, { useMemo, useState } from 'react';
 import { Copy, PlusCircle } from 'lucide-react';
 import { formatCurrency, DtfConfig } from '../../types/pricing';
 import { useCotacao } from '../../contexts/CotacaoContext';
-import { useDeslocamentoCep } from '../../hooks/useDeslocamentoCep';
-import DeslocamentoField from './DeslocamentoField';
 import { toast } from 'sonner';
 
 // DTF com preço MANUAL, definido em Configurações (config.dtf), NÃO pelo motor da
 // skill. Cobrado por METRO LINEAR. Dois tipos com preço/metro editável; as faixas
 // de quantidade foram simplificadas a um preço por tipo (a pedido do Étto). "Uber"
-// (busca do material) é um adicional opcional de valor editável. Deslocamento
-// opcional pelo fluxo por CEP, somado como custo de repasse (sem NF). O preço com
-// nota sai de um percentual único.
+// (busca do material) é um adicional opcional de valor editável. DTF não tem campo
+// de deslocamento (removido a pedido do Étto). O preço com nota sai de um
+// percentual único.
 interface Props {
   config: DtfConfig;
 }
@@ -37,8 +35,6 @@ const btn = (active: boolean) =>
   }`;
 
 const DtfManualCalculator: React.FC<Props> = ({ config }) => {
-  const deslocamento = useDeslocamentoCep();
-  const { incluirDeslocamento, custoDeslocamento } = deslocamento;
   const [tipo, setTipo] = useState<DtfOptionId>('textilPremium');
   const [metros, setMetros] = useState<string>('');
   const [incluirUber, setIncluirUber] = useState<boolean>(true);
@@ -54,7 +50,6 @@ const DtfManualCalculator: React.FC<Props> = ({ config }) => {
   );
 
   const metrosNum = parseFloat(metros) || 0;
-  const custoDeslocamentoNum = parseFloat(custoDeslocamento) || 0;
   const entradaValida = metrosNum > 0;
 
   const opcaoSel = opcoes.find((o) => o.id === tipo) ?? opcoes[0];
@@ -66,11 +61,10 @@ const DtfManualCalculator: React.FC<Props> = ({ config }) => {
     if (!entradaValida) return null;
     const material = precoMetro * metrosNum;
     const uber = incluirUber ? uberValor : 0;
-    const desloc = incluirDeslocamento ? custoDeslocamentoNum : 0;
-    const semNota = material + uber + desloc;
-    const comNota = (material + uber) * (1 + pct / 100) + desloc;
-    return { material, uber, desloc, semNota, comNota };
-  }, [entradaValida, precoMetro, metrosNum, incluirUber, uberValor, pct, incluirDeslocamento, custoDeslocamentoNum]);
+    const semNota = material + uber;
+    const comNota = (material + uber) * (1 + pct / 100);
+    return { material, uber, semNota, comNota };
+  }, [entradaValida, precoMetro, metrosNum, incluirUber, uberValor, pct]);
 
   const temPreco = !!calc && calc.semNota > 0;
 
@@ -83,7 +77,7 @@ const DtfManualCalculator: React.FC<Props> = ({ config }) => {
     if (!temPreco || !calc) return;
     const texto = `Orçamento DTF — ${opcaoSel.nome}
 Metros lineares: ${metrosNum.toFixed(2)} m (largura ${opcaoSel.descricao})
-${incluirUber ? `Uber (busca do material): ${formatCurrency(calc.uber)}\n` : ''}${incluirDeslocamento ? `Deslocamento incluído: ${formatCurrency(calc.desloc)}\n` : ''}Preço (sem nota fiscal): ${formatCurrency(calc.semNota)}
+${incluirUber ? `Uber (busca do material): ${formatCurrency(calc.uber)}\n` : ''}Preço (sem nota fiscal): ${formatCurrency(calc.semNota)}
 Preço (com nota fiscal): ${formatCurrency(calc.comNota)}`;
     navigator.clipboard.writeText(texto).then(
       () => toast.success('Orçamento copiado!'),
@@ -134,8 +128,6 @@ Preço (com nota fiscal): ${formatCurrency(calc.comNota)}`;
           <p className="text-xs text-gray-500 -mt-3">
             Desmarque se a busca deste DTF for combinada com outros pedidos na mesma corrida.
           </p>
-
-          <DeslocamentoField {...deslocamento} />
         </div>
 
         <div className="bg-gray-50 rounded-xl border border-gray-200 p-6">
@@ -161,9 +153,6 @@ Preço (com nota fiscal): ${formatCurrency(calc.comNota)}`;
                 <div className="flex justify-between text-sm text-gray-600"><span>Material:</span><span>{formatCurrency(calc.material)}</span></div>
                 {incluirUber && calc.uber > 0 && (
                   <div className="flex justify-between text-sm text-gray-600"><span>Uber (busca):</span><span>{formatCurrency(calc.uber)}</span></div>
-                )}
-                {incluirDeslocamento && calc.desloc > 0 && (
-                  <div className="flex justify-between text-sm text-gray-600"><span>Deslocamento:</span><span>{formatCurrency(calc.desloc)}</span></div>
                 )}
               </div>
 
