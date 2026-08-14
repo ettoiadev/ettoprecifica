@@ -21,6 +21,8 @@ interface Opcao {
   nome: string;
   descricao: string;
   preco: number;
+  /** Mínimo de impressão em metros lineares (cobrado quando o pedido é menor). */
+  minMetros: number;
 }
 
 const inputClass =
@@ -43,8 +45,8 @@ const DtfManualCalculator: React.FC<Props> = ({ config }) => {
 
   const opcoes = useMemo<Opcao[]>(
     () => [
-      { id: 'textilPremium', nome: 'DTF Têxtil Premium', descricao: '57 cm', preco: config.textilPremium },
-      { id: 'uvPremium', nome: 'DTF UV Premium', descricao: '38 cm', preco: config.uvPremium },
+      { id: 'textilPremium', nome: 'DTF Têxtil Premium', descricao: '57 cm', preco: config.textilPremium, minMetros: 0 },
+      { id: 'uvPremium', nome: 'DTF UV Premium', descricao: '38 cm', preco: config.uvPremium, minMetros: 0.35 },
     ],
     [config]
   );
@@ -59,12 +61,16 @@ const DtfManualCalculator: React.FC<Props> = ({ config }) => {
 
   const calc = useMemo(() => {
     if (!entradaValida) return null;
-    const material = precoMetro * metrosNum;
+    // Aplica o mínimo de impressão do tipo (ex.: DTF UV = 35cm): se o pedido é
+    // menor, cobra o equivalente ao mínimo automaticamente.
+    const metrosCobrados = Math.max(metrosNum, opcaoSel.minMetros);
+    const minimoAplicado = metrosNum < opcaoSel.minMetros;
+    const material = precoMetro * metrosCobrados;
     const uber = incluirUber ? uberValor : 0;
     const semNota = material + uber;
     const comNota = (material + uber) * (1 + pct / 100);
-    return { material, uber, semNota, comNota };
-  }, [entradaValida, precoMetro, metrosNum, incluirUber, uberValor, pct]);
+    return { material, uber, semNota, comNota, metrosCobrados, minimoAplicado };
+  }, [entradaValida, precoMetro, metrosNum, opcaoSel.minMetros, incluirUber, uberValor, pct]);
 
   const temPreco = !!calc && calc.semNota > 0;
 
@@ -117,6 +123,11 @@ Preço (com nota fiscal): ${formatCurrency(calc.comNota)}`;
           <div>
             <label htmlFor="metros-dtf" className="block text-sm font-medium text-gray-700 mb-3">Metros lineares</label>
             <input id="metros-dtf" type="number" min="0" step="0.1" value={metros} onChange={(e) => setMetros(e.target.value)} className={inputClass} placeholder="0.0" />
+            {opcaoSel.minMetros > 0 && (
+              <p className="text-xs text-gray-500 mt-1">
+                Mínimo de impressão: {(opcaoSel.minMetros * 100).toFixed(0)} cm — pedidos menores são cobrados como {opcaoSel.minMetros.toFixed(2)} m.
+              </p>
+            )}
           </div>
 
           <label className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
@@ -143,7 +154,12 @@ Preço (com nota fiscal): ${formatCurrency(calc.comNota)}`;
                 <div className="mt-1 text-sm text-orange-600 font-medium">Com nota fiscal: {formatCurrency(calc.comNota)}</div>
                 {metrosNum > 0 && (
                   <div className="mt-1 text-xs text-green-600 font-medium">
-                    {metrosNum.toFixed(2)}m · {formatCurrency(precoMetro)}/m
+                    {calc.metrosCobrados.toFixed(2)}m · {formatCurrency(precoMetro)}/m
+                  </div>
+                )}
+                {calc.minimoAplicado && (
+                  <div className="mt-1 text-xs text-amber-600 font-medium">
+                    Mínimo de {(opcaoSel.minMetros * 100).toFixed(0)} cm aplicado ({opcaoSel.minMetros.toFixed(2)} m).
                   </div>
                 )}
               </div>
