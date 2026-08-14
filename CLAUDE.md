@@ -7,7 +7,7 @@
 > 4. **Priorize a skill**: antes de criar qualquer objeto no banco ou calcular preço no app, cheque se a skill já tem a função/dado. O app só **consome**, nunca escreve preço.
 
 ## O que é
-SPA React de precificação usada por vendedores de uma empresa de comunicação visual. Cada aba é uma calculadora de um produto. **Quase todo preço vem do "motor" da skill orcamentista-cv** (funções `calc_*` no banco Supabase `tabelapreco`, ref `ghyctsclpcsrznrqegrp`), consumido via **Edge Functions read-only**. **Exceções (29–30/07/26): as abas Lona, Adesivos, Placas (PS + ACM) e Laser voltaram a ter preço MANUAL, editável em Configurações** — ver "Estado atual". Fora dessas, não há precificação local.
+SPA React de precificação usada por vendedores de uma empresa de comunicação visual. Cada aba é uma calculadora de um produto. **Quase todo preço vem do "motor" da skill orcamentista-cv** (funções `calc_*` no banco Supabase `tabelapreco`, ref `ghyctsclpcsrznrqegrp`), consumido via **Edge Functions read-only**. **Exceções (29–30/07/26): as abas Lona, Adesivos, Placas (PS + ACM), Laser e DTF voltaram a ter preço MANUAL, editável em Configurações** — ver "Estado atual". Fora dessas, não há precificação local.
 
 ## Stack e build
 - React 18.3 + TypeScript 5.5 + Vite 5.4 (SWC — **não faz typecheck no build**).
@@ -35,7 +35,7 @@ SPA React de precificação usada por vendedores de uma empresa de comunicação
 | Vidro | calc-vidro | `calc_vidro` |
 | Luminoso | calc-luminoso | `calc_luminoso` |
 | Laser | **(preço manual local — não usa Edge Function)** | ~~`calc_laser`~~ (intacta, não chamada) |
-| DTF | calc-dtf | `calc_dtf` |
+| DTF | **(preço manual local — não usa Edge Function)** | ~~`calc_dtf`~~ (intacta, não chamada) |
 | Cavaletes | calc-cavaletes | `calc_cavaletes` / `calc_cavaletes_madeira` |
 
 **Padrão de abas unificadas por wrapper fino** (27/07/26): quando produtos afins tinham abas separadas, a solução foi um componente wrapper com seletor de tipo no topo que renderiza o componente original por baixo, sem tocar na lógica de cálculo de nenhum:
@@ -64,8 +64,10 @@ curl -s -X POST "https://api.supabase.com/v1/projects/ghyctsclpcsrznrqegrp/datab
 ```
 Deploy de Edge Function: `POST .../v1/projects/<ref>/functions/deploy?slug=<slug>` com `-F metadata=...;type=application/json -F file=@index.ts`. **Nunca** salvar o token; pedir para revogar após uso.
 
-## Lona, Adesivos, Placas e Laser voltaram a ter preço MANUAL (29–30/07/26) — quebram o padrão "app só consome"
-A pedido do Étto, as **abas Lona, Adesivos, Placas (PS + ACM) e Laser deixaram de usar o motor da skill** e passaram a ser precificadas localmente, com preços editáveis em **Configurações > Produtos** (ele quer controlar o m² na mão). São as **únicas** exceções ao "todo preço vem da skill" — todo o resto continua no motor. Todas seguem exatamente o mesmo padrão (schema em `pricing.ts` → calculadora recebe `config` via `Index.tsx` → seção em `settingsConfig.ts` → percentual de NF tratado em `ConfigSection.tsx`/`configUtils.ts`, hoje genérico: qualquer campo `notaFiscalPercentual` é % → seção removida de `productOptions.ts` → materiais em botões pastel índigo).
+## Lona, Adesivos, Placas, Laser e DTF voltaram a ter preço MANUAL (29–30/07/26) — quebram o padrão "app só consome"
+A pedido do Étto, as **abas Lona, Adesivos, Placas (PS + ACM), Laser e DTF deixaram de usar o motor da skill** e passaram a ser precificadas localmente, com preços editáveis em **Configurações > Produtos** (ele quer controlar o preço na mão). São as **únicas** exceções ao "todo preço vem da skill" — todo o resto continua no motor. Todas seguem o mesmo padrão (schema em `pricing.ts` → calculadora recebe `config` via `Index.tsx` → seção em `settingsConfig.ts` → percentual de NF tratado em `ConfigSection.tsx`/`configUtils.ts`, hoje genérico: qualquer campo `notaFiscalPercentual` é % → seção removida de `productOptions.ts` quando aplicável → materiais em botões pastel índigo).
+
+**DTF** (30/07/26): `DtfManualCalculator` substitui o `DtfCalculator` (motor). DTF é o único cobrado por **METRO LINEAR** (não m²). **DTF nunca teve config no app** (era 100% motor) — criei `DtfConfig` do zero e adicionei `dtf` a `PricingConfig`/`defaultConfig` (por isso não há o que remover de `productOptions.ts`). A pedido do Étto, **faixas de quantidade simplificadas** a um preço/metro por tipo (padrão = preço de venda de 1 metro que vinha da skill, custo ×2,5): **DTF Têxtil Premium (57cm) R$149,75/m**, **DTF UV Premium (38cm) R$224,75/m**. **Uber** mantido como adicional opcional de valor editável (`uberValor`, padrão R$50 = 20 de custo ×2,5); NF (9,31%) incide sobre material+uber, deslocamento é repasse sem NF. `calc_dtf`/`calc-dtf` intactos, não chamados.
 
 **Laser** (30/07/26): `LaserManualCalculator` substitui o `LaserCalculator` (motor). A pedido do Étto, **simplificado como os demais** — os recursos que só o Laser tinha (forma retangular/circular com perda de chapa, multiplicador de complexidade, LED) **foram removidos**; ficou material (botões pastel agrupados por categoria) + medidas + qtd + deslocamento, preço = área × R$/m². **Lista curada** (só os materiais dos prints do Étto — 14 de 32 ativos), preços de venda/m² reais lidos da `laser_materiais.preco_venda_m2`: Acrílico Colorido 3mm 390 · Cristal 2/3/5/8/10mm 380/430/600/980/1250 · Espelhado Dourado 2mm 590 / Prata 2mm 540 / Rosé 2mm 590 · MDF 3/6/9mm 260/380/520 · PS Cristal 2/3mm 380/490. NF 9,31%. `calc_laser`/`calc-laser` intactos, não chamados. Adicionar material = campo em config+default+settingsConfig+array `opcoes` (com `categoria`) do `LaserManualCalculator`.
 

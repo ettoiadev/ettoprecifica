@@ -140,6 +140,18 @@ export interface LaserConfig {
   notaFiscalPercentual: number;
 }
 
+// DTF também tem preço MANUAL (como os demais). Cobrado por METRO LINEAR (não m²).
+// Preços padrão = o preço de venda/metro de 1 metro que vinha da skill (custo ×2,5),
+// lido via SQL em 30/07/26. Faixas de quantidade foram simplificadas (um preço por
+// tipo). "Uber" é um adicional opcional (busca do material), valor editável. O preço
+// com nota sai de um percentual único (9,31%).
+export interface DtfConfig {
+  textilPremium: number;
+  uvPremium: number;
+  uberValor: number;
+  notaFiscalPercentual: number;
+}
+
 // Novas configurações solicitadas
 export interface NotaFiscalConfig {
   percentual: number;
@@ -186,6 +198,7 @@ export interface PricingConfig {
   vidro: VidroConfig;
   luminoso: LuminosoConfig;
   laser: LaserConfig;
+  dtf: DtfConfig;
   notaFiscal: NotaFiscalConfig;
   arteFinal: ArteFinalConfig;
   cartaoCredito: CartaoCreditoConfig;
@@ -285,6 +298,12 @@ export const defaultConfig: PricingConfig = {
     mdf9mm: 520.0,
     psCristal2mm: 380.0,
     psCristal3mm: 490.0,
+    notaFiscalPercentual: 9.31,
+  },
+  dtf: {
+    textilPremium: 149.75,
+    uvPremium: 224.75,
+    uberValor: 50.0,
     notaFiscalPercentual: 9.31,
   },
   notaFiscal: {

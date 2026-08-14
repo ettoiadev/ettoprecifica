@@ -56,6 +56,16 @@ export const settingsConfig: ConfigSectionData[] = [
     ],
   },
   {
+    title: 'DTF',
+    section: 'dtf',
+    fields: [
+      { key: 'textilPremium', label: 'DTF Têxtil Premium (57cm)', unit: 'metro' },
+      { key: 'uvPremium', label: 'DTF UV Premium (38cm)', unit: 'metro' },
+      { key: 'uberValor', label: 'Uber (busca do material)', unit: 'R$' },
+      { key: 'notaFiscalPercentual', label: 'Percentual de nota fiscal', unit: '%' },
+    ],
+  },
+  {
     title: 'Laser',
     section: 'laser',
     fields: [

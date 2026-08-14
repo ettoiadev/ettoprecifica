@@ -9,7 +9,7 @@ import LetraCaixaCalculator from '../components/calculators/LetraCaixaCalculator
 import VidroCalculator from '../components/calculators/VidroCalculator';
 import LuminosoCalculator from '../components/calculators/LuminosoCalculator';
 import LaserManualCalculator from '../components/calculators/LaserManualCalculator';
-import DtfCalculator from '../components/calculators/DtfCalculator';
+import DtfManualCalculator from '../components/calculators/DtfManualCalculator';
 import CavaletesCalculator from '../components/calculators/CavaletesCalculator';
 import SettingsPanel from '../components/SettingsPanel';
 import ModernHeader from '../components/ModernHeader';
@@ -142,7 +142,7 @@ const Index = () => {
       case 'laser':
         return <LaserManualCalculator config={config.laser} />;
       case 'dtf':
-        return <DtfCalculator />;
+        return <DtfManualCalculator config={config.dtf} />;
       case 'cavaletes':
         return <CavaletesCalculator />;
       default:
