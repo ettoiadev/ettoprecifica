@@ -56,6 +56,15 @@ export const settingsConfig: ConfigSectionData[] = [
     ],
   },
   {
+    title: 'Etiquetas / Rótulos',
+    section: 'etiquetas',
+    fields: [
+      { key: 'precoM2', label: 'Preço por m²', unit: 'm²' },
+      { key: 'minPorUnidade', label: 'Mínimo por unidade', unit: 'un' },
+      { key: 'notaFiscalPercentual', label: 'Percentual de nota fiscal', unit: '%' },
+    ],
+  },
+  {
     title: 'DTF',
     section: 'dtf',
     fields: [

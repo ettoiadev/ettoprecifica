@@ -152,6 +152,16 @@ export interface DtfConfig {
   notaFiscalPercentual: number;
 }
 
+// Etiquetas/Rótulos com preço MANUAL por m² (não mais a matriz da skill). O preço
+// por unidade = área da etiqueta × precoM2, com um piso por unidade (etiquetas
+// pequenas caem no piso). Medida e quantidade são livres; as caixas de tamanho
+// fixo e os lotes são apenas atalhos. O preço com nota sai de um percentual único.
+export interface EtiquetasConfig {
+  precoM2: number;
+  minPorUnidade: number;
+  notaFiscalPercentual: number;
+}
+
 // Novas configurações solicitadas
 export interface NotaFiscalConfig {
   percentual: number;
@@ -199,6 +209,7 @@ export interface PricingConfig {
   luminoso: LuminosoConfig;
   laser: LaserConfig;
   dtf: DtfConfig;
+  etiquetas: EtiquetasConfig;
   notaFiscal: NotaFiscalConfig;
   arteFinal: ArteFinalConfig;
   cartaoCredito: CartaoCreditoConfig;
@@ -304,6 +315,11 @@ export const defaultConfig: PricingConfig = {
     textilPremium: 149.75,
     uvPremium: 224.75,
     uberValor: 50.0,
+    notaFiscalPercentual: 9.31,
+  },
+  etiquetas: {
+    precoM2: 100.0,
+    minPorUnidade: 0.25,
     notaFiscalPercentual: 9.31,
   },
   notaFiscal: {

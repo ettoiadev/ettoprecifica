@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AdesivoConfig } from '../../types/pricing';
+import { AdesivoConfig, EtiquetasConfig } from '../../types/pricing';
 import AdesivoManualCalculator from './AdesivoManualCalculator';
 import EtiquetasCalculator from './EtiquetasCalculator';
 
@@ -13,6 +13,7 @@ type TipoAdesivo = 'adesivo' | 'etiquetas';
 
 interface Props {
   config: AdesivoConfig;
+  etiquetasConfig: EtiquetasConfig;
 }
 
 const btn = (active: boolean) =>
@@ -22,7 +23,7 @@ const btn = (active: boolean) =>
       : 'border-gray-300 text-gray-700 hover:bg-gray-50'
   }`;
 
-const AdesivosCalculator: React.FC<Props> = ({ config }) => {
+const AdesivosCalculator: React.FC<Props> = ({ config, etiquetasConfig }) => {
   const [tipoAdesivo, setTipoAdesivo] = useState<TipoAdesivo>('adesivo');
 
   return (
@@ -40,7 +41,7 @@ const AdesivosCalculator: React.FC<Props> = ({ config }) => {
       </div>
 
       {tipoAdesivo === 'adesivo' && <AdesivoManualCalculator config={config} />}
-      {tipoAdesivo === 'etiquetas' && <EtiquetasCalculator />}
+      {tipoAdesivo === 'etiquetas' && <EtiquetasCalculator config={etiquetasConfig} />}
     </div>
   );
 };
