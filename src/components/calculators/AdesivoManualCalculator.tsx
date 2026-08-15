@@ -48,8 +48,8 @@ const AdesivoManualCalculator: React.FC<Props> = ({ config }) => {
   // Opções (preços manuais vindos de Configurações).
   const opcoes = useMemo<Opcao[]>(
     () => [
-      { id: 'digital', nome: 'Adesivo Digital', descricao: 'Apenas impressão sem corte', preco: config.digital },
-      { id: 'digitalPeliculaTransparente', nome: 'Adesivo Digital c/ Película Transparente', descricao: 'Impressão + transparente', preco: config.digitalPeliculaTransparente },
+      { id: 'digital', nome: 'Adesivo Impresso', descricao: 'Impressão só refilado', preco: config.digital },
+      { id: 'digitalPeliculaTransparente', nome: 'Adesivo Impresso Laminado Fosco ou Brilho', descricao: 'Impressão com laminação brilho ou fosco', preco: config.digitalPeliculaTransparente },
       { id: 'transparente', nome: 'Adesivo Transparente', descricao: 'Impressão', preco: config.transparente },
       { id: 'perfurado', nome: 'Adesivo Perfurado', descricao: 'Para carros ou vidros', preco: config.perfurado },
       { id: 'recorte1Cor', nome: 'Adesivo Recorte 1 Cor', descricao: 'Recorte Gold Max', preco: config.recorte1Cor },
