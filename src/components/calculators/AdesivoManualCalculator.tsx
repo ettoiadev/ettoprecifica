@@ -15,6 +15,10 @@ interface Props {
   config: AdesivoConfig;
 }
 
+// Tipos de recorte que podem levar máscara de transferência (por id — renomear o
+// item mantém o vínculo; um id fora deste conjunto não exibe a opção).
+const RECORTE_IDS = new Set(['recorte1Cor', 'recorte2Cores', 'refletivo']);
+
 const inputClass =
   'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent';
 
@@ -34,6 +38,7 @@ const AdesivoManualCalculator: React.FC<Props> = ({ config }) => {
   const [largura, setLargura] = useState<string>('');
   const [altura, setAltura] = useState<string>('');
   const [quantidade, setQuantidade] = useState<number>(1);
+  const [incluirMascara, setIncluirMascara] = useState<boolean>(false);
 
   const { addItem } = useCotacao();
 
@@ -52,17 +57,22 @@ const AdesivoManualCalculator: React.FC<Props> = ({ config }) => {
   const opcaoSel = opcoes.find((o) => o.id === materialId) ?? opcoes[0];
   const precoM2 = opcaoSel?.price ?? 0;
   const pct = config.notaFiscalPercentual || 0;
+  const mascaraM2 = config.mascaraTransferenciaM2 || 0;
+  // Só os adesivos de recorte oferecem máscara de transferência.
+  const mascaraDisponivel = RECORTE_IDS.has(opcaoSel?.id ?? '');
+  const aplicarMascara = mascaraDisponivel && incluirMascara;
 
   const calc = useMemo(() => {
     if (!entradaValida || !opcaoSel) return null;
     const areaUnit = larguraNum * alturaNum;
     const areaTotal = areaUnit * qtd;
-    const produtoSemNota = precoM2 * areaTotal;
+    const mascara = aplicarMascara ? mascaraM2 * areaTotal : 0;
+    const produtoSemNota = precoM2 * areaTotal + mascara;
     const desloc = incluirDeslocamento ? custoDeslocamentoNum : 0;
     const semNota = produtoSemNota + desloc;
     const comNota = produtoSemNota * (1 + pct / 100) + desloc;
-    return { areaUnit, areaTotal, produtoSemNota, desloc, semNota, comNota };
-  }, [entradaValida, opcaoSel, larguraNum, alturaNum, qtd, precoM2, pct, incluirDeslocamento, custoDeslocamentoNum]);
+    return { areaUnit, areaTotal, mascara, produtoSemNota, desloc, semNota, comNota };
+  }, [entradaValida, opcaoSel, larguraNum, alturaNum, qtd, precoM2, pct, aplicarMascara, mascaraM2, incluirDeslocamento, custoDeslocamentoNum]);
 
   const temPreco = !!calc && calc.semNota > 0;
 
@@ -76,7 +86,7 @@ const AdesivoManualCalculator: React.FC<Props> = ({ config }) => {
     if (!temPreco || !calc || !opcaoSel) return;
     const texto = `Orçamento ${opcaoSel.label}
 Dimensões: ${larguraNum.toFixed(2)} x ${alturaNum.toFixed(2)} m — ${qtd} un
-${incluirDeslocamento ? `Deslocamento incluído: ${formatCurrency(calc.desloc)}\n` : ''}Preço (sem nota fiscal): ${formatCurrency(calc.semNota)}
+${aplicarMascara && calc.mascara > 0 ? `Máscara de transferência: ${formatCurrency(calc.mascara)}\n` : ''}${incluirDeslocamento ? `Deslocamento incluído: ${formatCurrency(calc.desloc)}\n` : ''}Preço (sem nota fiscal): ${formatCurrency(calc.semNota)}
 Preço (com nota fiscal): ${formatCurrency(calc.comNota)}`;
     navigator.clipboard.writeText(texto).then(
       () => toast.success('Orçamento copiado!'),
@@ -137,6 +147,17 @@ Preço (com nota fiscal): ${formatCurrency(calc.comNota)}`;
             )}
           </div>
 
+          {mascaraDisponivel && (
+            <div>
+              <label className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                <input type="checkbox" checked={incluirMascara} onChange={(e) => setIncluirMascara(e.target.checked)} className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
+                <span className="text-sm font-medium text-gray-700">
+                  Incluir máscara de transferência ({formatCurrency(mascaraM2)}/m²)
+                </span>
+              </label>
+            </div>
+          )}
+
           <DeslocamentoField {...deslocamento} />
         </div>
 
@@ -164,6 +185,9 @@ Preço (com nota fiscal): ${formatCurrency(calc.comNota)}`;
                 <div className="flex justify-between text-sm text-gray-600"><span>Área (un):</span><span>{calc.areaUnit.toFixed(2)} m²</span></div>
                 {qtd > 1 && (
                   <div className="flex justify-between text-sm text-gray-600"><span>Área total:</span><span>{calc.areaTotal.toFixed(2)} m²</span></div>
+                )}
+                {aplicarMascara && calc.mascara > 0 && (
+                  <div className="flex justify-between text-sm text-gray-600"><span>Máscara de transferência:</span><span>{formatCurrency(calc.mascara)}</span></div>
                 )}
                 {incluirDeslocamento && calc.desloc > 0 && (
                   <div className="flex justify-between text-sm text-gray-600"><span>Deslocamento:</span><span>{formatCurrency(calc.desloc)}</span></div>

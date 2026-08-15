@@ -22,6 +22,7 @@ export const settingsConfig: ConfigSectionData[] = [
     title: 'Adesivos',
     section: 'adesivo',
     fields: [
+      { key: 'mascaraTransferenciaM2', label: 'Máscara de transferência (recorte)', unit: 'm²' },
       { key: 'notaFiscalPercentual', label: 'Percentual de nota fiscal', unit: '%' },
     ],
   },

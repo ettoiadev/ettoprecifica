@@ -31,6 +31,10 @@ export interface AdesivoConfig {
   refletivo: number;
   imaCarroAdesivado: number;
   notaFiscalPercentual: number;
+  // Adicional opcional por m² (máscara de transferência) que compõe o preço dos
+  // adesivos de recorte (1 cor, 2 cores e refletivo). Editável em Configurações;
+  // some para os demais tipos.
+  mascaraTransferenciaM2: number;
   // Lista editável de tipos de adesivo (nome, descrição, preço e ordem),
   // gerenciada em Configurações. Semeada por migrateConfig a partir dos campos
   // acima (preserva preços já salvos). A calculadora renderiza a partir dela.
@@ -244,6 +248,7 @@ export const defaultConfig: PricingConfig = {
     refletivo: 130.0,
     imaCarroAdesivado: 420.0,
     notaFiscalPercentual: 20.0,
+    mascaraTransferenciaM2: 30.0,
   },
   lona: {
     bannerSemAcabamento: 100.0,
