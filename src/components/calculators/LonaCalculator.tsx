@@ -1,6 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Copy, PlusCircle } from 'lucide-react';
-import { formatCurrency, LonaConfig } from '../../types/pricing';
+import { formatCurrency, LonaConfig, ProductVariation } from '../../types/pricing';
 import { useCotacao } from '../../contexts/CotacaoContext';
 import { useDeslocamentoCep } from '../../hooks/useDeslocamentoCep';
 import DeslocamentoField from './DeslocamentoField';
@@ -16,12 +16,6 @@ interface Props {
   config: LonaConfig;
 }
 
-interface Opcao {
-  id: keyof LonaConfig;
-  nome: string;
-  preco: number;
-}
-
 const inputClass =
   'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent';
 
@@ -35,7 +29,9 @@ const btn = (active: boolean) =>
 const LonaCalculator: React.FC<Props> = ({ config }) => {
   const deslocamento = useDeslocamentoCep();
   const { incluirDeslocamento, custoDeslocamento } = deslocamento;
-  const [acabamento, setAcabamento] = useState<keyof LonaConfig>('bannerSemAcabamento');
+  // Acabamentos (nome/descrição/preço/ordem) vêm da lista editável em Configurações.
+  const opcoes = useMemo<ProductVariation[]>(() => config.itens ?? [], [config.itens]);
+  const [acabamentoId, setAcabamentoId] = useState<string>(opcoes[0]?.id ?? '');
   const [laca, setLaca] = useState<boolean>(false);
   const [largura, setLargura] = useState<string>('');
   const [altura, setAltura] = useState<string>('');
@@ -43,16 +39,11 @@ const LonaCalculator: React.FC<Props> = ({ config }) => {
 
   const { addItem } = useCotacao();
 
-  // Opções de acabamento (preços manuais vindos de Configurações).
-  const opcoes = useMemo<Opcao[]>(
-    () => [
-      { id: 'bannerSemAcabamento', nome: 'Banner / Faixa', preco: config.bannerSemAcabamento },
-      { id: 'reforcoIlhos', nome: 'Lona reforço e ilhós', preco: config.reforcoIlhos },
-      { id: 'lonaGrande', nome: 'Lona grande (maior que 1,80 largura)', preco: config.lonaGrande },
-      { id: 'lonaTranslucida', nome: 'Lona translúcida', preco: config.lonaTranslucida },
-    ],
-    [config]
-  );
+  // Mantém a seleção válida quando a lista muda (renomear/reordenar/excluir).
+  useEffect(() => {
+    if (opcoes.length === 0) return;
+    if (!opcoes.some((o) => o.id === acabamentoId)) setAcabamentoId(opcoes[0].id);
+  }, [opcoes, acabamentoId]);
 
   const larguraNum = parseFloat(largura) || 0;
   const alturaNum = parseFloat(altura) || 0;
@@ -60,8 +51,8 @@ const LonaCalculator: React.FC<Props> = ({ config }) => {
   const custoDeslocamentoNum = parseFloat(custoDeslocamento) || 0;
   const entradaValida = larguraNum > 0 && alturaNum > 0;
 
-  const opcaoSel = opcoes.find((o) => o.id === acabamento) ?? opcoes[0];
-  const precoM2Base = opcaoSel.preco;
+  const opcaoSel = opcoes.find((o) => o.id === acabamentoId) ?? opcoes[0];
+  const precoM2Base = opcaoSel?.price ?? 0;
   const precoM2Laca = laca ? config.lacaProtecaoM2 : 0;
   const precoM2 = precoM2Base + precoM2Laca;
   const pct = config.notaFiscalPercentual || 0;
@@ -83,15 +74,15 @@ const LonaCalculator: React.FC<Props> = ({ config }) => {
 
   const descricao = useMemo(
     () =>
-      `Lona/Banner ${opcaoSel.nome}${laca ? ' + laca' : ''} ${larguraNum.toFixed(2)}×${alturaNum.toFixed(2)}m${
+      `Lona/Banner ${opcaoSel?.label ?? ''}${laca ? ' + laca' : ''} ${larguraNum.toFixed(2)}×${alturaNum.toFixed(2)}m${
         qtd > 1 ? ` (${qtd}un)` : ''
       }`,
-    [opcaoSel.nome, laca, larguraNum, alturaNum, qtd]
+    [opcaoSel, laca, larguraNum, alturaNum, qtd]
   );
 
   const handleCopy = () => {
     if (!temPreco || !calc) return;
-    const texto = `Orçamento Lona/Banner — ${opcaoSel.nome}${laca ? ' + Laca de Proteção' : ''}
+    const texto = `Orçamento Lona/Banner — ${opcaoSel?.label ?? ''}${laca ? ' + Laca de Proteção' : ''}
 Dimensões: ${larguraNum.toFixed(2)} x ${alturaNum.toFixed(2)} m — ${qtd} un
 ${incluirDeslocamento ? `Deslocamento incluído: ${formatCurrency(calc.desloc)}\n` : ''}Preço (sem nota fiscal): ${formatCurrency(calc.semNota)}
 Preço (com nota fiscal): ${formatCurrency(calc.comNota)}`;
@@ -139,9 +130,11 @@ Preço (com nota fiscal): ${formatCurrency(calc.comNota)}`;
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-3">Acabamento</label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {opcoes.map((o) => (
-                <button key={o.id} type="button" onClick={() => setAcabamento(o.id)} className={btn(acabamento === o.id)}>
-                  {o.nome} — {formatCurrency(o.preco)}/m²
+              {opcoes.length === 0 ? (
+                <span className="text-sm text-gray-500">Nenhum acabamento cadastrado — adicione em Configurações.</span>
+              ) : opcoes.map((o) => (
+                <button key={o.id} type="button" onClick={() => setAcabamentoId(o.id)} className={btn(acabamentoId === o.id)}>
+                  {o.label} — {formatCurrency(o.price)}/m²
                 </button>
               ))}
             </div>
@@ -176,7 +169,7 @@ Preço (com nota fiscal): ${formatCurrency(calc.comNota)}`;
               </div>
 
               <div className="space-y-1">
-                <div className="flex justify-between text-sm text-gray-600"><span>Acabamento:</span><span>{opcaoSel.nome}</span></div>
+                <div className="flex justify-between text-sm text-gray-600"><span>Acabamento:</span><span>{opcaoSel?.label}</span></div>
                 <div className="flex justify-between text-sm text-gray-600"><span>Preço/m²:</span><span>{formatCurrency(precoM2Base)}</span></div>
                 <div className="flex justify-between text-sm text-gray-600"><span>Área (un):</span><span>{calc.areaUnit.toFixed(2)} m²</span></div>
                 {qtd > 1 && (

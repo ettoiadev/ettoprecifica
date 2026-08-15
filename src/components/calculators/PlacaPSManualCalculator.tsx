@@ -1,23 +1,15 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Copy, PlusCircle } from 'lucide-react';
-import { formatCurrency, PlacaPSConfig } from '../../types/pricing';
+import { formatCurrency, PlacaPSConfig, ProductVariation } from '../../types/pricing';
 import { useCotacao } from '../../contexts/CotacaoContext';
 import { toast } from 'sonner';
 
 // Placa em PS com preço MANUAL, definido em Configurações (config.placaPS), NÃO
-// pelo motor da skill. Seis tipos de placa, cada um com preço por m²; o preço com
-// nota fiscal sai de um percentual único. Sem deslocamento (PS nunca teve).
-// Mesmo padrão da Lona/Adesivo.
+// pelo motor da skill. Os tipos (nome/descrição/preço/ordem) vêm da lista editável
+// `config.placaPS.itens`; o preço com nota sai de um percentual único. Sem
+// deslocamento (PS nunca teve). Mesmo padrão da Lona/Adesivo.
 interface Props {
   config: PlacaPSConfig;
-}
-
-type PSOptionId = Exclude<keyof PlacaPSConfig, 'notaFiscalPercentual'>;
-
-interface Opcao {
-  id: PSOptionId;
-  nome: string;
-  preco: number;
 }
 
 const inputClass =
@@ -32,24 +24,18 @@ const btn = (active: boolean) =>
   }`;
 
 const PlacaPSManualCalculator: React.FC<Props> = ({ config }) => {
-  const [tipo, setTipo] = useState<PSOptionId>('branco1mm');
+  const opcoes = useMemo<ProductVariation[]>(() => config.itens ?? [], [config.itens]);
+  const [tipo, setTipo] = useState<string>(opcoes[0]?.id ?? '');
   const [largura, setLargura] = useState<string>('');
   const [altura, setAltura] = useState<string>('');
   const [quantidade, setQuantidade] = useState<number>(1);
 
   const { addItem } = useCotacao();
 
-  const opcoes = useMemo<Opcao[]>(
-    () => [
-      { id: 'branco1mm', nome: 'Placa PS Branco 1mm', preco: config.branco1mm },
-      { id: 'branco2mm', nome: 'Placa PS Branco 2mm', preco: config.branco2mm },
-      { id: 'branco3mm', nome: 'Placa PS Branco 3mm', preco: config.branco3mm },
-      { id: 'cristal15mm', nome: 'PS Cristal 1,5mm', preco: config.cristal15mm },
-      { id: 'cristal2mm', nome: 'PS Cristal 2mm', preco: config.cristal2mm },
-      { id: 'cristal3mm', nome: 'PS Cristal 3mm', preco: config.cristal3mm },
-    ],
-    [config]
-  );
+  useEffect(() => {
+    if (opcoes.length === 0) return;
+    if (!opcoes.some((o) => o.id === tipo)) setTipo(opcoes[0].id);
+  }, [opcoes, tipo]);
 
   const larguraNum = parseFloat(largura) || 0;
   const alturaNum = parseFloat(altura) || 0;
@@ -57,7 +43,7 @@ const PlacaPSManualCalculator: React.FC<Props> = ({ config }) => {
   const entradaValida = larguraNum > 0 && alturaNum > 0;
 
   const opcaoSel = opcoes.find((o) => o.id === tipo) ?? opcoes[0];
-  const precoM2 = opcaoSel.preco;
+  const precoM2 = opcaoSel?.price ?? 0;
   const pct = config.notaFiscalPercentual || 0;
 
   const calc = useMemo(() => {
@@ -72,13 +58,13 @@ const PlacaPSManualCalculator: React.FC<Props> = ({ config }) => {
   const temPreco = !!calc && calc.semNota > 0;
 
   const descricao = useMemo(
-    () => `${opcaoSel.nome} ${larguraNum.toFixed(2)}×${alturaNum.toFixed(2)}m${qtd > 1 ? ` (${qtd}un)` : ''}`,
-    [opcaoSel.nome, larguraNum, alturaNum, qtd]
+    () => `${opcaoSel?.label ?? 'Placa PS'} ${larguraNum.toFixed(2)}×${alturaNum.toFixed(2)}m${qtd > 1 ? ` (${qtd}un)` : ''}`,
+    [opcaoSel, larguraNum, alturaNum, qtd]
   );
 
   const handleCopy = () => {
     if (!temPreco || !calc) return;
-    const texto = `Orçamento ${opcaoSel.nome}
+    const texto = `Orçamento ${opcaoSel?.label ?? 'Placa PS'}
 Dimensões: ${larguraNum.toFixed(2)} x ${alturaNum.toFixed(2)} m — ${qtd} un
 Preço (sem nota fiscal): ${formatCurrency(calc.semNota)}
 Preço (com nota fiscal): ${formatCurrency(calc.comNota)}`;
@@ -126,10 +112,12 @@ Preço (com nota fiscal): ${formatCurrency(calc.comNota)}`;
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-3">Tipo de placa</label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {opcoes.map((o) => (
+              {opcoes.length === 0 ? (
+                <span className="text-sm text-gray-500">Nenhum tipo cadastrado — adicione em Configurações.</span>
+              ) : opcoes.map((o) => (
                 <button key={o.id} type="button" onClick={() => setTipo(o.id)} className={btn(tipo === o.id)}>
-                  <div>{o.nome}</div>
-                  <div className="text-xs opacity-70 mt-0.5">{formatCurrency(o.preco)}/m²</div>
+                  <div>{o.label}</div>
+                  <div className="text-xs opacity-70 mt-0.5">{o.description ? `${o.description} · ` : ''}{formatCurrency(o.price)}/m²</div>
                 </button>
               ))}
             </div>
@@ -141,7 +129,7 @@ Preço (com nota fiscal): ${formatCurrency(calc.comNota)}`;
 
           {!entradaValida ? (
             <p className="text-sm text-gray-500">Informe as dimensões para ver o preço.</p>
-          ) : temPreco && calc ? (
+          ) : temPreco && calc && opcaoSel ? (
             <div className="space-y-4">
               <div className="bg-white rounded-lg border border-gray-200 p-4">
                 <div className="text-xs uppercase tracking-wide text-gray-500">Preço de venda (sem nota fiscal)</div>
@@ -155,7 +143,7 @@ Preço (com nota fiscal): ${formatCurrency(calc.comNota)}`;
               </div>
 
               <div className="space-y-1">
-                <div className="flex justify-between text-sm text-gray-600"><span>Placa:</span><span className="text-right">{opcaoSel.nome}</span></div>
+                <div className="flex justify-between text-sm text-gray-600"><span>Placa:</span><span className="text-right">{opcaoSel.label}</span></div>
                 <div className="flex justify-between text-sm text-gray-600"><span>Preço/m²:</span><span>{formatCurrency(precoM2)}</span></div>
                 <div className="flex justify-between text-sm text-gray-600"><span>Área (un):</span><span>{calc.areaUnit.toFixed(2)} m²</span></div>
                 {qtd > 1 && (

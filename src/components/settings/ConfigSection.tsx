@@ -22,14 +22,22 @@ interface ListManagerDef {
 // descrição e preço — a ordem e os nomes refletem na aba Adesivos.
 const LIST_MANAGERS: Record<string, ListManagerDef[]> = {
   adesivo: [
-    {
-      key: 'itens',
-      label: 'Tipos de adesivo',
-      addLabel: 'Adicionar tipo',
-      unitDefault: 'm²',
-      showDescription: true,
-      showReorder: true,
-    },
+    { key: 'itens', label: 'Tipos de adesivo', addLabel: 'Adicionar tipo', unitDefault: 'm²', showDescription: true, showReorder: true },
+  ],
+  lona: [
+    { key: 'itens', label: 'Acabamentos de lona', addLabel: 'Adicionar acabamento', unitDefault: 'm²', showDescription: true, showReorder: true },
+  ],
+  placaPS: [
+    { key: 'itens', label: 'Tipos de placa PS', addLabel: 'Adicionar tipo', unitDefault: 'm²', showDescription: true, showReorder: true },
+  ],
+  placaACM: [
+    { key: 'itens', label: 'Materiais de ACM', addLabel: 'Adicionar material', unitDefault: 'm²', showDescription: true, showReorder: true },
+  ],
+  laser: [
+    { key: 'itens', label: 'Materiais de laser', addLabel: 'Adicionar material', unitDefault: 'm²', showCategory: true, showDescription: true, showReorder: true },
+  ],
+  dtf: [
+    { key: 'itens', label: 'Tipos de DTF', addLabel: 'Adicionar tipo', unitDefault: 'm', showDescription: true, showReorder: true },
   ],
 };
 

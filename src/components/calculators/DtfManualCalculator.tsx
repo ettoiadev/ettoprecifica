@@ -1,29 +1,22 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Copy, PlusCircle } from 'lucide-react';
-import { formatCurrency, DtfConfig } from '../../types/pricing';
+import { formatCurrency, DtfConfig, ProductVariation } from '../../types/pricing';
 import { useCotacao } from '../../contexts/CotacaoContext';
 import { toast } from 'sonner';
 
 // DTF com preço MANUAL, definido em Configurações (config.dtf), NÃO pelo motor da
-// skill. Cobrado por METRO LINEAR. Dois tipos com preço/metro editável; as faixas
-// de quantidade foram simplificadas a um preço por tipo (a pedido do Étto). "Uber"
-// (busca do material) é um adicional opcional de valor editável. DTF não tem campo
-// de deslocamento (removido a pedido do Étto). O preço com nota sai de um
-// percentual único.
+// skill. Cobrado por METRO LINEAR. Os tipos (nome/descrição=largura/preço/ordem)
+// vêm da lista editável `config.dtf.itens`. "Uber" (busca do material) é um
+// adicional opcional de valor editável. Sem deslocamento. O preço com nota sai de
+// um percentual único.
 interface Props {
   config: DtfConfig;
 }
 
-type DtfOptionId = 'textilPremium' | 'uvPremium';
-
-interface Opcao {
-  id: DtfOptionId;
-  nome: string;
-  descricao: string;
-  preco: number;
-  /** Mínimo de impressão em metros lineares (cobrado quando o pedido é menor). */
-  minMetros: number;
-}
+// Mínimo de impressão (metros lineares) por tipo, por id. O DTF UV tem mínimo de
+// 35cm; cobra o equivalente quando o pedido é menor. (Mapa por id: renomear o tipo
+// mantém o mínimo; um tipo novo/reincluído fica sem mínimo até ser mapeado aqui.)
+const MIN_METROS: Record<string, number> = { uvPremium: 0.35 };
 
 const inputClass =
   'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent';
@@ -37,52 +30,51 @@ const btn = (active: boolean) =>
   }`;
 
 const DtfManualCalculator: React.FC<Props> = ({ config }) => {
-  const [tipo, setTipo] = useState<DtfOptionId>('textilPremium');
+  const opcoes = useMemo<ProductVariation[]>(() => config.itens ?? [], [config.itens]);
+  const [tipo, setTipo] = useState<string>(opcoes[0]?.id ?? '');
   const [metros, setMetros] = useState<string>('');
   const [incluirUber, setIncluirUber] = useState<boolean>(true);
 
   const { addItem } = useCotacao();
 
-  const opcoes = useMemo<Opcao[]>(
-    () => [
-      { id: 'textilPremium', nome: 'DTF Têxtil Premium', descricao: '57 cm', preco: config.textilPremium, minMetros: 0 },
-      { id: 'uvPremium', nome: 'DTF UV Premium', descricao: '38 cm', preco: config.uvPremium, minMetros: 0.35 },
-    ],
-    [config]
-  );
+  useEffect(() => {
+    if (opcoes.length === 0) return;
+    if (!opcoes.some((o) => o.id === tipo)) setTipo(opcoes[0].id);
+  }, [opcoes, tipo]);
 
   const metrosNum = parseFloat(metros) || 0;
   const entradaValida = metrosNum > 0;
 
   const opcaoSel = opcoes.find((o) => o.id === tipo) ?? opcoes[0];
-  const precoMetro = opcaoSel.preco;
+  const precoMetro = opcaoSel?.price ?? 0;
+  const minMetros = MIN_METROS[opcaoSel?.id ?? ''] ?? 0;
   const uberValor = config.uberValor || 0;
   const pct = config.notaFiscalPercentual || 0;
 
   const calc = useMemo(() => {
-    if (!entradaValida) return null;
+    if (!entradaValida || !opcaoSel) return null;
     // Aplica o mínimo de impressão do tipo (ex.: DTF UV = 35cm): se o pedido é
     // menor, cobra o equivalente ao mínimo automaticamente.
-    const metrosCobrados = Math.max(metrosNum, opcaoSel.minMetros);
-    const minimoAplicado = metrosNum < opcaoSel.minMetros;
+    const metrosCobrados = Math.max(metrosNum, minMetros);
+    const minimoAplicado = metrosNum < minMetros;
     const material = precoMetro * metrosCobrados;
     const uber = incluirUber ? uberValor : 0;
     const semNota = material + uber;
     const comNota = (material + uber) * (1 + pct / 100);
     return { material, uber, semNota, comNota, metrosCobrados, minimoAplicado };
-  }, [entradaValida, precoMetro, metrosNum, opcaoSel.minMetros, incluirUber, uberValor, pct]);
+  }, [entradaValida, opcaoSel, precoMetro, metrosNum, minMetros, incluirUber, uberValor, pct]);
 
   const temPreco = !!calc && calc.semNota > 0;
 
   const descricao = useMemo(
-    () => `DTF ${opcaoSel.nome} — ${metrosNum.toFixed(2)}m lineares`,
-    [opcaoSel.nome, metrosNum]
+    () => `DTF ${opcaoSel?.label ?? ''} — ${metrosNum.toFixed(2)}m lineares`,
+    [opcaoSel, metrosNum]
   );
 
   const handleCopy = () => {
     if (!temPreco || !calc) return;
-    const texto = `Orçamento DTF — ${opcaoSel.nome}
-Metros lineares: ${metrosNum.toFixed(2)} m (largura ${opcaoSel.descricao})
+    const texto = `Orçamento DTF — ${opcaoSel?.label ?? ''}
+Metros lineares: ${metrosNum.toFixed(2)} m${opcaoSel?.description ? ` (largura ${opcaoSel.description})` : ''}
 ${incluirUber ? `Uber (busca do material): ${formatCurrency(calc.uber)}\n` : ''}Preço (sem nota fiscal): ${formatCurrency(calc.semNota)}
 Preço (com nota fiscal): ${formatCurrency(calc.comNota)}`;
     navigator.clipboard.writeText(texto).then(
@@ -111,10 +103,12 @@ Preço (com nota fiscal): ${formatCurrency(calc.comNota)}`;
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-3">Tipo de DTF</label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {opcoes.map((o) => (
+              {opcoes.length === 0 ? (
+                <span className="text-sm text-gray-500">Nenhum tipo cadastrado — adicione em Configurações.</span>
+              ) : opcoes.map((o) => (
                 <button key={o.id} type="button" onClick={() => setTipo(o.id)} className={btn(tipo === o.id)}>
-                  <div>{o.nome}</div>
-                  <div className="text-xs opacity-70 mt-0.5">{o.descricao} · {formatCurrency(o.preco)}/m</div>
+                  <div>{o.label}</div>
+                  <div className="text-xs opacity-70 mt-0.5">{o.description ? `${o.description} · ` : ''}{formatCurrency(o.price)}/m</div>
                 </button>
               ))}
             </div>
@@ -123,9 +117,9 @@ Preço (com nota fiscal): ${formatCurrency(calc.comNota)}`;
           <div>
             <label htmlFor="metros-dtf" className="block text-sm font-medium text-gray-700 mb-3">Metros lineares</label>
             <input id="metros-dtf" type="number" min="0" step="0.1" value={metros} onChange={(e) => setMetros(e.target.value)} className={inputClass} placeholder="0.0" />
-            {opcaoSel.minMetros > 0 && (
+            {minMetros > 0 && (
               <p className="text-xs text-gray-500 mt-1">
-                Mínimo de impressão: {(opcaoSel.minMetros * 100).toFixed(0)} cm — pedidos menores são cobrados como {opcaoSel.minMetros.toFixed(2)} m.
+                Mínimo de impressão: {(minMetros * 100).toFixed(0)} cm — pedidos menores são cobrados como {minMetros.toFixed(2)} m.
               </p>
             )}
           </div>
@@ -146,7 +140,7 @@ Preço (com nota fiscal): ${formatCurrency(calc.comNota)}`;
 
           {!entradaValida ? (
             <p className="text-sm text-gray-500">Escolha o tipo e informe os metros lineares para ver o preço.</p>
-          ) : temPreco && calc ? (
+          ) : temPreco && calc && opcaoSel ? (
             <div className="space-y-4">
               <div className="bg-white rounded-lg border border-gray-200 p-4">
                 <div className="text-xs uppercase tracking-wide text-gray-500">Preço de venda (sem nota fiscal)</div>
@@ -159,13 +153,13 @@ Preço (com nota fiscal): ${formatCurrency(calc.comNota)}`;
                 )}
                 {calc.minimoAplicado && (
                   <div className="mt-1 text-xs text-amber-600 font-medium">
-                    Mínimo de {(opcaoSel.minMetros * 100).toFixed(0)} cm aplicado ({opcaoSel.minMetros.toFixed(2)} m).
+                    Mínimo de {(minMetros * 100).toFixed(0)} cm aplicado ({minMetros.toFixed(2)} m).
                   </div>
                 )}
               </div>
 
               <div className="space-y-1">
-                <div className="flex justify-between text-sm text-gray-600"><span>Tipo:</span><span className="text-right">{opcaoSel.nome}</span></div>
+                <div className="flex justify-between text-sm text-gray-600"><span>Tipo:</span><span className="text-right">{opcaoSel.label}</span></div>
                 <div className="flex justify-between text-sm text-gray-600"><span>Material:</span><span>{formatCurrency(calc.material)}</span></div>
                 {incluirUber && calc.uber > 0 && (
                   <div className="flex justify-between text-sm text-gray-600"><span>Uber (busca):</span><span>{formatCurrency(calc.uber)}</span></div>

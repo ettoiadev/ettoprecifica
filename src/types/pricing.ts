@@ -47,6 +47,9 @@ export interface LonaConfig {
   lonaTranslucida: number;
   lacaProtecaoM2: number;
   notaFiscalPercentual: number;
+  // Lista editável de acabamentos (nome, descrição, preço, ordem), semeada por
+  // migrateConfig a partir dos campos acima. A calculadora renderiza a partir dela.
+  itens?: ProductVariation[];
 }
 
 // Placas (PS e ACM) também têm preço MANUAL, editável em Configurações (como Lona
@@ -61,12 +64,14 @@ export interface PlacaPSConfig {
   cristal2mm: number;
   cristal3mm: number;
   notaFiscalPercentual: number;
+  itens?: ProductVariation[];
 }
 
 export interface PlacaACMConfig {
   brancoBrilho3mm: number;
   madeira3mm: number;
   notaFiscalPercentual: number;
+  itens?: ProductVariation[];
 }
 
 export interface FachadaConfig {
@@ -144,6 +149,8 @@ export interface LaserConfig {
   psCristal2mm: number;
   psCristal3mm: number;
   notaFiscalPercentual: number;
+  // Lista editável de materiais (com categoria), semeada por migrateConfig.
+  itens?: ProductVariation[];
 }
 
 // DTF também tem preço MANUAL (como os demais). Cobrado por METRO LINEAR (não m²).
@@ -156,6 +163,8 @@ export interface DtfConfig {
   uvPremium: number;
   uberValor: number;
   notaFiscalPercentual: number;
+  // Lista editável de tipos (nome, descrição/largura, preço/metro, ordem).
+  itens?: ProductVariation[];
 }
 
 // Etiquetas/Rótulos com preço MANUAL por m² (não mais a matriz da skill). O preço

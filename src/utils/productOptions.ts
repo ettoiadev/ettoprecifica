@@ -72,10 +72,14 @@ export const SECTION_OPTIONS: Record<OptionListSection, SectionOptionsDef> = {
 
 const OPTION_LIST_SECTIONS = Object.keys(SECTION_OPTIONS) as OptionListSection[];
 
-// Base canônica dos tipos de Adesivo (nome, descrição e a qual campo de preço da
-// AdesivoConfig cada um corresponde). Usada por migrateConfig para semear a lista
-// editável `adesivo.itens` a partir dos preços já salvos (preservando ajustes).
-export const ADESIVO_BASE: { id: string; label: string; description: string; priceKey: string }[] = [
+// Base canônica das listas editáveis de itens (`config.<secao>.itens`). Cada
+// entrada diz o id, nome, descrição/categoria e a qual campo de preço da config a
+// semente corresponde. migrateConfig usa isto para semear `itens` a partir dos
+// preços já salvos (preservando ajustes; idempotente). Chave `itens` (não
+// `variations`) de propósito, para não colidir com esquemas antigos.
+type ItemBase = { id: string; label: string; description?: string; category?: string; priceKey: string; unit?: string };
+
+export const ADESIVO_BASE: ItemBase[] = [
   { id: 'digital', label: 'Adesivo Impresso', description: 'Impressão só refilado', priceKey: 'digital' },
   { id: 'digitalPeliculaTransparente', label: 'Adesivo Impresso Laminado Fosco ou Brilho', description: 'Impressão com laminação brilho ou fosco', priceKey: 'digitalPeliculaTransparente' },
   { id: 'transparente', label: 'Adesivo Transparente Impresso', description: 'Impressão', priceKey: 'transparente' },
@@ -87,6 +91,59 @@ export const ADESIVO_BASE: { id: string; label: string; description: string; pri
   { id: 'refletivo', label: 'Adesivo Refletivo', description: 'Alta visibilidade / sinalização', priceKey: 'refletivo' },
   { id: 'imaCarroAdesivado', label: 'Imã de Carro Adesivado', description: 'Imã para carros', priceKey: 'imaCarroAdesivado' },
 ];
+
+const LONA_BASE: ItemBase[] = [
+  { id: 'bannerSemAcabamento', label: 'Banner / Faixa', priceKey: 'bannerSemAcabamento' },
+  { id: 'reforcoIlhos', label: 'Lona reforço e ilhós', priceKey: 'reforcoIlhos' },
+  { id: 'lonaGrande', label: 'Lona grande (maior que 1,80 largura)', priceKey: 'lonaGrande' },
+  { id: 'lonaTranslucida', label: 'Lona translúcida', priceKey: 'lonaTranslucida' },
+];
+
+const PLACA_PS_BASE: ItemBase[] = [
+  { id: 'branco1mm', label: 'Placa PS Branco 1mm', priceKey: 'branco1mm' },
+  { id: 'branco2mm', label: 'Placa PS Branco 2mm', priceKey: 'branco2mm' },
+  { id: 'branco3mm', label: 'Placa PS Branco 3mm', priceKey: 'branco3mm' },
+  { id: 'cristal15mm', label: 'PS Cristal 1,5mm', priceKey: 'cristal15mm' },
+  { id: 'cristal2mm', label: 'PS Cristal 2mm', priceKey: 'cristal2mm' },
+  { id: 'cristal3mm', label: 'PS Cristal 3mm', priceKey: 'cristal3mm' },
+];
+
+const PLACA_ACM_BASE: ItemBase[] = [
+  { id: 'brancoBrilho3mm', label: 'ACM Branco Brilho 3mm', priceKey: 'brancoBrilho3mm' },
+  { id: 'madeira3mm', label: 'ACM Madeira 3mm', priceKey: 'madeira3mm' },
+];
+
+const LASER_BASE: ItemBase[] = [
+  { id: 'acrilicoColorido3mm', label: 'Acrílico Colorido 3mm', category: 'Acrílico', priceKey: 'acrilicoColorido3mm' },
+  { id: 'acrilicoCristal2mm', label: 'Acrílico Cristal 2mm', category: 'Acrílico', priceKey: 'acrilicoCristal2mm' },
+  { id: 'acrilicoCristal3mm', label: 'Acrílico Cristal 3mm', category: 'Acrílico', priceKey: 'acrilicoCristal3mm' },
+  { id: 'acrilicoCristal5mm', label: 'Acrílico Cristal 5mm', category: 'Acrílico', priceKey: 'acrilicoCristal5mm' },
+  { id: 'acrilicoCristal8mm', label: 'Acrílico Cristal 8mm', category: 'Acrílico', priceKey: 'acrilicoCristal8mm' },
+  { id: 'acrilicoCristal10mm', label: 'Acrílico Cristal 10mm', category: 'Acrílico', priceKey: 'acrilicoCristal10mm' },
+  { id: 'espelhadoDourado2mm', label: 'Acrílico Espelhado Dourado 2mm', category: 'Acrílico Espelhado', priceKey: 'espelhadoDourado2mm' },
+  { id: 'espelhadoPrata2mm', label: 'Acrílico Espelhado Prata 2mm', category: 'Acrílico Espelhado', priceKey: 'espelhadoPrata2mm' },
+  { id: 'espelhadoRose2mm', label: 'Acrílico Espelhado Rosé 2mm', category: 'Acrílico Espelhado', priceKey: 'espelhadoRose2mm' },
+  { id: 'mdf3mm', label: 'MDF 3mm', category: 'Outros', priceKey: 'mdf3mm' },
+  { id: 'mdf6mm', label: 'MDF 6mm', category: 'Outros', priceKey: 'mdf6mm' },
+  { id: 'mdf9mm', label: 'MDF 9mm', category: 'Outros', priceKey: 'mdf9mm' },
+  { id: 'psCristal2mm', label: 'PS Cristal 2mm', category: 'Outros', priceKey: 'psCristal2mm' },
+  { id: 'psCristal3mm', label: 'PS Cristal 3mm', category: 'Outros', priceKey: 'psCristal3mm' },
+];
+
+const DTF_BASE: ItemBase[] = [
+  { id: 'textilPremium', label: 'DTF Têxtil Premium', description: '57 cm', priceKey: 'textilPremium', unit: 'm' },
+  { id: 'uvPremium', label: 'DTF UV Premium', description: '38 cm', priceKey: 'uvPremium', unit: 'm' },
+];
+
+// Seções que têm lista editável `itens` (semeadas por migrateConfig).
+const ITENS_BASE: Record<string, ItemBase[]> = {
+  adesivo: ADESIVO_BASE,
+  lona: LONA_BASE,
+  placaPS: PLACA_PS_BASE,
+  placaACM: PLACA_ACM_BASE,
+  laser: LASER_BASE,
+  dtf: DTF_BASE,
+};
 
 /** Constrói a lista de opções a partir dos campos base atuais da seção. */
 const seedVariations = (
@@ -127,21 +184,26 @@ export const migrateConfig = (config: PricingConfig): PricingConfig => {
     }
   });
 
-  // Adesivos: semeia a lista editável `itens` a partir dos campos de preço da
-  // config (preserva preços já salvos). Idempotente: só semeia quando ausente.
-  const ad = next.adesivo as unknown as Record<string, unknown> | undefined;
-  if (ad && !Array.isArray(ad.itens)) {
-    next.adesivo = {
-      ...(next.adesivo as object),
-      itens: ADESIVO_BASE.map((o) => ({
-        id: o.id,
-        label: o.label,
-        description: o.description,
-        price: Number(ad[o.priceKey]) || 0,
-        unit: 'm²',
-      })),
-    } as never;
-  }
+  // Semeia a lista editável `itens` de cada seção manual a partir dos campos de
+  // preço da config (preserva preços já salvos). Idempotente: só semeia quando
+  // ausente. A calculadora e o gerenciador de Configurações usam essa lista.
+  (Object.keys(ITENS_BASE) as string[]).forEach((section) => {
+    const sc = next[section as keyof PricingConfig] as unknown as Record<string, unknown> | undefined;
+    const base = ITENS_BASE[section];
+    if (sc && base && !Array.isArray(sc.itens)) {
+      next[section as keyof PricingConfig] = {
+        ...(sc as object),
+        itens: base.map((o) => ({
+          id: o.id,
+          label: o.label,
+          price: Number(sc[o.priceKey]) || 0,
+          unit: o.unit ?? 'm²',
+          ...(o.description ? { description: o.description } : {}),
+          ...(o.category ? { category: o.category } : {}),
+        })),
+      } as never;
+    }
+  });
 
   return next;
 };

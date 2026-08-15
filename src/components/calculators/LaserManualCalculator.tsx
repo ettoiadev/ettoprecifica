@@ -1,27 +1,17 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Copy, PlusCircle } from 'lucide-react';
-import { formatCurrency, LaserConfig } from '../../types/pricing';
+import { formatCurrency, LaserConfig, ProductVariation } from '../../types/pricing';
 import { useCotacao } from '../../contexts/CotacaoContext';
 import { useDeslocamentoCep } from '../../hooks/useDeslocamentoCep';
 import DeslocamentoField from './DeslocamentoField';
 import { toast } from 'sonner';
 
 // Laser com preço MANUAL, definido em Configurações (config.laser), NÃO pelo motor
-// da skill. Lista curada (só os materiais dos prints do Étto), preços de venda/m²
-// que vinham da skill. Modelo simples área × R$/m² (como Lona/Adesivos/Placas):
-// forma/complexidade/LED do motor antigo foram removidos a pedido do usuário.
+// da skill. Os materiais (nome/categoria/preço/ordem) vêm da lista editável
+// `config.laser.itens`, agrupados por categoria na UI. Modelo simples área × R$/m².
 // Deslocamento opcional pelo fluxo por CEP, somado à parte (sem incidência de NF).
 interface Props {
   config: LaserConfig;
-}
-
-type LaserOptionId = Exclude<keyof LaserConfig, 'notaFiscalPercentual'>;
-
-interface Opcao {
-  id: LaserOptionId;
-  nome: string;
-  categoria: string;
-  preco: number;
 }
 
 const inputClass =
@@ -38,39 +28,26 @@ const btn = (active: boolean) =>
 const LaserManualCalculator: React.FC<Props> = ({ config }) => {
   const deslocamento = useDeslocamentoCep();
   const { incluirDeslocamento, custoDeslocamento } = deslocamento;
-  const [material, setMaterial] = useState<LaserOptionId>('acrilicoColorido3mm');
+  const opcoes = useMemo<ProductVariation[]>(() => config.itens ?? [], [config.itens]);
+  const [material, setMaterial] = useState<string>(opcoes[0]?.id ?? '');
   const [largura, setLargura] = useState<string>('');
   const [altura, setAltura] = useState<string>('');
   const [quantidade, setQuantidade] = useState<number>(1);
 
   const { addItem } = useCotacao();
 
-  const opcoes = useMemo<Opcao[]>(
-    () => [
-      { id: 'acrilicoColorido3mm', nome: 'Acrílico Colorido 3mm', categoria: 'Acrílico', preco: config.acrilicoColorido3mm },
-      { id: 'acrilicoCristal2mm', nome: 'Acrílico Cristal 2mm', categoria: 'Acrílico', preco: config.acrilicoCristal2mm },
-      { id: 'acrilicoCristal3mm', nome: 'Acrílico Cristal 3mm', categoria: 'Acrílico', preco: config.acrilicoCristal3mm },
-      { id: 'acrilicoCristal5mm', nome: 'Acrílico Cristal 5mm', categoria: 'Acrílico', preco: config.acrilicoCristal5mm },
-      { id: 'acrilicoCristal8mm', nome: 'Acrílico Cristal 8mm', categoria: 'Acrílico', preco: config.acrilicoCristal8mm },
-      { id: 'acrilicoCristal10mm', nome: 'Acrílico Cristal 10mm', categoria: 'Acrílico', preco: config.acrilicoCristal10mm },
-      { id: 'espelhadoDourado2mm', nome: 'Acrílico Espelhado Dourado 2mm', categoria: 'Acrílico Espelhado', preco: config.espelhadoDourado2mm },
-      { id: 'espelhadoPrata2mm', nome: 'Acrílico Espelhado Prata 2mm', categoria: 'Acrílico Espelhado', preco: config.espelhadoPrata2mm },
-      { id: 'espelhadoRose2mm', nome: 'Acrílico Espelhado Rosé 2mm', categoria: 'Acrílico Espelhado', preco: config.espelhadoRose2mm },
-      { id: 'mdf3mm', nome: 'MDF 3mm', categoria: 'Outros', preco: config.mdf3mm },
-      { id: 'mdf6mm', nome: 'MDF 6mm', categoria: 'Outros', preco: config.mdf6mm },
-      { id: 'mdf9mm', nome: 'MDF 9mm', categoria: 'Outros', preco: config.mdf9mm },
-      { id: 'psCristal2mm', nome: 'PS Cristal 2mm', categoria: 'Outros', preco: config.psCristal2mm },
-      { id: 'psCristal3mm', nome: 'PS Cristal 3mm', categoria: 'Outros', preco: config.psCristal3mm },
-    ],
-    [config]
-  );
+  useEffect(() => {
+    if (opcoes.length === 0) return;
+    if (!opcoes.some((o) => o.id === material)) setMaterial(opcoes[0].id);
+  }, [opcoes, material]);
 
-  // Agrupa por categoria para renderizar os botões em seções.
+  // Agrupa por categoria para renderizar os botões em seções (mantém a ordem).
   const grupos = useMemo(() => {
-    const map = new Map<string, Opcao[]>();
+    const map = new Map<string, ProductVariation[]>();
     for (const o of opcoes) {
-      if (!map.has(o.categoria)) map.set(o.categoria, []);
-      map.get(o.categoria)!.push(o);
+      const cat = o.category || 'Outros';
+      if (!map.has(cat)) map.set(cat, []);
+      map.get(cat)!.push(o);
     }
     return Array.from(map.entries());
   }, [opcoes]);
@@ -82,7 +59,7 @@ const LaserManualCalculator: React.FC<Props> = ({ config }) => {
   const entradaValida = larguraNum > 0 && alturaNum > 0;
 
   const opcaoSel = opcoes.find((o) => o.id === material) ?? opcoes[0];
-  const precoM2 = opcaoSel.preco;
+  const precoM2 = opcaoSel?.price ?? 0;
   const pct = config.notaFiscalPercentual || 0;
 
   const calc = useMemo(() => {
@@ -99,13 +76,13 @@ const LaserManualCalculator: React.FC<Props> = ({ config }) => {
   const temPreco = !!calc && calc.semNota > 0;
 
   const descricao = useMemo(
-    () => `Laser ${opcaoSel.nome} ${larguraNum.toFixed(2)}×${alturaNum.toFixed(2)}m${qtd > 1 ? ` (${qtd}un)` : ''}`,
-    [opcaoSel.nome, larguraNum, alturaNum, qtd]
+    () => `Laser ${opcaoSel?.label ?? ''} ${larguraNum.toFixed(2)}×${alturaNum.toFixed(2)}m${qtd > 1 ? ` (${qtd}un)` : ''}`,
+    [opcaoSel, larguraNum, alturaNum, qtd]
   );
 
   const handleCopy = () => {
     if (!temPreco || !calc) return;
-    const texto = `Orçamento Laser — ${opcaoSel.nome}
+    const texto = `Orçamento Laser — ${opcaoSel?.label ?? ''}
 Dimensões: ${larguraNum.toFixed(2)} x ${alturaNum.toFixed(2)} m — ${qtd} un
 ${incluirDeslocamento ? `Deslocamento incluído: ${formatCurrency(calc.desloc)}\n` : ''}Preço (sem nota fiscal): ${formatCurrency(calc.semNota)}
 Preço (com nota fiscal): ${formatCurrency(calc.comNota)}`;
@@ -152,21 +129,25 @@ Preço (com nota fiscal): ${formatCurrency(calc.comNota)}`;
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-3">Material</label>
-            <div className="space-y-4">
-              {grupos.map(([cat, itens]) => (
-                <div key={cat}>
-                  <div className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">{cat}</div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {itens.map((o) => (
-                      <button key={o.id} type="button" onClick={() => setMaterial(o.id)} className={btn(material === o.id)}>
-                        <div>{o.nome}</div>
-                        <div className="text-xs opacity-70 mt-0.5">{formatCurrency(o.preco)}/m²</div>
-                      </button>
-                    ))}
+            {opcoes.length === 0 ? (
+              <span className="text-sm text-gray-500">Nenhum material cadastrado — adicione em Configurações.</span>
+            ) : (
+              <div className="space-y-4">
+                {grupos.map(([cat, itens]) => (
+                  <div key={cat}>
+                    <div className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">{cat}</div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {itens.map((o) => (
+                        <button key={o.id} type="button" onClick={() => setMaterial(o.id)} className={btn(material === o.id)}>
+                          <div>{o.label}</div>
+                          <div className="text-xs opacity-70 mt-0.5">{o.description ? `${o.description} · ` : ''}{formatCurrency(o.price)}/m²</div>
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <DeslocamentoField {...deslocamento} />
@@ -177,7 +158,7 @@ Preço (com nota fiscal): ${formatCurrency(calc.comNota)}`;
 
           {!entradaValida ? (
             <p className="text-sm text-gray-500">Informe as dimensões para ver o preço.</p>
-          ) : temPreco && calc ? (
+          ) : temPreco && calc && opcaoSel ? (
             <div className="space-y-4">
               <div className="bg-white rounded-lg border border-gray-200 p-4">
                 <div className="text-xs uppercase tracking-wide text-gray-500">Preço de venda (sem nota fiscal)</div>
@@ -191,7 +172,7 @@ Preço (com nota fiscal): ${formatCurrency(calc.comNota)}`;
               </div>
 
               <div className="space-y-1">
-                <div className="flex justify-between text-sm text-gray-600"><span>Material:</span><span className="text-right">{opcaoSel.nome}</span></div>
+                <div className="flex justify-between text-sm text-gray-600"><span>Material:</span><span className="text-right">{opcaoSel.label}</span></div>
                 <div className="flex justify-between text-sm text-gray-600"><span>Preço/m²:</span><span>{formatCurrency(precoM2)}</span></div>
                 <div className="flex justify-between text-sm text-gray-600"><span>Área (un):</span><span>{calc.areaUnit.toFixed(3)} m²</span></div>
                 {qtd > 1 && (
