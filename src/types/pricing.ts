@@ -377,6 +377,17 @@ export const defaultConfig: PricingConfig = {
   },
 };
 
+/**
+ * Alíquota FIXA de nota fiscal aplicada aos produtos de preço MANUAL (Adesivos,
+ * Lona, Placas, Laser, DTF, Etiquetas). É a alíquota real do imposto — decisão do
+ * Étto (15/08/26): os preços definidos SEMPRE aparecem com 9,35% de NF embutido por
+ * padrão; desmarcar a caixa de NF na calculadora concede exatamente esse desconto
+ * (para clientes que não querem nota). É constante de propósito — assim vale igual
+ * para todos e não depende de config salva por vendedor (que sobrescreveria o
+ * default). Se a alíquota legal mudar, alterar aqui num único lugar.
+ */
+export const ALIQUOTA_NF = 9.35;
+
 export const formatCurrency = (value: number): string => {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Copy, PlusCircle } from 'lucide-react';
-import { formatCurrency, LaserConfig, ProductVariation } from '../../types/pricing';
+import { formatCurrency, ALIQUOTA_NF, LaserConfig, ProductVariation } from '../../types/pricing';
 import { useCotacao } from '../../contexts/CotacaoContext';
 import { useDeslocamentoCep } from '../../hooks/useDeslocamentoCep';
 import DeslocamentoField from './DeslocamentoField';
@@ -33,6 +33,7 @@ const LaserManualCalculator: React.FC<Props> = ({ config }) => {
   const [largura, setLargura] = useState<string>('');
   const [altura, setAltura] = useState<string>('');
   const [quantidade, setQuantidade] = useState<number>(1);
+  const [incluirNota, setIncluirNota] = useState<boolean>(true);
 
   const { addItem } = useCotacao();
 
@@ -60,7 +61,6 @@ const LaserManualCalculator: React.FC<Props> = ({ config }) => {
 
   const opcaoSel = opcoes.find((o) => o.id === material) ?? opcoes[0];
   const precoM2 = opcaoSel?.price ?? 0;
-  const pct = config.notaFiscalPercentual || 0;
 
   const calc = useMemo(() => {
     if (!entradaValida) return null;
@@ -69,11 +69,13 @@ const LaserManualCalculator: React.FC<Props> = ({ config }) => {
     const produtoSemNota = precoM2 * areaTotal;
     const desloc = incluirDeslocamento ? custoDeslocamentoNum : 0;
     const semNota = produtoSemNota + desloc;
-    const comNota = produtoSemNota * (1 + pct / 100) + desloc;
-    return { areaUnit, areaTotal, produtoSemNota, desloc, semNota, comNota };
-  }, [entradaValida, larguraNum, alturaNum, qtd, precoM2, pct, incluirDeslocamento, custoDeslocamentoNum]);
+    const comNota = produtoSemNota * (1 + ALIQUOTA_NF / 100) + desloc;
+    const descontoNota = comNota - semNota;
+    const final = incluirNota ? comNota : semNota;
+    return { areaUnit, areaTotal, produtoSemNota, desloc, semNota, comNota, descontoNota, final };
+  }, [entradaValida, larguraNum, alturaNum, qtd, precoM2, incluirDeslocamento, custoDeslocamentoNum, incluirNota]);
 
-  const temPreco = !!calc && calc.semNota > 0;
+  const temPreco = !!calc && calc.final > 0;
 
   const descricao = useMemo(
     () => `Laser ${opcaoSel?.label ?? ''} ${larguraNum.toFixed(2)}×${alturaNum.toFixed(2)}m${qtd > 1 ? ` (${qtd}un)` : ''}`,
@@ -82,10 +84,9 @@ const LaserManualCalculator: React.FC<Props> = ({ config }) => {
 
   const handleCopy = () => {
     if (!temPreco || !calc) return;
-    const texto = `Orçamento Laser — ${opcaoSel?.label ?? ''}
-Dimensões: ${larguraNum.toFixed(2)} x ${alturaNum.toFixed(2)} m — ${qtd} un
-${incluirDeslocamento ? `Deslocamento incluído: ${formatCurrency(calc.desloc)}\n` : ''}Preço (sem nota fiscal): ${formatCurrency(calc.semNota)}
-Preço (com nota fiscal): ${formatCurrency(calc.comNota)}`;
+    const texto = `${opcaoSel?.label ?? 'Laser'}
+Medida: ${larguraNum.toFixed(2)} x ${alturaNum.toFixed(2)} m — ${qtd} un
+Valor: ${formatCurrency(calc.final)}`;
     navigator.clipboard.writeText(texto).then(
       () => toast.success('Orçamento copiado!'),
       () => toast.error('Não foi possível copiar.')
@@ -150,6 +151,13 @@ Preço (com nota fiscal): ${formatCurrency(calc.comNota)}`;
             )}
           </div>
 
+          <label className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+            <input type="checkbox" checked={incluirNota} onChange={(e) => setIncluirNota(e.target.checked)} className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
+            <span className="text-sm font-medium text-gray-700">
+              Emitir com nota fiscal ({ALIQUOTA_NF.toLocaleString('pt-BR')}%)
+            </span>
+          </label>
+
           <DeslocamentoField {...deslocamento} />
         </div>
 
@@ -161,12 +169,18 @@ Preço (com nota fiscal): ${formatCurrency(calc.comNota)}`;
           ) : temPreco && calc && opcaoSel ? (
             <div className="space-y-4">
               <div className="bg-white rounded-lg border border-gray-200 p-4">
-                <div className="text-xs uppercase tracking-wide text-gray-500">Preço de venda (sem nota fiscal)</div>
-                <div className="text-3xl font-bold text-blue-600">{formatCurrency(calc.semNota)}</div>
-                <div className="mt-1 text-sm text-orange-600 font-medium">Com nota fiscal: {formatCurrency(calc.comNota)}</div>
+                <div className="text-xs uppercase tracking-wide text-gray-500">Preço de venda</div>
+                <div className="text-3xl font-bold text-blue-600">{formatCurrency(calc.final)}</div>
+                {incluirNota ? (
+                  <div className="mt-1 text-xs text-gray-500">Nota fiscal ({ALIQUOTA_NF.toLocaleString('pt-BR')}%) incluída</div>
+                ) : (
+                  <div className="mt-1 text-xs text-amber-600 font-medium">
+                    Sem nota fiscal — desconto de {formatCurrency(calc.descontoNota)} ({ALIQUOTA_NF.toLocaleString('pt-BR')}%)
+                  </div>
+                )}
                 {qtd > 1 && (
                   <div className="mt-1 text-xs text-green-600 font-medium">
-                    {qtd} un · unitário {formatCurrency(calc.semNota / qtd)} ({formatCurrency(calc.comNota / qtd)} c/ nota)
+                    {qtd} un · unitário {formatCurrency(calc.final / qtd)}
                   </div>
                 )}
               </div>

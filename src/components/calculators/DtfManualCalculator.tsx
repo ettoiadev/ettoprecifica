@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Copy, PlusCircle } from 'lucide-react';
-import { formatCurrency, DtfConfig, ProductVariation } from '../../types/pricing';
+import { formatCurrency, ALIQUOTA_NF, DtfConfig, ProductVariation } from '../../types/pricing';
 import { useCotacao } from '../../contexts/CotacaoContext';
 import { toast } from 'sonner';
 
@@ -34,6 +34,7 @@ const DtfManualCalculator: React.FC<Props> = ({ config }) => {
   const [tipo, setTipo] = useState<string>(opcoes[0]?.id ?? '');
   const [metros, setMetros] = useState<string>('');
   const [incluirUber, setIncluirUber] = useState<boolean>(true);
+  const [incluirNota, setIncluirNota] = useState<boolean>(true);
 
   const { addItem } = useCotacao();
 
@@ -49,7 +50,6 @@ const DtfManualCalculator: React.FC<Props> = ({ config }) => {
   const precoMetro = opcaoSel?.price ?? 0;
   const minMetros = MIN_METROS[opcaoSel?.id ?? ''] ?? 0;
   const uberValor = config.uberValor || 0;
-  const pct = config.notaFiscalPercentual || 0;
 
   const calc = useMemo(() => {
     if (!entradaValida || !opcaoSel) return null;
@@ -60,11 +60,13 @@ const DtfManualCalculator: React.FC<Props> = ({ config }) => {
     const material = precoMetro * metrosCobrados;
     const uber = incluirUber ? uberValor : 0;
     const semNota = material + uber;
-    const comNota = (material + uber) * (1 + pct / 100);
-    return { material, uber, semNota, comNota, metrosCobrados, minimoAplicado };
-  }, [entradaValida, opcaoSel, precoMetro, metrosNum, minMetros, incluirUber, uberValor, pct]);
+    const comNota = (material + uber) * (1 + ALIQUOTA_NF / 100);
+    const descontoNota = comNota - semNota;
+    const final = incluirNota ? comNota : semNota;
+    return { material, uber, semNota, comNota, descontoNota, final, metrosCobrados, minimoAplicado };
+  }, [entradaValida, opcaoSel, precoMetro, metrosNum, minMetros, incluirUber, uberValor, incluirNota]);
 
-  const temPreco = !!calc && calc.semNota > 0;
+  const temPreco = !!calc && calc.final > 0;
 
   const descricao = useMemo(
     () => `DTF ${opcaoSel?.label ?? ''} — ${metrosNum.toFixed(2)}m lineares`,
@@ -73,10 +75,9 @@ const DtfManualCalculator: React.FC<Props> = ({ config }) => {
 
   const handleCopy = () => {
     if (!temPreco || !calc) return;
-    const texto = `Orçamento DTF — ${opcaoSel?.label ?? ''}
-Metros lineares: ${metrosNum.toFixed(2)} m${opcaoSel?.description ? ` (largura ${opcaoSel.description})` : ''}
-${incluirUber ? `Uber (busca do material): ${formatCurrency(calc.uber)}\n` : ''}Preço (sem nota fiscal): ${formatCurrency(calc.semNota)}
-Preço (com nota fiscal): ${formatCurrency(calc.comNota)}`;
+    const texto = `DTF ${opcaoSel?.label ?? ''}
+Medida: ${metrosNum.toFixed(2)} m lineares${opcaoSel?.description ? ` (largura ${opcaoSel.description})` : ''}
+Valor: ${formatCurrency(calc.final)}`;
     navigator.clipboard.writeText(texto).then(
       () => toast.success('Orçamento copiado!'),
       () => toast.error('Não foi possível copiar.')
@@ -133,6 +134,13 @@ Preço (com nota fiscal): ${formatCurrency(calc.comNota)}`;
           <p className="text-xs text-gray-500 -mt-3">
             Desmarque se a busca deste DTF for combinada com outros pedidos na mesma corrida.
           </p>
+
+          <label className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+            <input type="checkbox" checked={incluirNota} onChange={(e) => setIncluirNota(e.target.checked)} className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
+            <span className="text-sm font-medium text-gray-700">
+              Emitir com nota fiscal ({ALIQUOTA_NF.toLocaleString('pt-BR')}%)
+            </span>
+          </label>
         </div>
 
         <div className="bg-gray-50 rounded-xl border border-gray-200 p-6">
@@ -143,9 +151,15 @@ Preço (com nota fiscal): ${formatCurrency(calc.comNota)}`;
           ) : temPreco && calc && opcaoSel ? (
             <div className="space-y-4">
               <div className="bg-white rounded-lg border border-gray-200 p-4">
-                <div className="text-xs uppercase tracking-wide text-gray-500">Preço de venda (sem nota fiscal)</div>
-                <div className="text-3xl font-bold text-blue-600">{formatCurrency(calc.semNota)}</div>
-                <div className="mt-1 text-sm text-orange-600 font-medium">Com nota fiscal: {formatCurrency(calc.comNota)}</div>
+                <div className="text-xs uppercase tracking-wide text-gray-500">Preço de venda</div>
+                <div className="text-3xl font-bold text-blue-600">{formatCurrency(calc.final)}</div>
+                {incluirNota ? (
+                  <div className="mt-1 text-xs text-gray-500">Nota fiscal ({ALIQUOTA_NF.toLocaleString('pt-BR')}%) incluída</div>
+                ) : (
+                  <div className="mt-1 text-xs text-amber-600 font-medium">
+                    Sem nota fiscal — desconto de {formatCurrency(calc.descontoNota)} ({ALIQUOTA_NF.toLocaleString('pt-BR')}%)
+                  </div>
+                )}
                 {metrosNum > 0 && (
                   <div className="mt-1 text-xs text-green-600 font-medium">
                     {calc.metrosCobrados.toFixed(2)}m · {formatCurrency(precoMetro)}/m

@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Copy, PlusCircle } from 'lucide-react';
-import { formatCurrency, EtiquetasConfig } from '../../types/pricing';
+import { formatCurrency, ALIQUOTA_NF, EtiquetasConfig } from '../../types/pricing';
 import { useCotacao } from '../../contexts/CotacaoContext';
 import { toast } from 'sonner';
 
@@ -45,6 +45,7 @@ const EtiquetasCalculator: React.FC<Props> = ({ config }) => {
   const [largura, setLargura] = useState<string>('');
   const [altura, setAltura] = useState<string>('');
   const [quantidade, setQuantidade] = useState<string>('');
+  const [incluirNota, setIncluirNota] = useState<boolean>(true);
 
   const { addItem } = useCotacao();
 
@@ -53,7 +54,6 @@ const EtiquetasCalculator: React.FC<Props> = ({ config }) => {
   const qtd = parseInt(quantidade) || 0;
   const precoM2 = config.precoM2 || 0;
   const minUn = config.minPorUnidade || 0;
-  const pct = config.notaFiscalPercentual || 0;
   const entradaValida = larguraCm > 0 && alturaCm > 0 && qtd > 0;
 
   const calc = useMemo(() => {
@@ -63,11 +63,13 @@ const EtiquetasCalculator: React.FC<Props> = ({ config }) => {
     const pisoAplicado = precoUnitCalc < minUn;
     const precoUnit = Math.max(precoUnitCalc, minUn);
     const semNota = precoUnit * qtd;
-    const comNota = semNota * (1 + pct / 100);
-    return { areaUnit, precoUnitCalc, precoUnit, pisoAplicado, semNota, comNota };
-  }, [entradaValida, larguraCm, alturaCm, qtd, precoM2, minUn, pct]);
+    const comNota = semNota * (1 + ALIQUOTA_NF / 100);
+    const descontoNota = comNota - semNota;
+    const final = incluirNota ? comNota : semNota;
+    return { areaUnit, precoUnitCalc, precoUnit, pisoAplicado, semNota, comNota, descontoNota, final };
+  }, [entradaValida, larguraCm, alturaCm, qtd, precoM2, minUn, incluirNota]);
 
-  const temPreco = !!calc && calc.semNota > 0;
+  const temPreco = !!calc && calc.final > 0;
 
   const descricao = useMemo(
     () => `Etiquetas ${larguraCm}×${alturaCm}cm — ${qtd} un`,
@@ -76,10 +78,9 @@ const EtiquetasCalculator: React.FC<Props> = ({ config }) => {
 
   const handleCopy = () => {
     if (!temPreco || !calc) return;
-    const texto = `Orçamento Etiquetas/Rótulos
-Tamanho: ${larguraCm}×${alturaCm}cm — Quantidade: ${qtd} un
-Preço (sem nota fiscal): ${formatCurrency(calc.semNota)}
-Preço (com nota fiscal): ${formatCurrency(calc.comNota)}`;
+    const texto = `Etiquetas/Rótulos
+Medida: ${larguraCm}×${alturaCm} cm — ${qtd} un
+Valor: ${formatCurrency(calc.final)}`;
     navigator.clipboard.writeText(texto).then(
       () => toast.success('Orçamento copiado!'),
       () => toast.error('Não foi possível copiar.')
@@ -151,6 +152,13 @@ Preço (com nota fiscal): ${formatCurrency(calc.comNota)}`;
               ))}
             </div>
           </div>
+
+          <label className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+            <input type="checkbox" checked={incluirNota} onChange={(e) => setIncluirNota(e.target.checked)} className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
+            <span className="text-sm font-medium text-gray-700">
+              Emitir com nota fiscal ({ALIQUOTA_NF.toLocaleString('pt-BR')}%)
+            </span>
+          </label>
         </div>
 
         <div className="bg-gray-50 rounded-xl border border-gray-200 p-6">
@@ -161,9 +169,15 @@ Preço (com nota fiscal): ${formatCurrency(calc.comNota)}`;
           ) : temPreco && calc ? (
             <div className="space-y-4">
               <div className="bg-white rounded-lg border border-gray-200 p-4">
-                <div className="text-xs uppercase tracking-wide text-gray-500">Preço de venda (sem nota fiscal)</div>
-                <div className="text-3xl font-bold text-blue-600">{formatCurrency(calc.semNota)}</div>
-                <div className="mt-1 text-sm text-orange-600 font-medium">Com nota fiscal: {formatCurrency(calc.comNota)}</div>
+                <div className="text-xs uppercase tracking-wide text-gray-500">Preço de venda</div>
+                <div className="text-3xl font-bold text-blue-600">{formatCurrency(calc.final)}</div>
+                {incluirNota ? (
+                  <div className="mt-1 text-xs text-gray-500">Nota fiscal ({ALIQUOTA_NF.toLocaleString('pt-BR')}%) incluída</div>
+                ) : (
+                  <div className="mt-1 text-xs text-amber-600 font-medium">
+                    Sem nota fiscal — desconto de {formatCurrency(calc.descontoNota)} ({ALIQUOTA_NF.toLocaleString('pt-BR')}%)
+                  </div>
+                )}
                 <div className="mt-1 text-xs text-green-600 font-medium">
                   {qtd} un · unitário {formatCurrency(calc.precoUnit)}
                 </div>
