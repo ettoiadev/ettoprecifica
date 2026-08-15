@@ -2,6 +2,8 @@
 export interface ProductVariation {
   id: string;
   label: string;
+  /** Descrição curta opcional (subtítulo do item na frente). */
+  description?: string;
   price: number;
   unit?: string;
   category?: string;
@@ -29,6 +31,10 @@ export interface AdesivoConfig {
   refletivo: number;
   imaCarroAdesivado: number;
   notaFiscalPercentual: number;
+  // Lista editável de tipos de adesivo (nome, descrição, preço e ordem),
+  // gerenciada em Configurações. Semeada por migrateConfig a partir dos campos
+  // acima (preserva preços já salvos). A calculadora renderiza a partir dela.
+  itens?: ProductVariation[];
 }
 
 // Lona é o único produto com preço MANUAL (definido em Configurações), não pelo

@@ -1,27 +1,18 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Copy, PlusCircle } from 'lucide-react';
-import { formatCurrency, AdesivoConfig } from '../../types/pricing';
+import { formatCurrency, AdesivoConfig, ProductVariation } from '../../types/pricing';
 import { useCotacao } from '../../contexts/CotacaoContext';
 import { useDeslocamentoCep } from '../../hooks/useDeslocamentoCep';
 import DeslocamentoField from './DeslocamentoField';
 import { toast } from 'sonner';
 
-// Adesivos (impresso + recorte) com preço MANUAL, definido em Configurações
-// (config.adesivo), NÃO pelo motor da skill. Nove tipos da planilha do Étto, cada
-// um com preço por m²; o preço com nota fiscal sai de um percentual único sobre o
-// preço do produto. Deslocamento opcional pelo fluxo por CEP, somado à parte como
-// custo de repasse (sem incidência de nota fiscal). Mesmo padrão da Lona.
+// Adesivos (impresso + recorte) com preço MANUAL, definido em Configurações. A
+// lista de tipos (nome, descrição, preço e ordem) vem de config.itens — editável
+// em Configurações > Adesivos (renomear, reordenar, add/excluir); a ordem e os
+// nomes refletem aqui. O preço com nota sai de um percentual único. Deslocamento
+// opcional pelo fluxo por CEP, somado à parte (sem incidência de nota fiscal).
 interface Props {
   config: AdesivoConfig;
-}
-
-type AdesivoOptionId = Exclude<keyof AdesivoConfig, 'notaFiscalPercentual'>;
-
-interface Opcao {
-  id: AdesivoOptionId;
-  nome: string;
-  descricao: string;
-  preco: number;
 }
 
 const inputClass =
@@ -38,29 +29,19 @@ const btn = (active: boolean) =>
 const AdesivoManualCalculator: React.FC<Props> = ({ config }) => {
   const deslocamento = useDeslocamentoCep();
   const { incluirDeslocamento, custoDeslocamento } = deslocamento;
-  const [acabamento, setAcabamento] = useState<AdesivoOptionId>('digital');
+  const opcoes = useMemo<ProductVariation[]>(() => config.itens ?? [], [config.itens]);
+  const [materialId, setMaterialId] = useState<string>(opcoes[0]?.id ?? '');
   const [largura, setLargura] = useState<string>('');
   const [altura, setAltura] = useState<string>('');
   const [quantidade, setQuantidade] = useState<number>(1);
 
   const { addItem } = useCotacao();
 
-  // Opções (preços manuais vindos de Configurações).
-  const opcoes = useMemo<Opcao[]>(
-    () => [
-      { id: 'digital', nome: 'Adesivo Impresso', descricao: 'Impressão só refilado', preco: config.digital },
-      { id: 'digitalPeliculaTransparente', nome: 'Adesivo Impresso Laminado Fosco ou Brilho', descricao: 'Impressão com laminação brilho ou fosco', preco: config.digitalPeliculaTransparente },
-      { id: 'transparente', nome: 'Adesivo Transparente Impresso', descricao: 'Impressão', preco: config.transparente },
-      { id: 'perfurado', nome: 'Adesivo Perfurado', descricao: 'Para carros ou vidros', preco: config.perfurado },
-      { id: 'recorte1Cor', nome: 'Adesivo Recorte 1 Cor', descricao: 'Recorte Gold Max', preco: config.recorte1Cor },
-      { id: 'recorte2Cores', nome: 'Adesivo Recorte 2 Cores', descricao: 'Recorte Gold Max', preco: config.recorte2Cores },
-      { id: 'jateado', nome: 'Adesivo Jateado', descricao: 'Para vidros', preco: config.jateado },
-      { id: 'blackout', nome: 'Adesivo corte contorno', descricao: 'Adesivo impresso com corte no formato', preco: config.blackout },
-      { id: 'refletivo', nome: 'Adesivo Refletivo', descricao: 'Alta visibilidade / sinalização', preco: config.refletivo },
-      { id: 'imaCarroAdesivado', nome: 'Imã de Carro Adesivado', descricao: 'Imã para carros', preco: config.imaCarroAdesivado },
-    ],
-    [config]
-  );
+  // Garante uma seleção válida quando a lista muda (renomear/reordenar/excluir).
+  useEffect(() => {
+    if (opcoes.length === 0) return;
+    if (!opcoes.some((o) => o.id === materialId)) setMaterialId(opcoes[0].id);
+  }, [opcoes, materialId]);
 
   const larguraNum = parseFloat(largura) || 0;
   const alturaNum = parseFloat(altura) || 0;
@@ -68,14 +49,12 @@ const AdesivoManualCalculator: React.FC<Props> = ({ config }) => {
   const custoDeslocamentoNum = parseFloat(custoDeslocamento) || 0;
   const entradaValida = larguraNum > 0 && alturaNum > 0;
 
-  const opcaoSel = opcoes.find((o) => o.id === acabamento) ?? opcoes[0];
-  const precoM2 = opcaoSel.preco;
+  const opcaoSel = opcoes.find((o) => o.id === materialId) ?? opcoes[0];
+  const precoM2 = opcaoSel?.price ?? 0;
   const pct = config.notaFiscalPercentual || 0;
 
-  // Cálculo local: área agregada × preço/m²; deslocamento (opcional) somado uma
-  // vez ao total, sem incidência de nota fiscal (é custo de repasse).
   const calc = useMemo(() => {
-    if (!entradaValida) return null;
+    if (!entradaValida || !opcaoSel) return null;
     const areaUnit = larguraNum * alturaNum;
     const areaTotal = areaUnit * qtd;
     const produtoSemNota = precoM2 * areaTotal;
@@ -83,19 +62,19 @@ const AdesivoManualCalculator: React.FC<Props> = ({ config }) => {
     const semNota = produtoSemNota + desloc;
     const comNota = produtoSemNota * (1 + pct / 100) + desloc;
     return { areaUnit, areaTotal, produtoSemNota, desloc, semNota, comNota };
-  }, [entradaValida, larguraNum, alturaNum, qtd, precoM2, pct, incluirDeslocamento, custoDeslocamentoNum]);
+  }, [entradaValida, opcaoSel, larguraNum, alturaNum, qtd, precoM2, pct, incluirDeslocamento, custoDeslocamentoNum]);
 
   const temPreco = !!calc && calc.semNota > 0;
 
   const descricao = useMemo(
     () =>
-      `${opcaoSel.nome} ${larguraNum.toFixed(2)}×${alturaNum.toFixed(2)}m${qtd > 1 ? ` (${qtd}un)` : ''}`,
-    [opcaoSel.nome, larguraNum, alturaNum, qtd]
+      `${opcaoSel?.label ?? 'Adesivo'} ${larguraNum.toFixed(2)}×${alturaNum.toFixed(2)}m${qtd > 1 ? ` (${qtd}un)` : ''}`,
+    [opcaoSel, larguraNum, alturaNum, qtd]
   );
 
   const handleCopy = () => {
-    if (!temPreco || !calc) return;
-    const texto = `Orçamento ${opcaoSel.nome}
+    if (!temPreco || !calc || !opcaoSel) return;
+    const texto = `Orçamento ${opcaoSel.label}
 Dimensões: ${larguraNum.toFixed(2)} x ${alturaNum.toFixed(2)} m — ${qtd} un
 ${incluirDeslocamento ? `Deslocamento incluído: ${formatCurrency(calc.desloc)}\n` : ''}Preço (sem nota fiscal): ${formatCurrency(calc.semNota)}
 Preço (com nota fiscal): ${formatCurrency(calc.comNota)}`;
@@ -116,7 +95,7 @@ Preço (com nota fiscal): ${formatCurrency(calc.comNota)}`;
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Adesivos</h2>
         <p className="text-gray-600">
-          Adesivo impresso e de recorte por m². Preços definidos manualmente em Configurações.
+          Adesivo impresso e de recorte por m². Preços e ordem definidos em Configurações.
         </p>
       </div>
 
@@ -142,14 +121,20 @@ Preço (com nota fiscal): ${formatCurrency(calc.comNota)}`;
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-3">Tipo de adesivo</label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {opcoes.map((o) => (
-                <button key={o.id} type="button" onClick={() => setAcabamento(o.id)} className={btn(acabamento === o.id)}>
-                  <div>{o.nome}</div>
-                  <div className="text-xs opacity-70 mt-0.5">{o.descricao} · {formatCurrency(o.preco)}/m²</div>
-                </button>
-              ))}
-            </div>
+            {opcoes.length === 0 ? (
+              <span className="text-sm text-gray-500">Nenhum tipo cadastrado — adicione em Configurações.</span>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {opcoes.map((o) => (
+                  <button key={o.id} type="button" onClick={() => setMaterialId(o.id)} className={btn(materialId === o.id)}>
+                    <div>{o.label}</div>
+                    <div className="text-xs opacity-70 mt-0.5">
+                      {o.description ? `${o.description} · ` : ''}{formatCurrency(o.price)}/m²
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           <DeslocamentoField {...deslocamento} />
@@ -160,7 +145,7 @@ Preço (com nota fiscal): ${formatCurrency(calc.comNota)}`;
 
           {!entradaValida ? (
             <p className="text-sm text-gray-500">Informe as dimensões para ver o preço.</p>
-          ) : temPreco && calc ? (
+          ) : temPreco && calc && opcaoSel ? (
             <div className="space-y-4">
               <div className="bg-white rounded-lg border border-gray-200 p-4">
                 <div className="text-xs uppercase tracking-wide text-gray-500">Preço de venda (sem nota fiscal)</div>
@@ -174,7 +159,7 @@ Preço (com nota fiscal): ${formatCurrency(calc.comNota)}`;
               </div>
 
               <div className="space-y-1">
-                <div className="flex justify-between text-sm text-gray-600"><span>Tipo:</span><span>{opcaoSel.nome}</span></div>
+                <div className="flex justify-between text-sm text-gray-600"><span>Tipo:</span><span className="text-right">{opcaoSel.label}</span></div>
                 <div className="flex justify-between text-sm text-gray-600"><span>Preço/m²:</span><span>{formatCurrency(precoM2)}</span></div>
                 <div className="flex justify-between text-sm text-gray-600"><span>Área (un):</span><span>{calc.areaUnit.toFixed(2)} m²</span></div>
                 {qtd > 1 && (

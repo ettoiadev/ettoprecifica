@@ -13,12 +13,25 @@ interface ListManagerDef {
   unitDefault?: string;
   showCategory?: boolean;
   showMinPrice?: boolean;
+  showDescription?: boolean;
+  showReorder?: boolean;
 }
 
 // Seções com listas editáveis (CRUD) e a quais chaves da config elas apontam.
-// Obs.: todos os produtos e taxas são precificados pelo motor da skill
-// (Edge Functions), então não há mais nenhuma lista de preço editável no app.
-const LIST_MANAGERS: Record<string, ListManagerDef[]> = {};
+// Adesivos: lista `itens` (tipos de adesivo) com renomear, reordenar (↑/↓),
+// descrição e preço — a ordem e os nomes refletem na aba Adesivos.
+const LIST_MANAGERS: Record<string, ListManagerDef[]> = {
+  adesivo: [
+    {
+      key: 'itens',
+      label: 'Tipos de adesivo',
+      addLabel: 'Adicionar tipo',
+      unitDefault: 'm²',
+      showDescription: true,
+      showReorder: true,
+    },
+  ],
+};
 
 interface ConfigSectionProps {
   title: string;
@@ -131,6 +144,8 @@ const ConfigSection = React.memo<ConfigSectionProps>(({ title, section, fields, 
             unitDefault={mgr.unitDefault}
             showCategory={mgr.showCategory}
             showMinPrice={mgr.showMinPrice}
+            showDescription={mgr.showDescription}
+            showReorder={mgr.showReorder}
           />
         ))}
       </CardContent>

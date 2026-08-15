@@ -72,6 +72,22 @@ export const SECTION_OPTIONS: Record<OptionListSection, SectionOptionsDef> = {
 
 const OPTION_LIST_SECTIONS = Object.keys(SECTION_OPTIONS) as OptionListSection[];
 
+// Base canônica dos tipos de Adesivo (nome, descrição e a qual campo de preço da
+// AdesivoConfig cada um corresponde). Usada por migrateConfig para semear a lista
+// editável `adesivo.itens` a partir dos preços já salvos (preservando ajustes).
+export const ADESIVO_BASE: { id: string; label: string; description: string; priceKey: string }[] = [
+  { id: 'digital', label: 'Adesivo Impresso', description: 'Impressão só refilado', priceKey: 'digital' },
+  { id: 'digitalPeliculaTransparente', label: 'Adesivo Impresso Laminado Fosco ou Brilho', description: 'Impressão com laminação brilho ou fosco', priceKey: 'digitalPeliculaTransparente' },
+  { id: 'transparente', label: 'Adesivo Transparente Impresso', description: 'Impressão', priceKey: 'transparente' },
+  { id: 'perfurado', label: 'Adesivo Perfurado', description: 'Para carros ou vidros', priceKey: 'perfurado' },
+  { id: 'recorte1Cor', label: 'Adesivo Recorte 1 Cor', description: 'Recorte Gold Max', priceKey: 'recorte1Cor' },
+  { id: 'recorte2Cores', label: 'Adesivo Recorte 2 Cores', description: 'Recorte Gold Max', priceKey: 'recorte2Cores' },
+  { id: 'jateado', label: 'Adesivo Jateado', description: 'Para vidros', priceKey: 'jateado' },
+  { id: 'blackout', label: 'Adesivo corte contorno', description: 'Adesivo impresso com corte no formato', priceKey: 'blackout' },
+  { id: 'refletivo', label: 'Adesivo Refletivo', description: 'Alta visibilidade / sinalização', priceKey: 'refletivo' },
+  { id: 'imaCarroAdesivado', label: 'Imã de Carro Adesivado', description: 'Imã para carros', priceKey: 'imaCarroAdesivado' },
+];
+
 /** Constrói a lista de opções a partir dos campos base atuais da seção. */
 const seedVariations = (
   section: OptionListSection,
@@ -110,6 +126,22 @@ export const migrateConfig = (config: PricingConfig): PricingConfig => {
       } as never;
     }
   });
+
+  // Adesivos: semeia a lista editável `itens` a partir dos campos de preço da
+  // config (preserva preços já salvos). Idempotente: só semeia quando ausente.
+  const ad = next.adesivo as unknown as Record<string, unknown> | undefined;
+  if (ad && !Array.isArray(ad.itens)) {
+    next.adesivo = {
+      ...(next.adesivo as object),
+      itens: ADESIVO_BASE.map((o) => ({
+        id: o.id,
+        label: o.label,
+        description: o.description,
+        price: Number(ad[o.priceKey]) || 0,
+        unit: 'm²',
+      })),
+    } as never;
+  }
 
   return next;
 };

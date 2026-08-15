@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, ChevronUp, ChevronDown } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -34,6 +34,10 @@ interface CustomVariationsManagerProps {
   showCategory?: boolean;
   /** Exibe o campo "Valor mínimo (R$)" por item (piso do total da linha). */
   showMinPrice?: boolean;
+  /** Exibe o campo "Descrição" por item (subtítulo mostrado na frente). */
+  showDescription?: boolean;
+  /** Exibe as setas ↑/↓ para reordenar os itens (a ordem reflete na frente). */
+  showReorder?: boolean;
 }
 
 const CustomVariationsManager: React.FC<CustomVariationsManagerProps> = ({
@@ -45,16 +49,19 @@ const CustomVariationsManager: React.FC<CustomVariationsManagerProps> = ({
   unitDefault = 'm²',
   showCategory = false,
   showMinPrice = false,
+  showDescription = false,
+  showReorder = false,
 }) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingVariation, setEditingVariation] = useState<ProductVariation | null>(null);
-  const [formData, setFormData] = useState({ label: '', price: '', unit: unitDefault, category: '', minPrice: '' });
+  const [formData, setFormData] = useState({ label: '', description: '', price: '', unit: unitDefault, category: '', minPrice: '' });
 
   const handleOpenDialog = (variation?: ProductVariation) => {
     if (variation) {
       setEditingVariation(variation);
       setFormData({
         label: variation.label,
+        description: variation.description || '',
         price: variation.price.toString(),
         unit: variation.unit || unitDefault,
         category: variation.category || '',
@@ -62,7 +69,7 @@ const CustomVariationsManager: React.FC<CustomVariationsManagerProps> = ({
       });
     } else {
       setEditingVariation(null);
-      setFormData({ label: '', price: '', unit: unitDefault, category: '', minPrice: '' });
+      setFormData({ label: '', description: '', price: '', unit: unitDefault, category: '', minPrice: '' });
     }
     setIsDialogOpen(true);
   };
@@ -70,7 +77,16 @@ const CustomVariationsManager: React.FC<CustomVariationsManagerProps> = ({
   const handleCloseDialog = () => {
     setIsDialogOpen(false);
     setEditingVariation(null);
-    setFormData({ label: '', price: '', unit: unitDefault, category: '', minPrice: '' });
+    setFormData({ label: '', description: '', price: '', unit: unitDefault, category: '', minPrice: '' });
+  };
+
+  // Reordena os itens (a ordem reflete na frente).
+  const handleMove = (index: number, dir: -1 | 1) => {
+    const j = index + dir;
+    if (j < 0 || j >= variations.length) return;
+    const updated = [...variations];
+    [updated[index], updated[j]] = [updated[j], updated[index]];
+    onChange(updated);
   };
 
   const handleSave = () => {
@@ -84,6 +100,7 @@ const CustomVariationsManager: React.FC<CustomVariationsManagerProps> = ({
       label: formData.label,
       price: parseFloat(formData.price),
       unit: formData.unit,
+      ...(showDescription && formData.description ? { description: formData.description } : {}),
       ...(showCategory && formData.category ? { category: formData.category } : {}),
       ...(showMinPrice && formData.minPrice !== '' && !Number.isNaN(parsedMinPrice)
         ? { minPrice: parsedMinPrice }
@@ -130,11 +147,37 @@ const CustomVariationsManager: React.FC<CustomVariationsManagerProps> = ({
 
       {variations.length > 0 && (
         <div className="space-y-2">
-          {variations.map((variation) => (
+          {variations.map((variation, index) => (
             <div
               key={variation.id}
               className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
             >
+              {showReorder && (
+                <div className="flex flex-col mr-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => handleMove(index, -1)}
+                    disabled={index === 0}
+                    aria-label={`Mover ${variation.label} para cima`}
+                    className="h-5 w-6 p-0 disabled:opacity-30"
+                  >
+                    <ChevronUp className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => handleMove(index, 1)}
+                    disabled={index === variations.length - 1}
+                    aria-label={`Mover ${variation.label} para baixo`}
+                    className="h-5 w-6 p-0 disabled:opacity-30"
+                  >
+                    <ChevronDown className="w-4 h-4" />
+                  </Button>
+                </div>
+              )}
               <div className="flex-1">
                 {showCategory && variation.category && (
                   <div className="text-[10px] uppercase tracking-wide text-blue-600 font-semibold">
@@ -144,6 +187,9 @@ const CustomVariationsManager: React.FC<CustomVariationsManagerProps> = ({
                 <div className="font-medium text-sm text-gray-900">
                   {variation.label}
                 </div>
+                {showDescription && variation.description && (
+                  <div className="text-xs text-gray-500">{variation.description}</div>
+                )}
                 <div className="text-xs text-gray-500">
                   R$ {variation.price.toFixed(2)} / {variation.unit || 'm²'}
                   {showMinPrice && (
@@ -238,6 +284,19 @@ const CustomVariationsManager: React.FC<CustomVariationsManagerProps> = ({
                 }
               />
             </div>
+            {showDescription && (
+              <div className="grid gap-2">
+                <Label htmlFor="description">Descrição</Label>
+                <Input
+                  id="description"
+                  placeholder="Ex: Impressão só refilado"
+                  value={formData.description}
+                  onChange={(e) =>
+                    setFormData({ ...formData, description: e.target.value })
+                  }
+                />
+              </div>
+            )}
             <div className="grid gap-2">
               <Label htmlFor="price">Preço</Label>
               <Input
