@@ -67,10 +67,10 @@ const inputClass =
 const AdesivoRecorteEngineCalculator: React.FC<Props> = ({ cores, titulo }) => {
   const [materiais, setMateriais] = useState<Material[]>([]);
   const [produto, setProduto] = useState<string>('');
-  const [modo, setModo] = useState<'medida' | 'area'>('medida');
+  const [modo, setModo] = useState<'medida' | 'linear'>('medida');
   const [largura, setLargura] = useState<string>('');
   const [altura, setAltura] = useState<string>('');
-  const [areaDireta, setAreaDireta] = useState<string>('');
+  const [metrosLineares, setMetrosLineares] = useState<string>('');
   const [quantidade, setQuantidade] = useState<number>(1);
   // Aproveitamento do vinil fixo em 100% (a pedido do Étto) — sem opções na UI.
   const percentual = 100;
@@ -89,16 +89,20 @@ const AdesivoRecorteEngineCalculator: React.FC<Props> = ({ cores, titulo }) => {
 
   const larguraNum = parseFloat(largura) || 0;
   const alturaNum = parseFloat(altura) || 0;
-  const areaDiretaNum = parseFloat(areaDireta) || 0;
+  const metrosLinearesNum = parseFloat(metrosLineares) || 0;
   const custoDeslocamentoNum = parseFloat(custoDeslocamento) || 0;
   const qtd = quantidade > 0 ? quantidade : 1;
 
+  // Largura do rolo do material selecionado (m). No modo linear, a área de vinil =
+  // metros lineares × largura do rolo (o motor precifica por área m²).
+  const larguraRolo = num(materiais.find((m) => m.nome === produto)?.largura_rolo_m);
+
   const areaUnit =
-    modo === 'area' ? areaDiretaNum : larguraNum * alturaNum * (percentual / 100);
+    modo === 'linear' ? metrosLinearesNum * larguraRolo : larguraNum * alturaNum * (percentual / 100);
   const areaTotal = areaUnit * qtd;
 
   const entradaValida =
-    modo === 'area' ? areaDiretaNum > 0 : larguraNum > 0 && alturaNum > 0;
+    modo === 'linear' ? metrosLinearesNum > 0 && larguraRolo > 0 : larguraNum > 0 && alturaNum > 0;
 
   // Carrega materiais do motor (uma vez).
   useEffect(() => {
@@ -182,8 +186,8 @@ const AdesivoRecorteEngineCalculator: React.FC<Props> = ({ cores, titulo }) => {
   }, [materiais]);
 
   const unidadeTexto =
-    modo === 'area'
-      ? `${areaDiretaNum.toFixed(3)} m² (área)`
+    modo === 'linear'
+      ? `${metrosLinearesNum.toFixed(2)} m lineares`
       : `${larguraNum.toFixed(2)}×${alturaNum.toFixed(2)}m`;
   const qtdPrefixo = qtd > 1 ? `${qtd}x ` : '';
   const medidaTexto = `${qtdPrefixo}${unidadeTexto}`;
@@ -283,7 +287,7 @@ Valor: ${formatCurrency(precos.final)}`;
           <div className="grid grid-cols-2 gap-3">
             {([
               { value: 'medida', label: 'Por medida' },
-              { value: 'area', label: 'Área direta (m²)' },
+              { value: 'linear', label: 'Medida linear (m)' },
             ] as const).map((mo) => (
               <button
                 key={mo.value}
@@ -301,12 +305,17 @@ Valor: ${formatCurrency(precos.final)}`;
           </div>
         </div>
 
-        {modo === 'area' ? (
+        {modo === 'linear' ? (
           <div>
-            <label htmlFor="area-direta-rec" className="block text-sm font-medium text-gray-700 mb-3">
-              Área de vinil (m²)
+            <label htmlFor="metros-lineares-rec" className="block text-sm font-medium text-gray-700 mb-3">
+              Metros lineares (m)
             </label>
-            <input id="area-direta-rec" type="number" min="0" step="0.001" value={areaDireta} onChange={(e) => setAreaDireta(e.target.value)} className={inputClass} placeholder="0.000" />
+            <input id="metros-lineares-rec" type="number" min="0" step="0.01" value={metrosLineares} onChange={(e) => setMetrosLineares(e.target.value)} className={inputClass} placeholder="0.00" />
+            <p className="text-xs text-gray-500 mt-2">
+              {larguraRolo > 0
+                ? `Rolo de ${larguraRolo.toFixed(2).replace('.', ',')} m de largura${metrosLinearesNum > 0 ? ` — ${metrosLinearesNum.toFixed(2)} m lineares = ${(metrosLinearesNum * larguraRolo).toFixed(3)} m²` : ''}.`
+                : 'Selecione o material para calcular a partir da largura do rolo.'}
+            </p>
           </div>
         ) : (
           <>
@@ -367,7 +376,7 @@ Valor: ${formatCurrency(precos.final)}`;
 
         {!(produto && entradaValida) ? (
           <p className="text-sm text-gray-500">
-            Selecione o material e informe {modo === 'area' ? 'a área' : 'as dimensões'} para ver o preço.
+            Selecione o material e informe {modo === 'linear' ? 'os metros lineares' : 'as dimensões'} para ver o preço.
           </p>
         ) : loading ? (
           <div className="flex items-center gap-2 text-sm text-gray-500">
