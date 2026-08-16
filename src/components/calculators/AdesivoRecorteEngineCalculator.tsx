@@ -59,12 +59,6 @@ const USO_LABEL: Record<string, string> = {
   externo_auto: 'Automotivo',
 };
 
-const PRESETS = [
-  { value: 25, label: 'Texto/letras (~25%)' },
-  { value: 50, label: 'Logo/misto (~50%)' },
-  { value: 100, label: 'Sólido (100%)' },
-];
-
 const num = (v: number | string | undefined | null): number => Number(v ?? 0);
 
 const inputClass =
@@ -78,7 +72,8 @@ const AdesivoRecorteEngineCalculator: React.FC<Props> = ({ cores, titulo }) => {
   const [altura, setAltura] = useState<string>('');
   const [areaDireta, setAreaDireta] = useState<string>('');
   const [quantidade, setQuantidade] = useState<number>(1);
-  const [percentual, setPercentual] = useState<number>(100);
+  // Aproveitamento do vinil fixo em 100% (a pedido do Étto) — sem opções na UI.
+  const percentual = 100;
   const [comMascara, setComMascara] = useState<boolean>(false);
   const [produtoCor2, setProdutoCor2] = useState<string>('');
   const [percentualCor2, setPercentualCor2] = useState<number>(90);
@@ -189,7 +184,7 @@ const AdesivoRecorteEngineCalculator: React.FC<Props> = ({ cores, titulo }) => {
   const unidadeTexto =
     modo === 'area'
       ? `${areaDiretaNum.toFixed(3)} m² (área)`
-      : `${larguraNum.toFixed(2)}×${alturaNum.toFixed(2)}m (${percentual}%)`;
+      : `${larguraNum.toFixed(2)}×${alturaNum.toFixed(2)}m`;
   const qtdPrefixo = qtd > 1 ? `${qtd}x ` : '';
   const medidaTexto = `${qtdPrefixo}${unidadeTexto}`;
 
@@ -326,44 +321,6 @@ Valor: ${formatCurrency(precos.final)}`;
                   <label className="block text-xs text-gray-500 mb-1">Altura (m)</label>
                   <input type="number" min="0" step="0.01" value={altura} onChange={(e) => setAltura(e.target.value)} className={inputClass} placeholder="0.00" />
                 </div>
-              </div>
-            </div>
-
-            <div>
-              <label htmlFor="percentual-rec" className="block text-sm font-medium text-gray-700 mb-3">
-                Aproveitamento do vinil
-              </label>
-              <div className="grid grid-cols-3 gap-3 mb-3">
-                {PRESETS.map((p) => (
-                  <button
-                    key={p.value}
-                    type="button"
-                    onClick={() => setPercentual(p.value)}
-                    className={`px-3 py-2 rounded-lg border text-xs font-medium transition-colors ${
-                      percentual === p.value
-                        ? 'bg-blue-50 border-blue-300 text-blue-700'
-                        : 'border-gray-300 text-gray-700 hover:bg-gray-50'
-                    }`}
-                  >
-                    {p.label}
-                  </button>
-                ))}
-              </div>
-              <div className="flex items-center gap-2">
-                <input
-                  id="percentual-rec"
-                  type="number"
-                  min="1"
-                  max="100"
-                  step="1"
-                  value={percentual}
-                  onChange={(e) => {
-                    const v = parseInt(e.target.value, 10);
-                    setPercentual(Number.isFinite(v) ? Math.min(100, Math.max(1, v)) : 100);
-                  }}
-                  className="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-                <span className="text-sm text-gray-500">% do retângulo é vinil recortado.</span>
               </div>
             </div>
           </>
