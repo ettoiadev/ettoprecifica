@@ -4,6 +4,7 @@ import { formatCurrency, ALIQUOTA_NF, AdesivoConfig, ProductVariation } from '..
 import { useCotacao } from '../../contexts/CotacaoContext';
 import { useDeslocamentoCep } from '../../hooks/useDeslocamentoCep';
 import DeslocamentoField from './DeslocamentoField';
+import AdesivoRecorteEngineCalculator from './AdesivoRecorteEngineCalculator';
 import { toast } from 'sonner';
 
 // Adesivos (impresso + recorte) com preço MANUAL, definido em Configurações. A
@@ -11,13 +12,22 @@ import { toast } from 'sonner';
 // em Configurações > Adesivos (renomear, reordenar, add/excluir); a ordem e os
 // nomes refletem aqui. O preço com nota sai de um percentual único. Deslocamento
 // opcional pelo fluxo por CEP, somado à parte (sem incidência de nota fiscal).
+//
+// EXCEÇÃO (a pedido do Étto): os tipos "Adesivo Recorte 1 Cor" e "Adesivo Recorte
+// 2 Cores" voltaram ao MOTOR da skill (calc_adesivo_recorte) — ao selecioná-los, a
+// calculadora renderiza o painel AdesivoRecorteEngineCalculator em vez do cálculo
+// manual. O vínculo é por id (renomear/reordenar mantém), via RECORTE_ENGINE_CORES.
 interface Props {
   config: AdesivoConfig;
 }
 
-// Tipos de recorte que podem levar máscara de transferência (por id — renomear o
-// item mantém o vínculo; um id fora deste conjunto não exibe a opção).
-const RECORTE_IDS = new Set(['recorte1Cor', 'recorte2Cores', 'refletivo']);
+// Tipos de recorte precificados pelo motor da skill → nº de cores fixado pelo tipo.
+const RECORTE_ENGINE_CORES: Record<string, 1 | 2> = { recorte1Cor: 1, recorte2Cores: 2 };
+
+// Tipos manuais que ainda oferecem a caixa de máscara de transferência (por id).
+// Recorte 1/2 cores saíram daqui (a máscara deles é tratada no motor); sobra o
+// Refletivo, que continua manual.
+const RECORTE_IDS = new Set(['refletivo']);
 
 const inputClass =
   'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent';
@@ -57,6 +67,9 @@ const AdesivoManualCalculator: React.FC<Props> = ({ config }) => {
   const entradaValida = larguraNum > 0 && alturaNum > 0;
 
   const opcaoSel = opcoes.find((o) => o.id === materialId) ?? opcoes[0];
+  // Recorte 1/2 cores: precificados pelo motor (renderiza outro painel).
+  const engineCores = RECORTE_ENGINE_CORES[opcaoSel?.id ?? ''];
+  const isEngine = engineCores !== undefined;
   const precoM2 = opcaoSel?.price ?? 0;
   const mascaraM2 = config.mascaraTransferenciaM2 || 0;
   // Só os adesivos de recorte oferecem máscara de transferência.
@@ -111,6 +124,30 @@ Valor: ${formatCurrency(calc.final)}`;
         </p>
       </div>
 
+      {/* Seleção de tipo (sempre visível) — fica no topo porque alguns tipos
+          trocam o corpo inteiro da calculadora (recorte 1/2 cores usam o motor). */}
+      <div className="mb-6">
+        <label className="block text-sm font-medium text-gray-700 mb-3">Tipo de adesivo</label>
+        {opcoes.length === 0 ? (
+          <span className="text-sm text-gray-500">Nenhum tipo cadastrado — adicione em Configurações.</span>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {opcoes.map((o) => (
+              <button key={o.id} type="button" onClick={() => setMaterialId(o.id)} className={btn(materialId === o.id)}>
+                <div>{o.label}</div>
+                <div className="text-xs opacity-70 mt-0.5">
+                  {o.description ? `${o.description} · ` : ''}
+                  {RECORTE_ENGINE_CORES[o.id] ? 'cálculo pelo motor' : `${formatCurrency(o.price)}/m²`}
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {isEngine ? (
+        <AdesivoRecorteEngineCalculator cores={engineCores} titulo={opcaoSel?.label ?? 'Adesivo de Recorte'} />
+      ) : (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="space-y-6">
           <div>
@@ -129,24 +166,6 @@ Valor: ${formatCurrency(calc.final)}`;
                 <input type="number" min="1" step="1" value={quantidade || ''} onChange={(e) => setQuantidade(parseInt(e.target.value) || 1)} className={inputClass} placeholder="1" />
               </div>
             </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-3">Tipo de adesivo</label>
-            {opcoes.length === 0 ? (
-              <span className="text-sm text-gray-500">Nenhum tipo cadastrado — adicione em Configurações.</span>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {opcoes.map((o) => (
-                  <button key={o.id} type="button" onClick={() => setMaterialId(o.id)} className={btn(materialId === o.id)}>
-                    <div>{o.label}</div>
-                    <div className="text-xs opacity-70 mt-0.5">
-                      {o.description ? `${o.description} · ` : ''}{formatCurrency(o.price)}/m²
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
           </div>
 
           {mascaraDisponivel && (
@@ -221,6 +240,7 @@ Valor: ${formatCurrency(calc.final)}`;
           ) : null}
         </div>
       </div>
+      )}
     </div>
   );
 };
