@@ -388,6 +388,15 @@ export const defaultConfig: PricingConfig = {
  */
 export const ALIQUOTA_NF = 9.35;
 
+/**
+ * Alíquota que o MOTOR da skill já embute em `preco_..._com_nota` (×1,0931,
+ * confirmado por SQL — ver CLAUDE.md). Só para exibir no checkbox "Emitir com
+ * nota fiscal" das abas Fachada/ACM3D/Letra Caixa/Vidro/Luminoso/Cavaletes —
+ * o app nunca recalcula esse valor, só escolhe entre os dois preços que a
+ * skill já retorna (sem/com nota).
+ */
+export const ALIQUOTA_NF_MOTOR = 9.31;
+
 export const formatCurrency = (value: number): string => {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',

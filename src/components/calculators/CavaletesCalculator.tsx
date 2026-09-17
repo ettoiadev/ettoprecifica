@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Loader2, AlertTriangle, Copy, PlusCircle } from 'lucide-react';
-import { formatCurrency } from '../../types/pricing';
+import { formatCurrency, ALIQUOTA_NF_MOTOR } from '../../types/pricing';
 import { supabase } from '../../lib/supabase/client';
 import { useCotacao } from '../../contexts/CotacaoContext';
 import { useDeslocamentoCep } from '../../hooks/useDeslocamentoCep';
@@ -50,6 +50,7 @@ const CavaletesCalculator: React.FC = () => {
   const [opcaoPainel, setOpcaoPainel] = useState<string>('');
   const deslocamento = useDeslocamentoCep();
   const { incluirDeslocamento, custoDeslocamento } = deslocamento;
+  const [incluirNota, setIncluirNota] = useState<boolean>(true);
 
   const [result, setResult] = useState<CavResult | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
@@ -140,6 +141,13 @@ const CavaletesCalculator: React.FC = () => {
   const precoComNota = isMadeira ? result?.preco_com_nota_65 : result?.preco_com_nota_60;
   const temPreco = precoSemNota != null && num(precoSemNota) > 0;
 
+  const precos = useMemo(() => {
+    if (!temPreco) return null;
+    const semNota = num(precoSemNota);
+    const comNota = num(precoComNota);
+    return { semNota, comNota, descontoNota: comNota - semNota, final: incluirNota ? comNota : semNota };
+  }, [temPreco, precoSemNota, precoComNota, incluirNota]);
+
   const descricao = useMemo(() => {
     if (isMadeira) {
       return `Cavalete madeira ${tamanho} — ${opcaoPainel}`;
@@ -148,11 +156,9 @@ const CavaletesCalculator: React.FC = () => {
   }, [isMadeira, tamanho, opcaoPainel]);
 
   const handleCopy = () => {
-    if (!temPreco) return;
-    const texto = `Orçamento ${descricao}
-
-Preço (sem nota fiscal): ${formatCurrency(num(precoSemNota))}
-Preço (com nota fiscal): ${formatCurrency(num(precoComNota))}`;
+    if (!precos) return;
+    const texto = `${descricao}
+Valor: ${formatCurrency(precos.final)}`;
     navigator.clipboard.writeText(texto).then(
       () => toast.success('Orçamento copiado!'),
       () => toast.error('Não foi possível copiar.')
@@ -160,11 +166,11 @@ Preço (com nota fiscal): ${formatCurrency(num(precoComNota))}`;
   };
 
   const handleAddCotacao = () => {
-    if (!temPreco) return;
+    if (!precos) return;
     addItem({
       descricao,
-      precoSemNota: num(precoSemNota),
-      precoComNota: num(precoComNota),
+      precoSemNota: precos.semNota,
+      precoComNota: precos.comNota,
     });
     toast.success('Adicionado à cotação!');
   };
@@ -233,6 +239,18 @@ Preço (com nota fiscal): ${formatCurrency(num(precoComNota))}`;
           )}
 
           <DeslocamentoField {...deslocamento} />
+
+          <label className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={incluirNota}
+              onChange={(e) => setIncluirNota(e.target.checked)}
+              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+            />
+            <span className="text-sm font-medium text-gray-700">
+              Emitir com nota fiscal ({ALIQUOTA_NF_MOTOR.toLocaleString('pt-BR')}%)
+            </span>
+          </label>
         </div>
 
         <div className="bg-gray-50 rounded-xl border border-gray-200 p-6">
@@ -258,18 +276,21 @@ Preço (com nota fiscal): ${formatCurrency(num(precoComNota))}`;
                 </div>
               )}
 
-              {temPreco && (
+              {temPreco && precos && (
                 <>
                   <div className="bg-white rounded-lg border border-gray-200 p-4">
-                    <div className="text-xs uppercase tracking-wide text-gray-500">
-                      Preço de venda (sem nota fiscal)
-                    </div>
-                    <div className="text-3xl font-bold text-blue-600">
-                      {formatCurrency(num(precoSemNota))}
-                    </div>
-                    <div className="mt-1 text-sm text-orange-600 font-medium">
-                      Com nota fiscal: {formatCurrency(num(precoComNota))}
-                    </div>
+                    <div className="text-xs uppercase tracking-wide text-gray-500">Preço de venda</div>
+                    <div className="text-3xl font-bold text-blue-600">{formatCurrency(precos.final)}</div>
+                    {incluirNota ? (
+                      <div className="mt-1 text-xs text-gray-500">
+                        Nota fiscal ({ALIQUOTA_NF_MOTOR.toLocaleString('pt-BR')}%) incluída
+                      </div>
+                    ) : (
+                      <div className="mt-1 text-xs text-amber-600 font-medium">
+                        Sem nota fiscal — desconto de {formatCurrency(precos.descontoNota)} (
+                        {ALIQUOTA_NF_MOTOR.toLocaleString('pt-BR')}%)
+                      </div>
+                    )}
                   </div>
 
                   <div className="space-y-1">

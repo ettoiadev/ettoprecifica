@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Loader2, AlertTriangle, Copy, PlusCircle } from 'lucide-react';
-import { formatCurrency } from '../../types/pricing';
+import { formatCurrency, ALIQUOTA_NF_MOTOR } from '../../types/pricing';
 import { supabase } from '../../lib/supabase/client';
 import { useCotacao } from '../../contexts/CotacaoContext';
 import { useDeslocamentoCep } from '../../hooks/useDeslocamentoCep';
@@ -36,6 +36,7 @@ const inputClass =
 const Acm3dCalculator: React.FC = () => {
   const deslocamento = useDeslocamentoCep();
   const { incluirDeslocamento, custoDeslocamento } = deslocamento;
+  const [incluirNota, setIncluirNota] = useState<boolean>(true);
   const [largura, setLargura] = useState<string>('');
   const [altura, setAltura] = useState<string>('');
   const [qtdChapas, setQtdChapas] = useState<string>('');
@@ -89,8 +90,10 @@ const Acm3dCalculator: React.FC = () => {
 
   const precos = useMemo(() => {
     if (!result || result.preco_final == null) return null;
-    return { semNota: num(result.preco_final), comNota: num(result.preco_final_com_nota) };
-  }, [result]);
+    const semNota = num(result.preco_final);
+    const comNota = num(result.preco_final_com_nota);
+    return { semNota, comNota, descontoNota: comNota - semNota, final: incluirNota ? comNota : semNota };
+  }, [result, incluirNota]);
 
   const temPreco = !!precos && precos.semNota > 0;
 
@@ -101,10 +104,9 @@ const Acm3dCalculator: React.FC = () => {
 
   const handleCopy = () => {
     if (!temPreco || !precos) return;
-    const texto = `Orçamento Fachada ACM 3D
-Dimensões: ${larguraNum.toFixed(2)} x ${alturaNum.toFixed(2)} m
-${incluirDeslocamento ? `Deslocamento incluído: ${formatCurrency(custoDeslocamentoNum)}\n` : ''}Preço (sem nota fiscal): ${formatCurrency(precos.semNota)}
-Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
+    const texto = `Fachada ACM 3D
+Medida: ${larguraNum.toFixed(2)} x ${alturaNum.toFixed(2)} m
+Valor: ${formatCurrency(precos.final)}`;
     navigator.clipboard.writeText(texto).then(
       () => toast.success('Orçamento copiado!'),
       () => toast.error('Não foi possível copiar.')
@@ -163,6 +165,18 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
           </div>
 
           <DeslocamentoField {...deslocamento} />
+
+          <label className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={incluirNota}
+              onChange={(e) => setIncluirNota(e.target.checked)}
+              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+            />
+            <span className="text-sm font-medium text-gray-700">
+              Emitir com nota fiscal ({ALIQUOTA_NF_MOTOR.toLocaleString('pt-BR')}%)
+            </span>
+          </label>
         </div>
 
         <div className="bg-gray-50 rounded-xl border border-gray-200 p-6">
@@ -191,9 +205,18 @@ Preço (com nota fiscal): ${formatCurrency(precos.comNota)}`;
               {temPreco && precos && (
                 <>
                   <div className="bg-white rounded-lg border border-gray-200 p-4">
-                    <div className="text-xs uppercase tracking-wide text-gray-500">Preço de venda (sem nota fiscal)</div>
-                    <div className="text-3xl font-bold text-blue-600">{formatCurrency(precos.semNota)}</div>
-                    <div className="mt-1 text-sm text-orange-600 font-medium">Com nota fiscal: {formatCurrency(precos.comNota)}</div>
+                    <div className="text-xs uppercase tracking-wide text-gray-500">Preço de venda</div>
+                    <div className="text-3xl font-bold text-blue-600">{formatCurrency(precos.final)}</div>
+                    {incluirNota ? (
+                      <div className="mt-1 text-xs text-gray-500">
+                        Nota fiscal ({ALIQUOTA_NF_MOTOR.toLocaleString('pt-BR')}%) incluída
+                      </div>
+                    ) : (
+                      <div className="mt-1 text-xs text-amber-600 font-medium">
+                        Sem nota fiscal — desconto de {formatCurrency(precos.descontoNota)} (
+                        {ALIQUOTA_NF_MOTOR.toLocaleString('pt-BR')}%)
+                      </div>
+                    )}
                   </div>
 
                   <div className="space-y-1">
