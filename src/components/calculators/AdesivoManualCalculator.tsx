@@ -134,7 +134,7 @@ Valor: ${formatCurrency(calc.final)}`;
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {opcoes.map((o) => (
               <button key={o.id} type="button" onClick={() => setMaterialId(o.id)} className={btn(materialId === o.id)}>
-                <div>{o.label}</div>
+                <div className="text-base font-semibold">{o.label}</div>
                 <div className="text-xs opacity-70 mt-0.5">
                   {o.description ? `${o.description} · ` : ''}
                   {RECORTE_ENGINE_CORES[o.id] ? 'cálculo pelo motor' : `${formatCurrency(o.price)}/m²`}
