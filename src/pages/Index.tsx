@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import AdesivosCalculator from '../components/calculators/AdesivosCalculator';
 import LonaCalculator from '../components/calculators/LonaCalculator';
 import PlacasCalculator from '../components/calculators/PlacasCalculator';
-import FachadaCalculator from '../components/calculators/FachadaCalculator';
+import FachadaManualCalculator from '../components/calculators/FachadaManualCalculator';
 import Acm3dCalculator from '../components/calculators/Acm3dCalculator';
 import LetraCaixaCalculator from '../components/calculators/LetraCaixaCalculator';
 import VidroCalculator from '../components/calculators/VidroCalculator';
@@ -130,7 +130,7 @@ const Index = () => {
       case 'placas':
         return <PlacasCalculator configPS={config.placaPS} configACM={config.placaACM} />;
       case 'fachada':
-        return <FachadaCalculator config={config.fachada} fullConfig={config} />;
+        return <FachadaManualCalculator config={config.fachada} />;
       case 'acm3d':
         return <Acm3dCalculator />;
       case 'letra-caixa':

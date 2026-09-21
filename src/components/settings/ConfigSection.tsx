@@ -33,6 +33,9 @@ const LIST_MANAGERS: Record<string, ListManagerDef[]> = {
   placaACM: [
     { key: 'itens', label: 'Materiais de ACM', addLabel: 'Adicionar material', unitDefault: 'm²', showDescription: true, showReorder: true },
   ],
+  fachada: [
+    { key: 'itens', label: 'Tipos de fachada', addLabel: 'Adicionar tipo', unitDefault: 'm²', showMinPrice: true, showDescription: true, showReorder: true },
+  ],
   laser: [
     { key: 'itens', label: 'Materiais de laser', addLabel: 'Adicionar material', unitDefault: 'm²', showCategory: true, showDescription: true, showReorder: true },
   ],

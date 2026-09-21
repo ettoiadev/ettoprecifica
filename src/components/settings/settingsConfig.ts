@@ -39,6 +39,12 @@ export const settingsConfig: ConfigSectionData[] = [
     fields: [],
   },
   {
+    // Tipos de fachada (preço/m² e valor mínimo) na lista abaixo (LIST_MANAGERS.fachada).
+    title: 'Fachada',
+    section: 'fachada',
+    fields: [],
+  },
+  {
     title: 'Etiquetas / Rótulos',
     section: 'etiquetas',
     fields: [

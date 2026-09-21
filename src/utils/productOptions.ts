@@ -77,7 +77,7 @@ const OPTION_LIST_SECTIONS = Object.keys(SECTION_OPTIONS) as OptionListSection[]
 // semente corresponde. migrateConfig usa isto para semear `itens` a partir dos
 // preços já salvos (preservando ajustes; idempotente). Chave `itens` (não
 // `variations`) de propósito, para não colidir com esquemas antigos.
-type ItemBase = { id: string; label: string; description?: string; category?: string; priceKey: string; unit?: string };
+type ItemBase = { id: string; label: string; description?: string; category?: string; priceKey: string; unit?: string; minPrice?: number };
 
 export const ADESIVO_BASE: ItemBase[] = [
   { id: 'digital', label: 'Adesivo Impresso', description: 'Impressão só refilado', priceKey: 'digital' },
@@ -135,12 +135,24 @@ const DTF_BASE: ItemBase[] = [
   { id: 'uvPremium', label: 'DTF UV Premium', description: '38 cm', priceKey: 'uvPremium', unit: 'm' },
 ];
 
+// Mínimos = os do motor (fachada ACM R$500, lona R$300), sobre o preço sem nota.
+const FACHADA_BASE: ItemBase[] = [
+  { id: 'acmSimples', label: 'Fachada ACM — Simples', description: 'Estrutura em metalon + ACM', priceKey: 'acmSimples', minPrice: 500 },
+  { id: 'acmRecortesDobras', label: 'Fachada ACM — Recortes/dobras', description: 'ACM com recortes e dobras', priceKey: 'acmRecortesDobras', minPrice: 500 },
+  { id: 'acmLetraPvc', label: 'Fachada ACM + Letra PVC', description: 'ACM com letras em PVC', priceKey: 'acmLetraPvc', minPrice: 500 },
+  { id: 'acmLetraIluminada', label: 'Fachada ACM + Letra iluminada', description: 'ACM com letras iluminadas', priceKey: 'acmLetraIluminada', minPrice: 500 },
+  { id: 'lonaCantoneira', label: 'Fachada em Lona — Cantoneira', description: 'Lona esticada com rebites e cantoneira', priceKey: 'lonaCantoneira', minPrice: 300 },
+  { id: 'lonaIlhos', label: 'Fachada em Lona — Ilhós', description: 'Ilhós + abraçadeiras de nylon', priceKey: 'lonaIlhos', minPrice: 300 },
+  { id: 'lonaIluminada', label: 'Fachada em Lona iluminada (backlight)', description: 'Lona translúcida para backlight', priceKey: 'lonaIluminada', minPrice: 300 },
+];
+
 // Seções que têm lista editável `itens` (semeadas por migrateConfig).
 const ITENS_BASE: Record<string, ItemBase[]> = {
   adesivo: ADESIVO_BASE,
   lona: LONA_BASE,
   placaPS: PLACA_PS_BASE,
   placaACM: PLACA_ACM_BASE,
+  fachada: FACHADA_BASE,
   laser: LASER_BASE,
   dtf: DTF_BASE,
 };
@@ -200,6 +212,7 @@ export const migrateConfig = (config: PricingConfig): PricingConfig => {
           unit: o.unit ?? 'm²',
           ...(o.description ? { description: o.description } : {}),
           ...(o.category ? { category: o.category } : {}),
+          ...(o.minPrice != null ? { minPrice: o.minPrice } : {}),
         })),
       } as never;
     }

@@ -78,16 +78,20 @@ export interface PlacaACMConfig {
   itens?: ProductVariation[];
 }
 
+// Fachada também tem preço MANUAL por m² (como Lona/Placas), editável em
+// Configurações. Preços padrão = preço de mercado/m² que vinha do motor da skill
+// (lido via SQL em 21/09/26); cada item tem também um valor mínimo (piso sobre o
+// preço sem nota, como o motor: ACM R$500, lona R$300). A lista `itens` é a fonte
+// da calculadora; os campos planos só semeiam `itens` (migrateConfig).
 export interface FachadaConfig {
-  lona: number;
-  acm122: number;
-  acm150: number;
-  cantoneira: number;
-  // Novos parâmetros para estrutura metálica
-  estruturaMetalica: {
-    precoPorBarra: number;
-    comprimentoBarra: number;
-  };
+  acmSimples: number;
+  acmRecortesDobras: number;
+  acmLetraPvc: number;
+  acmLetraIluminada: number;
+  lonaCantoneira: number;
+  lonaIlhos: number;
+  lonaIluminada: number;
+  itens?: ProductVariation[];
 }
 
 export interface LetraCaixaConfig {
@@ -273,14 +277,13 @@ export const defaultConfig: PricingConfig = {
     notaFiscalPercentual: 9.31,
   },
   fachada: {
-    lona: 20.0,
-    acm122: 120.0,
-    acm150: 150.0,
-    cantoneira: 8.0,
-    estruturaMetalica: {
-      precoPorBarra: 80.0,
-      comprimentoBarra: 6.0,
-    },
+    acmSimples: 450.0,
+    acmRecortesDobras: 500.0,
+    acmLetraPvc: 1050.0,
+    acmLetraIluminada: 1400.0,
+    lonaCantoneira: 250.0,
+    lonaIlhos: 250.0,
+    lonaIluminada: 600.0,
   },
   letraCaixa: {
     espessura10mm: 50.0,
