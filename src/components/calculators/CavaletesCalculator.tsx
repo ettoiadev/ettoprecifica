@@ -5,6 +5,7 @@ import { supabase } from '../../lib/supabase/client';
 import { useCotacao } from '../../contexts/CotacaoContext';
 import { useDeslocamentoCep } from '../../hooks/useDeslocamentoCep';
 import DeslocamentoField from './DeslocamentoField';
+import { CalcCheckbox, OptionChip, selectClass } from './CalcControls';
 import { toast } from 'sonner';
 
 // Calculadora de Cavaletes — preço do motor da skill (Edge Function
@@ -31,16 +32,6 @@ interface ComboMadeira {
 type Estrutura = 'metalon' | 'madeira';
 
 const num = (v: number | string | undefined | null): number => Number(v ?? 0);
-
-const inputClass =
-  'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent';
-
-const btn = (active: boolean) =>
-  `px-4 py-3 rounded-lg border text-sm font-medium transition-colors ${
-    active
-      ? 'bg-blue-50 border-blue-300 text-blue-700'
-      : 'border-gray-300 text-gray-700 hover:bg-gray-50'
-  }`;
 
 const CavaletesCalculator: React.FC = () => {
   const [estrutura, setEstrutura] = useState<Estrutura>('metalon');
@@ -190,12 +181,12 @@ Valor: ${formatCurrency(precos.final)}`;
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-3">Estrutura</label>
             <div className="grid grid-cols-2 gap-3">
-              <button type="button" onClick={() => setEstrutura('metalon')} className={btn(!isMadeira)}>
+              <OptionChip onClick={() => setEstrutura('metalon')} active={!isMadeira} variant="neutral">
                 Metalon + Lona
-              </button>
-              <button type="button" onClick={() => setEstrutura('madeira')} className={btn(isMadeira)}>
+              </OptionChip>
+              <OptionChip onClick={() => setEstrutura('madeira')} active={isMadeira} variant="neutral">
                 Madeira
-              </button>
+              </OptionChip>
             </div>
           </div>
 
@@ -207,7 +198,7 @@ Valor: ${formatCurrency(precos.final)}`;
               id="tamanho-cav"
               value={tamanho}
               onChange={(e) => setTamanho(e.target.value)}
-              className={inputClass}
+              className={selectClass}
             >
               {tamanhos.length === 0 && <option value="">Carregando…</option>}
               {tamanhos.map((t) => (
@@ -227,7 +218,7 @@ Valor: ${formatCurrency(precos.final)}`;
                 id="painel-cav"
                 value={opcaoPainel}
                 onChange={(e) => setOpcaoPainel(e.target.value)}
-                className={inputClass}
+                className={selectClass}
               >
                 {paineis.map((p) => (
                   <option key={p} value={p}>
@@ -240,17 +231,9 @@ Valor: ${formatCurrency(precos.final)}`;
 
           <DeslocamentoField {...deslocamento} />
 
-          <label className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={incluirNota}
-              onChange={(e) => setIncluirNota(e.target.checked)}
-              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-            />
-            <span className="text-sm font-medium text-gray-700">
-              Emitir com nota fiscal ({ALIQUOTA_NF_MOTOR.toLocaleString('pt-BR')}%)
-            </span>
-          </label>
+          <CalcCheckbox checked={incluirNota} onCheckedChange={setIncluirNota}>
+            Emitir com nota fiscal ({ALIQUOTA_NF_MOTOR.toLocaleString('pt-BR')}%)
+          </CalcCheckbox>
         </div>
 
         <div className="bg-gray-50 rounded-xl border border-gray-200 p-6">

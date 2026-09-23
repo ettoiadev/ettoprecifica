@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Copy, PlusCircle } from 'lucide-react';
 import { formatCurrency, ALIQUOTA_NF, DtfConfig, ProductVariation } from '../../types/pricing';
 import { useCotacao } from '../../contexts/CotacaoContext';
+import { CalcCheckbox, OptionChip } from './CalcControls';
+import { Input } from '../ui/input';
 import { toast } from 'sonner';
 
 // DTF com preço MANUAL, definido em Configurações (config.dtf), NÃO pelo motor da
@@ -18,16 +20,6 @@ interface Props {
 // mantém o mínimo; um tipo novo/reincluído fica sem mínimo até ser mapeado aqui.)
 const MIN_METROS: Record<string, number> = { uvPremium: 0.35 };
 
-const inputClass =
-  'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent';
-
-// Boxes com preenchimento pastel (tonalidade suave) para facilitar a leitura.
-const btn = (active: boolean) =>
-  `text-left px-4 py-3 rounded-lg border text-sm font-medium transition-colors ${
-    active
-      ? 'bg-indigo-100 border-indigo-400 text-indigo-800 shadow-sm'
-      : 'bg-indigo-50/60 border-indigo-200 text-gray-700 hover:bg-indigo-100/70'
-  }`;
 
 const DtfManualCalculator: React.FC<Props> = ({ config }) => {
   const opcoes = useMemo<ProductVariation[]>(() => config.itens ?? [], [config.itens]);
@@ -107,17 +99,17 @@ Valor: ${formatCurrency(calc.final)}`;
               {opcoes.length === 0 ? (
                 <span className="text-sm text-gray-500">Nenhum tipo cadastrado — adicione em Configurações.</span>
               ) : opcoes.map((o) => (
-                <button key={o.id} type="button" onClick={() => setTipo(o.id)} className={btn(tipo === o.id)}>
+                <OptionChip key={o.id} onClick={() => setTipo(o.id)} active={tipo === o.id} variant="indigo">
                   <div>{o.label}</div>
                   <div className="text-xs opacity-70 mt-0.5">{o.description ? `${o.description} · ` : ''}{formatCurrency(o.price)}/m</div>
-                </button>
+                </OptionChip>
               ))}
             </div>
           </div>
 
           <div>
             <label htmlFor="metros-dtf" className="block text-sm font-medium text-gray-700 mb-3">Metros lineares</label>
-            <input id="metros-dtf" type="number" min="0" step="0.1" value={metros} onChange={(e) => setMetros(e.target.value)} className={inputClass} placeholder="0.0" />
+            <Input id="metros-dtf" type="number" min="0" step="0.1" value={metros} onChange={(e) => setMetros(e.target.value)} placeholder="0.0" />
             {minMetros > 0 && (
               <p className="text-xs text-gray-500 mt-1">
                 Mínimo de impressão: {(minMetros * 100).toFixed(0)} cm — pedidos menores são cobrados como {minMetros.toFixed(2)} m.
@@ -125,22 +117,16 @@ Valor: ${formatCurrency(calc.final)}`;
             )}
           </div>
 
-          <label className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
-            <input type="checkbox" checked={incluirUber} onChange={(e) => setIncluirUber(e.target.checked)} className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
-            <span className="text-sm font-medium text-gray-700">
-              Incluir Uber para buscar o material ({formatCurrency(uberValor)})
-            </span>
-          </label>
+          <CalcCheckbox checked={incluirUber} onCheckedChange={setIncluirUber}>
+            Incluir Uber para buscar o material ({formatCurrency(uberValor)})
+          </CalcCheckbox>
           <p className="text-xs text-gray-500 -mt-3">
             Desmarque se a busca deste DTF for combinada com outros pedidos na mesma corrida.
           </p>
 
-          <label className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
-            <input type="checkbox" checked={incluirNota} onChange={(e) => setIncluirNota(e.target.checked)} className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
-            <span className="text-sm font-medium text-gray-700">
-              Emitir com nota fiscal ({ALIQUOTA_NF.toLocaleString('pt-BR')}%)
-            </span>
-          </label>
+          <CalcCheckbox checked={incluirNota} onCheckedChange={setIncluirNota}>
+            Emitir com nota fiscal ({ALIQUOTA_NF.toLocaleString('pt-BR')}%)
+          </CalcCheckbox>
         </div>
 
         <div className="bg-gray-50 rounded-xl border border-gray-200 p-6">

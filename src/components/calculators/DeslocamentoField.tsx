@@ -1,10 +1,9 @@
 import React from 'react';
 import { Loader2, AlertTriangle } from 'lucide-react';
 import { formatCurrency } from '../../types/pricing';
+import { CalcCheckbox } from './CalcControls';
+import { Input } from '../ui/input';
 import type { UseDeslocamentoCepReturn } from '../../hooks/useDeslocamentoCep';
-
-const inputClass =
-  'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent';
 
 // Bloco de deslocamento compartilhado pelas 12 calculadoras migradas: CEP do
 // cliente + tempo estimado de instalação pré-preenchem o valor em R$ via
@@ -24,40 +23,32 @@ const DeslocamentoField: React.FC<UseDeslocamentoCepReturn> = ({
 }) => {
   return (
     <div>
-      <label className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
-        <input
-          type="checkbox"
-          checked={incluirDeslocamento}
-          onChange={(e) => setIncluirDeslocamento(e.target.checked)}
-          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-        />
-        <span className="text-sm font-medium text-gray-700">Incluir deslocamento</span>
-      </label>
+      <CalcCheckbox checked={incluirDeslocamento} onCheckedChange={setIncluirDeslocamento}>
+            Incluir deslocamento
+          </CalcCheckbox>
 
       {incluirDeslocamento && (
         <div className="mt-3 space-y-3">
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs text-gray-500 mb-1">CEP do cliente</label>
-              <input
+              <Input
                 type="text"
                 inputMode="numeric"
                 value={cepDestino}
                 onChange={(e) => setCepDestino(e.target.value)}
-                className={inputClass}
                 placeholder="00000-000"
                 maxLength={9}
               />
             </div>
             <div>
               <label className="block text-xs text-gray-500 mb-1">Tempo estimado de instalação (h)</label>
-              <input
+              <Input
                 type="number"
                 min="0"
                 step="0.5"
                 value={tempoInstalacaoHoras}
                 onChange={(e) => setTempoInstalacaoHoras(e.target.value)}
-                className={inputClass}
                 placeholder="0"
               />
             </div>
@@ -86,13 +77,12 @@ const DeslocamentoField: React.FC<UseDeslocamentoCepReturn> = ({
 
           <div>
             <label className="block text-xs text-gray-500 mb-1">Valor do deslocamento (R$)</label>
-            <input
+            <Input
               type="number"
               min="0"
               step="0.01"
               value={custoDeslocamento}
               onChange={(e) => setCustoDeslocamento(e.target.value)}
-              className={inputClass}
               placeholder="0.00"
             />
           </div>

@@ -14,8 +14,8 @@ fora de `src/components/ui/` em si):
 
 | Componente | Usos | Onde | Status |
 |---|---|---|---|
-| `button` | 5 | `ModernHeader`, `SettingsHeader`, `Auth`, `ProtectedRoute`, `CustomVariationsManager` | **Usar sempre** para botões fora das calculadoras. Calculadoras usam `<button>` cru — ver §3. |
-| `input` | 3 | `SettingsHeader` (busca), `Auth`, `CustomVariationsManager` | Idem — calculadoras usam `<input>` cru com classe local. |
+| `button` | 5 | `ModernHeader`, `SettingsHeader`, `Auth`, `ProtectedRoute`, `CustomVariationsManager` | **Usar sempre** para botões de ação. Nas calculadoras, botão de *seleção* é o `OptionChip` (§3); os botões "Adicionar à cotação"/"Copiar orçamento" ainda são `<button>` cru — candidatos à próxima etapa. |
+| `input` | 17 | Todas as calculadoras (via `Input` direto) + `SettingsHeader`, `Auth`, `CustomVariationsManager` | Padrão desde 23/09/26 — ver §3. |
 | `card` | 4 | `ModernCalculatorWrapper`, `ConfigSection`, OrbynAdmin-style summary (nenhum hoje) | Base de painéis fora das calculadoras. |
 | `label` | 3 | `CustomVariationsManager`, formulários de auth | — |
 | `currency-input` | 1 | `ConfigSection` | Componente próprio do projeto (não é do shadcn puro), ver §2. |
@@ -23,7 +23,7 @@ fora de `src/components/ui/` em si):
 | `percentage-input` | 1 | `ConfigSection` | Idem. |
 | `dialog` | 1 | `CustomVariationsManager` (form de adicionar/editar item) | — |
 | `alert-dialog` | 1 | `CustomVariationsManager` (confirmar exclusão) | — |
-| `checkbox` | **0** | — | **Instalado e nunca usado.** Todas as calculadoras usam `<input type="checkbox">` cru + classe local. Ver §3. |
+| `checkbox` | 1 | `calculators/CalcControls.tsx` (via `CalcCheckbox`, usado por 16 calculadoras) | Padrão desde 23/09/26 — usar sempre via `CalcCheckbox`, ver §3. |
 | `select`, `radio-group`, `switch`, `textarea`, `alert`, `aspect-ratio`, `breadcrumb`, `collapsible` | **0** | — | Instalados, não usados em lugar nenhum. |
 | `table`, `pagination` | **0** | — | Instalados, não usados — não há tabela de dados no app hoje (ver `PAGE_PATTERNS.md#list-page`). |
 | `accordion`, `avatar`, `calendar`, `carousel`, `chart`, `command`, `context-menu`, `drawer`, `hover-card`, `input-otp`, `menubar`, `navigation-menu`, `progress`, `resizable`, `sidebar`, `slider`, `toggle`, `toggle-group`, `form` | **0** | — | Instalados, não usados. Sobra do scaffold inicial (provavelmente Lovable/shadcn starter completo). Não remover só por estarem sem uso — deixar disponíveis, mas não presumir que já estão adaptados ao tema até o primeiro uso real. |
@@ -48,11 +48,39 @@ médio, não fazer de uma vez).
 | `DeslocamentoField` | `src/components/calculators/DeslocamentoField.tsx` | Campo de CEP + deslocamento, compartilhado por 12 calculadoras | Bom exemplo de componente compartilhado que evitou duplicação — mesmo princípio deveria valer para `inputClass`/`btn()` (ver §3). |
 | `currency-input` / `number-input` / `percentage-input` | `src/components/ui/*.tsx` | Inputs formatados (moeda/número/percentual) só usados em Configurações | Próprios do projeto, não vieram do shadcn CLI puro — tratar como parte do inventário shadcn local mesmo assim. |
 
-## 3. Duplicação encontrada nas calculadoras (`src/components/calculators/`)
+## 3. Duplicação nas calculadoras — **etapa 2 da migração já aplicada (23/09/26)**
 
-Este é o achado mais concreto da auditoria: cada calculadora reimplementa
-localmente os mesmos três padrões, em vez de importar um componente
-compartilhado.
+Era o achado mais concreto da auditoria: cada calculadora reimplementava
+localmente os mesmos três padrões. **Resolvido**: os três viraram
+`src/components/calculators/CalcControls.tsx` (`OptionChip`, `CalcCheckbox`,
+`selectClass`) + o `Input` do shadcn usado direto. Os 16 arquivos vivos foram
+migrados; os componentes mortos (§4) ficaram como estavam, de propósito.
+
+| Padrão antigo | Onde estava | Virou | Ganho |
+|---|---|---|---|
+| `const inputClass = 'w-full px-4 py-3 …'` | 22 cópias **idênticas** | `Input` do shadcn (sem className) | Campo da calculadora passa a ter a mesma altura/raio do campo de Configurações (`h-10`, `rounded-md`) — antes eram visivelmente diferentes |
+| `const btn = (active) => …` | 15 cópias, 2 variantes de cor | `<OptionChip variant="indigo" \| "neutral" active={…}>` | Uma definição só; ganhou `aria-pressed` |
+| `<input type="checkbox">` cru | 20 cópias | `<CalcCheckbox>` (usa o `Checkbox` do shadcn/Radix) | Estado/foco acessível de graça; a caixa inteira continua clicável |
+| `<select className={inputClass}>` | selects de Vidro/Cavaletes/Letra Caixa/Recorte | `<select className={selectClass}>` | Select alinhado com o Input. **Migrar para o `Select` do shadcn (Radix) é etapa futura** — muda a API e o comportamento do dropdown |
+
+Resultado: **-218 linhas** (183 inseridas, 401 removidas) em 17 arquivos.
+
+**Verificação feita** (não foi só typecheck): preview local sem login
+(`dev-preview.html`, gitignorado) + Playwright — as 11 abas renderizam sem erro
+de console, checkbox e chip respondem ao clique em todas, e o painel
+"Orçamento" inteiro (preço, composição, desconto, unitário) foi capturado
+antes e depois da migração em 6 abas × 2 cenários (com/sem nota fiscal): **texto
+byte-a-byte idêntico**.
+
+**Bug real que a verificação pegou** (registrado porque a lição vale para a
+próxima etapa): o codemod fundiu dois checkboxes num só no
+`AdesivoRecorteEngineCalculator` — a caixa "Emitir com nota fiscal" sumiu e a
+da máscara ficou com o rótulo errado. Passou pelo `tsc` (JSX válido) e pelo
+smoke test das abas (aquele painel só aparece ao escolher "Adesivo Recorte 1/2
+Cores", que o teste não selecionava). Foi pego comparando a **contagem de
+elementos antes/depois arquivo a arquivo**. Corrigido à mão. Moral: numa
+migração em lote, contar elementos antes/depois é mais confiável que confiar em
+compilar + abrir a tela principal.
 
 ### 3.1 `const btn = (active) => "..."` (chip/botão de seleção) — 15 arquivos
 

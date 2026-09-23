@@ -5,6 +5,8 @@ import { supabase } from '../../lib/supabase/client';
 import { useCotacao } from '../../contexts/CotacaoContext';
 import { useDeslocamentoCep } from '../../hooks/useDeslocamentoCep';
 import DeslocamentoField from './DeslocamentoField';
+import { CalcCheckbox, OptionChip } from './CalcControls';
+import { Input } from '../ui/input';
 import { toast } from 'sonner';
 
 interface Props {
@@ -53,9 +55,6 @@ const MATERIAL_LABEL: Record<Material, string> = {
 };
 
 const num = (v: number | string | undefined): number => Number(v ?? 0);
-
-const inputClass =
-  'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent';
 
 const LuminosoCalculator: React.FC<Props> = () => {
   const [material, setMaterial] = useState<Material>('lona');
@@ -177,13 +176,6 @@ Valor: ${formatCurrency(precos.final)}`;
     toast.success('Adicionado à cotação!');
   };
 
-  const btn = (active: boolean) =>
-    `px-4 py-3 rounded-lg border text-sm font-medium transition-colors ${
-      active
-        ? 'bg-blue-50 border-blue-300 text-blue-700'
-        : 'border-gray-300 text-gray-700 hover:bg-gray-50'
-    }`;
-
   return (
     <div className="p-6">
       <div className="mb-6">
@@ -201,9 +193,9 @@ Valor: ${formatCurrency(precos.final)}`;
             <label className="block text-sm font-medium text-gray-700 mb-3">Material</label>
             <div className="grid grid-cols-3 gap-3">
               {(['lona', 'acm_vazado', 'acrilico'] as const).map((m) => (
-                <button key={m} type="button" onClick={() => setMaterial(m)} className={btn(material === m)}>
+                <OptionChip key={m} onClick={() => setMaterial(m)} active={material === m} variant="neutral">
                   {MATERIAL_LABEL[m]}
-                </button>
+                </OptionChip>
               ))}
             </div>
           </div>
@@ -211,12 +203,12 @@ Valor: ${formatCurrency(precos.final)}`;
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-3">Forma</label>
             <div className="grid grid-cols-2 gap-3">
-              <button type="button" onClick={() => setForma('retangular')} className={btn(forma === 'retangular')}>
+              <OptionChip onClick={() => setForma('retangular')} active={forma === 'retangular'} variant="neutral">
                 Retangular
-              </button>
-              <button type="button" onClick={() => setForma('circular')} className={btn(forma === 'circular')}>
+              </OptionChip>
+              <OptionChip onClick={() => setForma('circular')} active={forma === 'circular'} variant="neutral">
                 Circular
-              </button>
+              </OptionChip>
             </div>
             {forma === 'circular' && (
               <p className="text-xs text-gray-500 mt-2">
@@ -229,24 +221,24 @@ Valor: ${formatCurrency(precos.final)}`;
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-3">Faces</label>
             <div className="grid grid-cols-2 gap-3">
-              <button type="button" onClick={() => setFaces(1)} className={btn(faces === 1)}>
+              <OptionChip onClick={() => setFaces(1)} active={faces === 1} variant="neutral">
                 1 face
-              </button>
-              <button type="button" onClick={() => setFaces(2)} className={btn(faces === 2)}>
+              </OptionChip>
+              <OptionChip onClick={() => setFaces(2)} active={faces === 2} variant="neutral">
                 2 faces
-              </button>
+              </OptionChip>
             </div>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-3">Iluminação</label>
             <div className="grid grid-cols-2 gap-3">
-              <button type="button" onClick={() => setTipoLuz('modulo')} className={btn(tipoLuz === 'modulo')}>
+              <OptionChip onClick={() => setTipoLuz('modulo')} active={tipoLuz === 'modulo'} variant="neutral">
                 Módulo LED
-              </button>
-              <button type="button" onClick={() => setTipoLuz('tubular')} className={btn(tipoLuz === 'tubular')}>
+              </OptionChip>
+              <OptionChip onClick={() => setTipoLuz('tubular')} active={tipoLuz === 'tubular'} variant="neutral">
                 Lâmpada tubular
-              </button>
+              </OptionChip>
             </div>
           </div>
 
@@ -255,13 +247,12 @@ Valor: ${formatCurrency(precos.final)}`;
             {forma === 'circular' ? (
               <div>
                 <label className="block text-xs text-gray-500 mb-1">Diâmetro (m)</label>
-                <input
+                <Input
                   type="number"
                   min="0"
                   step="0.01"
                   value={largura}
                   onChange={(e) => setLargura(e.target.value)}
-                  className={inputClass}
                   placeholder="0.00"
                 />
               </div>
@@ -269,25 +260,23 @@ Valor: ${formatCurrency(precos.final)}`;
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs text-gray-500 mb-1">Largura (m)</label>
-                  <input
+                  <Input
                     type="number"
                     min="0"
                     step="0.01"
                     value={largura}
                     onChange={(e) => setLargura(e.target.value)}
-                    className={inputClass}
                     placeholder="0.00"
                   />
                 </div>
                 <div>
                   <label className="block text-xs text-gray-500 mb-1">Altura (m)</label>
-                  <input
+                  <Input
                     type="number"
                     min="0"
                     step="0.01"
                     value={altura}
                     onChange={(e) => setAltura(e.target.value)}
-                    className={inputClass}
                     placeholder="0.00"
                   />
                 </div>
@@ -307,17 +296,9 @@ Valor: ${formatCurrency(precos.final)}`;
 
           <DeslocamentoField {...deslocamento} />
 
-          <label className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={incluirNota}
-              onChange={(e) => setIncluirNota(e.target.checked)}
-              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-            />
-            <span className="text-sm font-medium text-gray-700">
-              Emitir com nota fiscal ({ALIQUOTA_NF_MOTOR.toLocaleString('pt-BR')}%)
-            </span>
-          </label>
+          <CalcCheckbox checked={incluirNota} onCheckedChange={setIncluirNota}>
+            Emitir com nota fiscal ({ALIQUOTA_NF_MOTOR.toLocaleString('pt-BR')}%)
+          </CalcCheckbox>
         </div>
 
         {/* Resultado */}

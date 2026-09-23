@@ -3,6 +3,8 @@ import { Loader2, AlertTriangle, Copy, PlusCircle } from 'lucide-react';
 import { formatCurrency, ALIQUOTA_NF_MOTOR } from '../../types/pricing';
 import { supabase } from '../../lib/supabase/client';
 import { useCotacao } from '../../contexts/CotacaoContext';
+import { CalcCheckbox, OptionChip, selectClass } from './CalcControls';
+import { Input } from '../ui/input';
 import { toast } from 'sonner';
 
 // Resultado da função calc_letra_caixa (via Edge Function calc-letra-caixa).
@@ -54,16 +56,6 @@ const ILUM_LABEL: Record<Ilum, string> = {
 };
 
 const num = (v: number | string | undefined | null): number => Number(v ?? 0);
-
-const inputClass =
-  'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent';
-
-const btn = (active: boolean) =>
-  `px-4 py-3 rounded-lg border text-sm font-medium transition-colors ${
-    active
-      ? 'bg-blue-50 border-blue-300 text-blue-700'
-      : 'border-gray-300 text-gray-700 hover:bg-gray-50'
-  }`;
 
 const LetraCaixaCalculator: React.FC = () => {
   const [material, setMaterial] = useState<Material>('pvc');
@@ -244,9 +236,9 @@ Valor: ${formatCurrency(precos.final)}`;
             <label className="block text-sm font-medium text-gray-700 mb-3">Material</label>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {(['pvc', 'acm', 'galvanizado', 'inox', 'impressao_3d'] as const).map((m) => (
-                <button key={m} type="button" onClick={() => changeMaterial(m)} className={btn(material === m)}>
+                <OptionChip key={m} onClick={() => changeMaterial(m)} active={material === m} variant="neutral">
                   {MATERIAL_LABEL[m]}
-                </button>
+                </OptionChip>
               ))}
             </div>
           </div>
@@ -261,7 +253,7 @@ Valor: ${formatCurrency(precos.final)}`;
                   id="espessura"
                   value={espessura}
                   onChange={(e) => setEspessura(Number(e.target.value))}
-                  className={inputClass}
+                  className={selectClass}
                 >
                   {espessuras.map((mm) => (
                     <option key={mm} value={mm}>
@@ -278,25 +270,23 @@ Valor: ${formatCurrency(precos.final)}`;
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs text-gray-500 mb-1">Largura (m)</label>
-                    <input
+                    <Input
                       type="number"
                       min="0"
                       step="0.01"
                       value={larguraPlaca}
                       onChange={(e) => setLarguraPlaca(e.target.value)}
-                      className={inputClass}
                       placeholder="0.00"
                     />
                   </div>
                   <div>
                     <label className="block text-xs text-gray-500 mb-1">Altura (m)</label>
-                    <input
+                    <Input
                       type="number"
                       min="0"
                       step="0.01"
                       value={alturaPlaca}
                       onChange={(e) => setAlturaPlaca(e.target.value)}
-                      className={inputClass}
                       placeholder="0.00"
                     />
                   </div>
@@ -315,14 +305,13 @@ Valor: ${formatCurrency(precos.final)}`;
                   <label htmlFor="altura-cm" className="block text-sm font-medium text-gray-700 mb-3">
                     Altura da letra (cm)
                   </label>
-                  <input
+                  <Input
                     id="altura-cm"
                     type="number"
                     min="0"
                     step="1"
                     value={alturaCm}
                     onChange={(e) => setAlturaCm(e.target.value)}
-                    className={inputClass}
                     placeholder="0"
                   />
                 </div>
@@ -330,14 +319,13 @@ Valor: ${formatCurrency(precos.final)}`;
                   <label htmlFor="n-caracteres" className="block text-sm font-medium text-gray-700 mb-3">
                     Nº de caracteres
                   </label>
-                  <input
+                  <Input
                     id="n-caracteres"
                     type="number"
                     min="1"
                     step="1"
                     value={nCaracteres}
                     onChange={(e) => setNCaracteres(e.target.value)}
-                    className={inputClass}
                     placeholder="0"
                   />
                 </div>
@@ -347,14 +335,13 @@ Valor: ${formatCurrency(precos.final)}`;
                 <label htmlFor="largura-total" className="block text-sm font-medium text-gray-700 mb-3">
                   Largura total do conjunto (cm) — opcional
                 </label>
-                <input
+                <Input
                   id="largura-total"
                   type="number"
                   min="0"
                   step="1"
                   value={larguraTotalCm}
                   onChange={(e) => setLarguraTotalCm(e.target.value)}
-                  className={inputClass}
                   placeholder="0"
                 />
                 <p className="text-xs text-gray-500 mt-2">
@@ -370,14 +357,9 @@ Valor: ${formatCurrency(precos.final)}`;
             <label className="block text-sm font-medium text-gray-700 mb-3">Iluminação</label>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {opcoesIlum.map((op) => (
-                <button
-                  key={op}
-                  type="button"
-                  onClick={() => setIluminacao(op)}
-                  className={btn(iluminacao === op)}
-                >
+                <OptionChip key={op} onClick={() => setIluminacao(op)} active={iluminacao === op} variant="neutral">
                   {ILUM_LABEL[op]}
-                </button>
+                </OptionChip>
               ))}
             </div>
             {iluminacao === 'frontal' && (
@@ -393,17 +375,9 @@ Valor: ${formatCurrency(precos.final)}`;
             )}
           </div>
 
-          <label className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={incluirNota}
-              onChange={(e) => setIncluirNota(e.target.checked)}
-              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-            />
-            <span className="text-sm font-medium text-gray-700">
-              Emitir com nota fiscal ({ALIQUOTA_NF_MOTOR.toLocaleString('pt-BR')}%)
-            </span>
-          </label>
+          <CalcCheckbox checked={incluirNota} onCheckedChange={setIncluirNota}>
+            Emitir com nota fiscal ({ALIQUOTA_NF_MOTOR.toLocaleString('pt-BR')}%)
+          </CalcCheckbox>
         </div>
 
         {/* Resultado */}

@@ -5,6 +5,8 @@ import { supabase } from '../../lib/supabase/client';
 import { useCotacao } from '../../contexts/CotacaoContext';
 import { useDeslocamentoCep } from '../../hooks/useDeslocamentoCep';
 import DeslocamentoField from './DeslocamentoField';
+import { CalcCheckbox } from './CalcControls';
+import { Input } from '../ui/input';
 import { toast } from 'sonner';
 
 // Calculadora de Fachada em ACM 3D — preço do motor da skill (Edge Function
@@ -29,9 +31,6 @@ interface Acm3dResult {
 }
 
 const num = (v: number | string | undefined | null): number => Number(v ?? 0);
-
-const inputClass =
-  'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent';
 
 const Acm3dCalculator: React.FC = () => {
   const deslocamento = useDeslocamentoCep();
@@ -136,11 +135,11 @@ Valor: ${formatCurrency(precos.final)}`;
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs text-gray-500 mb-1">Largura (m)</label>
-                <input type="number" min="0" step="0.01" value={largura} onChange={(e) => setLargura(e.target.value)} className={inputClass} placeholder="0.00" />
+                <Input type="number" min="0" step="0.01" value={largura} onChange={(e) => setLargura(e.target.value)} placeholder="0.00" />
               </div>
               <div>
                 <label className="block text-xs text-gray-500 mb-1">Altura (m)</label>
-                <input type="number" min="0" step="0.01" value={altura} onChange={(e) => setAltura(e.target.value)} className={inputClass} placeholder="0.00" />
+                <Input type="number" min="0" step="0.01" value={altura} onChange={(e) => setAltura(e.target.value)} placeholder="0.00" />
               </div>
             </div>
           </div>
@@ -152,11 +151,11 @@ Valor: ${formatCurrency(precos.final)}`;
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs text-gray-500 mb-1">Qtd. chapas de ACM</label>
-                <input type="number" min="0" step="1" value={qtdChapas} onChange={(e) => setQtdChapas(e.target.value)} className={inputClass} placeholder="auto" />
+                <Input type="number" min="0" step="1" value={qtdChapas} onChange={(e) => setQtdChapas(e.target.value)} placeholder="auto" />
               </div>
               <div>
                 <label className="block text-xs text-gray-500 mb-1">Qtd. barras de metalon</label>
-                <input type="number" min="0" step="1" value={qtdBarras} onChange={(e) => setQtdBarras(e.target.value)} className={inputClass} placeholder="auto" />
+                <Input type="number" min="0" step="1" value={qtdBarras} onChange={(e) => setQtdBarras(e.target.value)} placeholder="auto" />
               </div>
             </div>
             <p className="text-xs text-gray-400 mt-1">
@@ -166,17 +165,9 @@ Valor: ${formatCurrency(precos.final)}`;
 
           <DeslocamentoField {...deslocamento} />
 
-          <label className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={incluirNota}
-              onChange={(e) => setIncluirNota(e.target.checked)}
-              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-            />
-            <span className="text-sm font-medium text-gray-700">
-              Emitir com nota fiscal ({ALIQUOTA_NF_MOTOR.toLocaleString('pt-BR')}%)
-            </span>
-          </label>
+          <CalcCheckbox checked={incluirNota} onCheckedChange={setIncluirNota}>
+            Emitir com nota fiscal ({ALIQUOTA_NF_MOTOR.toLocaleString('pt-BR')}%)
+          </CalcCheckbox>
         </div>
 
         <div className="bg-gray-50 rounded-xl border border-gray-200 p-6">

@@ -4,6 +4,8 @@ import { formatCurrency, ALIQUOTA_NF, LonaConfig, ProductVariation } from '../..
 import { useCotacao } from '../../contexts/CotacaoContext';
 import { useDeslocamentoCep } from '../../hooks/useDeslocamentoCep';
 import DeslocamentoField from './DeslocamentoField';
+import { CalcCheckbox, OptionChip } from './CalcControls';
+import { Input } from '../ui/input';
 import { toast } from 'sonner';
 
 // Calculadora de Lona/Banner/Faixa — ÚNICO produto com preço MANUAL, definido em
@@ -16,15 +18,6 @@ interface Props {
   config: LonaConfig;
 }
 
-const inputClass =
-  'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent';
-
-const btn = (active: boolean) =>
-  `px-4 py-3 rounded-lg border text-sm font-medium transition-colors ${
-    active
-      ? 'bg-blue-50 border-blue-300 text-blue-700'
-      : 'border-gray-300 text-gray-700 hover:bg-gray-50'
-  }`;
 
 const LonaCalculator: React.FC<Props> = ({ config }) => {
   const deslocamento = useDeslocamentoCep();
@@ -115,15 +108,15 @@ Valor: ${formatCurrency(calc.final)}`;
             <div className="grid grid-cols-3 gap-4">
               <div>
                 <label className="block text-xs text-gray-500 mb-1">Largura (m)</label>
-                <input type="number" min="0" step="0.01" value={largura} onChange={(e) => setLargura(e.target.value)} className={inputClass} placeholder="0.00" />
+                <Input type="number" min="0" step="0.01" value={largura} onChange={(e) => setLargura(e.target.value)} placeholder="0.00" />
               </div>
               <div>
                 <label className="block text-xs text-gray-500 mb-1">Altura (m)</label>
-                <input type="number" min="0" step="0.01" value={altura} onChange={(e) => setAltura(e.target.value)} className={inputClass} placeholder="0.00" />
+                <Input type="number" min="0" step="0.01" value={altura} onChange={(e) => setAltura(e.target.value)} placeholder="0.00" />
               </div>
               <div>
                 <label className="block text-xs text-gray-500 mb-1">Quantidade</label>
-                <input type="number" min="1" step="1" value={quantidade || ''} onChange={(e) => setQuantidade(parseInt(e.target.value) || 1)} className={inputClass} placeholder="1" />
+                <Input type="number" min="1" step="1" value={quantidade || ''} onChange={(e) => setQuantidade(parseInt(e.target.value) || 1)} placeholder="1" />
               </div>
             </div>
           </div>
@@ -134,26 +127,20 @@ Valor: ${formatCurrency(calc.final)}`;
               {opcoes.length === 0 ? (
                 <span className="text-sm text-gray-500">Nenhum acabamento cadastrado — adicione em Configurações.</span>
               ) : opcoes.map((o) => (
-                <button key={o.id} type="button" onClick={() => setAcabamentoId(o.id)} className={btn(acabamentoId === o.id)}>
+                <OptionChip key={o.id} onClick={() => setAcabamentoId(o.id)} active={acabamentoId === o.id} variant="neutral">
                   {o.label} — {formatCurrency(o.price)}/m²
-                </button>
+                </OptionChip>
               ))}
             </div>
           </div>
 
-          <label className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
-            <input type="checkbox" checked={laca} onChange={(e) => setLaca(e.target.checked)} className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
-            <span className="text-sm font-medium text-gray-700">
-              Laca de Proteção (UV) — {formatCurrency(config.lacaProtecaoM2)}/m²
-            </span>
-          </label>
+          <CalcCheckbox checked={laca} onCheckedChange={setLaca}>
+            Laca de Proteção (UV) — {formatCurrency(config.lacaProtecaoM2)}/m²
+          </CalcCheckbox>
 
-          <label className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
-            <input type="checkbox" checked={incluirNota} onChange={(e) => setIncluirNota(e.target.checked)} className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
-            <span className="text-sm font-medium text-gray-700">
-              Emitir com nota fiscal ({ALIQUOTA_NF.toLocaleString('pt-BR')}%)
-            </span>
-          </label>
+          <CalcCheckbox checked={incluirNota} onCheckedChange={setIncluirNota}>
+            Emitir com nota fiscal ({ALIQUOTA_NF.toLocaleString('pt-BR')}%)
+          </CalcCheckbox>
 
           <DeslocamentoField {...deslocamento} />
         </div>

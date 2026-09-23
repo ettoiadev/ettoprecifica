@@ -2,6 +2,8 @@ import React, { useMemo, useState } from 'react';
 import { Copy, PlusCircle } from 'lucide-react';
 import { formatCurrency, ALIQUOTA_NF, EtiquetasConfig } from '../../types/pricing';
 import { useCotacao } from '../../contexts/CotacaoContext';
+import { CalcCheckbox, OptionChip } from './CalcControls';
+import { Input } from '../ui/input';
 import { toast } from 'sonner';
 
 // Calculadora de Etiquetas/Rótulos — preço MANUAL, definido em Configurações
@@ -30,16 +32,6 @@ const TAMANHOS_FIXOS: { largura: number; altura: number }[] = [
 // Lotes de quantidade — atalhos que preenchem a quantidade.
 const LOTES = [100, 250, 500, 1000];
 
-const inputClass =
-  'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent';
-
-// Boxes com preenchimento pastel (tonalidade suave) para facilitar a leitura.
-const btn = (active: boolean) =>
-  `px-4 py-3 rounded-lg border text-sm font-medium transition-colors ${
-    active
-      ? 'bg-indigo-100 border-indigo-400 text-indigo-800 shadow-sm'
-      : 'bg-indigo-50/60 border-indigo-200 text-gray-700 hover:bg-indigo-100/70'
-  }`;
 
 const EtiquetasCalculator: React.FC<Props> = ({ config }) => {
   const [largura, setLargura] = useState<string>('');
@@ -113,15 +105,15 @@ Valor: ${formatCurrency(calc.final)}`;
             <div className="grid grid-cols-3 gap-4">
               <div>
                 <label className="block text-xs text-gray-500 mb-1">Largura (cm)</label>
-                <input type="number" min="0" step="0.1" value={largura} onChange={(e) => setLargura(e.target.value)} className={inputClass} placeholder="0.0" />
+                <Input type="number" min="0" step="0.1" value={largura} onChange={(e) => setLargura(e.target.value)} placeholder="0.0" />
               </div>
               <div>
                 <label className="block text-xs text-gray-500 mb-1">Altura (cm)</label>
-                <input type="number" min="0" step="0.1" value={altura} onChange={(e) => setAltura(e.target.value)} className={inputClass} placeholder="0.0" />
+                <Input type="number" min="0" step="0.1" value={altura} onChange={(e) => setAltura(e.target.value)} placeholder="0.0" />
               </div>
               <div>
                 <label className="block text-xs text-gray-500 mb-1">Quantidade</label>
-                <input type="number" min="1" step="1" value={quantidade} onChange={(e) => setQuantidade(e.target.value)} className={inputClass} placeholder="0" />
+                <Input type="number" min="1" step="1" value={quantidade} onChange={(e) => setQuantidade(e.target.value)} placeholder="0" />
               </div>
             </div>
           </div>
@@ -130,14 +122,9 @@ Valor: ${formatCurrency(calc.final)}`;
             <label className="block text-sm font-medium text-gray-700 mb-3">Tamanhos (atalho)</label>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {TAMANHOS_FIXOS.map((t) => (
-                <button
-                  key={`${t.largura}x${t.altura}`}
-                  type="button"
-                  onClick={() => { setLargura(String(t.largura)); setAltura(String(t.altura)); }}
-                  className={btn(tamanhoAtivo(t))}
-                >
+                <OptionChip key={`${t.largura}x${t.altura}`} onClick={() => { setLargura(String(t.largura)); setAltura(String(t.altura)); }} active={tamanhoAtivo(t)} variant="indigo">
                   {t.largura}×{t.altura}cm
-                </button>
+                </OptionChip>
               ))}
             </div>
           </div>
@@ -146,19 +133,16 @@ Valor: ${formatCurrency(calc.final)}`;
             <label className="block text-sm font-medium text-gray-700 mb-3">Quantidade (lote, atalho)</label>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {LOTES.map((l) => (
-                <button key={l} type="button" onClick={() => setQuantidade(String(l))} className={btn(qtd === l)}>
+                <OptionChip key={l} onClick={() => setQuantidade(String(l))} active={qtd === l} variant="indigo">
                   {l} un
-                </button>
+                </OptionChip>
               ))}
             </div>
           </div>
 
-          <label className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
-            <input type="checkbox" checked={incluirNota} onChange={(e) => setIncluirNota(e.target.checked)} className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
-            <span className="text-sm font-medium text-gray-700">
-              Emitir com nota fiscal ({ALIQUOTA_NF.toLocaleString('pt-BR')}%)
-            </span>
-          </label>
+          <CalcCheckbox checked={incluirNota} onCheckedChange={setIncluirNota}>
+            Emitir com nota fiscal ({ALIQUOTA_NF.toLocaleString('pt-BR')}%)
+          </CalcCheckbox>
         </div>
 
         <div className="bg-gray-50 rounded-xl border border-gray-200 p-6">

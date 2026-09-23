@@ -190,13 +190,31 @@ O que ainda não foi tocado (etapas seguintes da migração gradual, ver
 - Ícones 100% Lucide, sem mistura de biblioteca.
 - Espaçamento já majoritariamente na escala de 4px.
 
-### 6.3 Duplicação a resolver (gradual, não nesta etapa)
+### 6.3 Duplicação nas calculadoras — **etapa 2 resolvida em 23/09/26**
 
-Cada calculadora define localmente sua própria constante `inputClass` (22
-arquivos) e função `btn(active)` (15 arquivos) em vez de usar `Input` e
-`Button`/`ToggleGroup` do shadcn/ui, e usa `<input type="checkbox">` cru em
-vez do componente `Checkbox` do shadcn (que está instalado e nunca é
-importado). Ver detalhamento arquivo-a-arquivo em `UI_COMPONENT_INVENTORY.md`.
+O que era 22 cópias de `inputClass` + 15 de `btn(active)` + 20 checkboxes crus
+virou `src/components/calculators/CalcControls.tsx` (`OptionChip`,
+`CalcCheckbox`, `selectClass`) e o `Input` do shadcn usado direto. Efeito
+colateral bom: o campo da calculadora agora tem a mesma altura e raio do campo
+de Configurações (antes eram visivelmente diferentes). Detalhes, contagens e o
+que ficou de fora em `UI_COMPONENT_INVENTORY.md §3`.
+
+**Ao criar uma calculadora nova**: usar `Input` (shadcn), `OptionChip` e
+`CalcCheckbox` — nunca redefinir uma classe de campo ou um `btn()` local.
+
+### 6.4 O que ainda não foi migrado (próximas etapas)
+
+- Botões de ação das calculadoras ("Adicionar à cotação" / "Copiar orçamento")
+  ainda são `<button>` cru com classe inline — deveriam ser o `Button` do
+  shadcn (`variant="outline"` e `default`).
+- `<select>` nativo (Vidro, Cavaletes, Letra Caixa, Recorte) usa `selectClass`
+  para parecer com o `Input`; migrar para o `Select` do shadcn muda API e
+  comportamento do dropdown — etapa própria.
+- Título duplicado: `ModernCalculatorWrapper` mostra o título da aba e algumas
+  calculadoras repetem o mesmo texto no próprio `<h2>` (ex.: "Calculadora de
+  Cavaletes" aparece duas vezes). Decidir qual dos dois fica.
+- Componentes mortos (`UI_COMPONENT_INVENTORY.md §4`) não foram migrados de
+  propósito.
 
 ## 7. Regra de decisão
 

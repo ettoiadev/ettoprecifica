@@ -5,6 +5,8 @@ import { supabase } from '../../lib/supabase/client';
 import { useCotacao } from '../../contexts/CotacaoContext';
 import { useDeslocamentoCep } from '../../hooks/useDeslocamentoCep';
 import DeslocamentoField from './DeslocamentoField';
+import { CalcCheckbox, selectClass } from './CalcControls';
+import { Input } from '../ui/input';
 import { toast } from 'sonner';
 
 // Painel de Adesivo de RECORTE precificado pelo MOTOR da skill (calc_adesivo_recorte
@@ -61,8 +63,6 @@ const USO_LABEL: Record<string, string> = {
 
 const num = (v: number | string | undefined | null): number => Number(v ?? 0);
 
-const inputClass =
-  'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent';
 
 const AdesivoRecorteEngineCalculator: React.FC<Props> = ({ cores, titulo }) => {
   const [materiais, setMateriais] = useState<Material[]>([]);
@@ -226,7 +226,7 @@ Valor: ${formatCurrency(precos.final)}`;
           <label htmlFor="material-rec" className="block text-sm font-medium text-gray-700 mb-3">
             {cores === 2 ? 'Material (1ª cor)' : 'Material'}
           </label>
-          <select id="material-rec" value={produto} onChange={(e) => setProduto(e.target.value)} className={inputClass}>
+          <select id="material-rec" value={produto} onChange={(e) => setProduto(e.target.value)} className={selectClass}>
             {materiais.length === 0 && <option value="">Carregando…</option>}
             {Object.entries(materiaisPorUso).map(([uso, itens]) => (
               <optgroup key={uso} label={USO_LABEL[uso] ?? uso}>
@@ -244,7 +244,7 @@ Valor: ${formatCurrency(precos.final)}`;
               <label htmlFor="material-cor2-rec" className="block text-sm font-medium text-gray-700 mb-3">
                 Material da 2ª cor
               </label>
-              <select id="material-cor2-rec" value={produtoCor2} onChange={(e) => setProdutoCor2(e.target.value)} className={inputClass}>
+              <select id="material-cor2-rec" value={produtoCor2} onChange={(e) => setProdutoCor2(e.target.value)} className={selectClass}>
                 <option value="">Mesma da 1ª cor</option>
                 {Object.entries(materiaisPorUso).map(([uso, itens]) => (
                   <optgroup key={uso} label={USO_LABEL[uso] ?? uso}>
@@ -261,7 +261,7 @@ Valor: ${formatCurrency(precos.final)}`;
                 Área da 2ª cor
               </label>
               <div className="flex items-center gap-2">
-                <input
+                <Input
                   id="percentual-cor2-rec"
                   type="number"
                   min="1"
@@ -272,7 +272,7 @@ Valor: ${formatCurrency(precos.final)}`;
                     const v = parseInt(e.target.value, 10);
                     setPercentualCor2(Number.isFinite(v) ? Math.min(100, Math.max(1, v)) : 90);
                   }}
-                  className="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-24"
                 />
                 <span className="text-sm text-gray-500">
                   % da área da 1ª cor (cada cor gasta quase o mesmo de material). Inclui registro fixo.
@@ -310,7 +310,7 @@ Valor: ${formatCurrency(precos.final)}`;
             <label htmlFor="metros-lineares-rec" className="block text-sm font-medium text-gray-700 mb-3">
               Metros lineares (m)
             </label>
-            <input id="metros-lineares-rec" type="number" min="0" step="0.01" value={metrosLineares} onChange={(e) => setMetrosLineares(e.target.value)} className={inputClass} placeholder="0.00" />
+            <Input id="metros-lineares-rec" type="number" min="0" step="0.01" value={metrosLineares} onChange={(e) => setMetrosLineares(e.target.value)} placeholder="0.00" />
             <p className="text-xs text-gray-500 mt-2">
               {larguraRolo > 0
                 ? `Rolo de ${larguraRolo.toFixed(2).replace('.', ',')} m de largura${metrosLinearesNum > 0 ? ` — ${metrosLinearesNum.toFixed(2)} m lineares = ${(metrosLinearesNum * larguraRolo).toFixed(3)} m²` : ''}.`
@@ -324,11 +324,11 @@ Valor: ${formatCurrency(precos.final)}`;
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs text-gray-500 mb-1">Largura (m)</label>
-                  <input type="number" min="0" step="0.01" value={largura} onChange={(e) => setLargura(e.target.value)} className={inputClass} placeholder="0.00" />
+                  <Input type="number" min="0" step="0.01" value={largura} onChange={(e) => setLargura(e.target.value)} placeholder="0.00" />
                 </div>
                 <div>
                   <label className="block text-xs text-gray-500 mb-1">Altura (m)</label>
-                  <input type="number" min="0" step="0.01" value={altura} onChange={(e) => setAltura(e.target.value)} className={inputClass} placeholder="0.00" />
+                  <Input type="number" min="0" step="0.01" value={altura} onChange={(e) => setAltura(e.target.value)} placeholder="0.00" />
                 </div>
               </div>
             </div>
@@ -338,7 +338,7 @@ Valor: ${formatCurrency(precos.final)}`;
         <div>
           <label htmlFor="quantidade-rec" className="block text-sm font-medium text-gray-700 mb-3">Quantidade</label>
           <div className="flex items-center gap-2">
-            <input
+            <Input
               id="quantidade-rec"
               type="number"
               min="1"
@@ -348,24 +348,23 @@ Valor: ${formatCurrency(precos.final)}`;
                 const v = parseInt(e.target.value, 10);
                 setQuantidade(Number.isFinite(v) && v > 0 ? v : 1);
               }}
-              className="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-24"
             />
             <span className="text-sm text-gray-500">unidades iguais — soma a área total (mínimo e registro valem uma vez).</span>
           </div>
         </div>
 
-        <label className="flex items-start gap-3 cursor-pointer p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
-          <input type="checkbox" checked={comMascara} onChange={(e) => setComMascara(e.target.checked)} className="mt-0.5 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
-          <span>
-            <span className="block text-sm font-medium text-gray-700">Máscara de transferência (papel)</span>
-            <span className="block text-xs text-gray-500">Marque quando o recorte for de aplicação (letras/logos que precisam de máscara).</span>
-          </span>
-        </label>
+        <CalcCheckbox
+          checked={comMascara}
+          onCheckedChange={setComMascara}
+          description="Marque quando o recorte for de aplicação (letras/logos que precisam de máscara)."
+        >
+          Máscara de transferência (papel)
+        </CalcCheckbox>
 
-        <label className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
-          <input type="checkbox" checked={incluirNota} onChange={(e) => setIncluirNota(e.target.checked)} className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
-          <span className="text-sm font-medium text-gray-700">Emitir com nota fiscal</span>
-        </label>
+        <CalcCheckbox checked={incluirNota} onCheckedChange={setIncluirNota}>
+          Emitir com nota fiscal
+        </CalcCheckbox>
 
         <DeslocamentoField {...deslocamento} />
       </div>

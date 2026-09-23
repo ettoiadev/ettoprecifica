@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { AdesivoConfig, EtiquetasConfig } from '../../types/pricing';
 import AdesivoManualCalculator from './AdesivoManualCalculator';
+import { OptionChip } from './CalcControls';
 import EtiquetasCalculator from './EtiquetasCalculator';
 
 // Aba unificada "Adesivos": um seletor de tipo no topo escolhe entre
@@ -16,13 +17,6 @@ interface Props {
   etiquetasConfig: EtiquetasConfig;
 }
 
-const btn = (active: boolean) =>
-  `px-4 py-3 rounded-lg border text-sm font-medium transition-colors ${
-    active
-      ? 'bg-blue-50 border-blue-300 text-blue-700'
-      : 'border-gray-300 text-gray-700 hover:bg-gray-50'
-  }`;
-
 const AdesivosCalculator: React.FC<Props> = ({ config, etiquetasConfig }) => {
   const [tipoAdesivo, setTipoAdesivo] = useState<TipoAdesivo>('adesivo');
 
@@ -31,12 +25,12 @@ const AdesivosCalculator: React.FC<Props> = ({ config, etiquetasConfig }) => {
       <div className="px-6 pt-6">
         <label className="block text-sm font-medium text-gray-700 mb-3">Tipo</label>
         <div className="grid grid-cols-2 gap-3 max-w-sm">
-          <button type="button" onClick={() => setTipoAdesivo('adesivo')} className={btn(tipoAdesivo === 'adesivo')}>
+          <OptionChip onClick={() => setTipoAdesivo('adesivo')} active={tipoAdesivo === 'adesivo'} variant="neutral">
             Adesivos
-          </button>
-          <button type="button" onClick={() => setTipoAdesivo('etiquetas')} className={btn(tipoAdesivo === 'etiquetas')}>
+          </OptionChip>
+          <OptionChip onClick={() => setTipoAdesivo('etiquetas')} active={tipoAdesivo === 'etiquetas'} variant="neutral">
             Etiquetas
-          </button>
+          </OptionChip>
         </div>
       </div>
 

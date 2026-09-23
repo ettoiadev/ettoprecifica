@@ -27,6 +27,13 @@ vite.config.ts.timestamp-*.mjs
 /reference-ui/*
 !/reference-ui/README.md
 
+# Preview de UI só para desenvolvimento (renderiza as calculadoras sem login,
+# para conferir mudanças visuais no navegador). Nunca entra em produção —
+# `index.html` continua sendo o único entry real.
+/dev-preview.html
+/src/dev-preview.tsx
+/.playwright/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
