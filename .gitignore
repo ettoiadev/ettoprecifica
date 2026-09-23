@@ -20,6 +20,13 @@ vite.config.ts.timestamp-*.mjs
 .env.*
 !.env.example
 
+# Referência visual externa (OrbynAdmin) — clonada localmente para consulta de
+# padrões de UI, nunca importada pela aplicação. Não versionamos o clone em si
+# (código de terceiros, MIT, não é nosso para carregar no histórico do repo) —
+# só a documentação que escrevemos a partir dele, em /docs. Ver reference-ui/README.md.
+/reference-ui/*
+!/reference-ui/README.md
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
