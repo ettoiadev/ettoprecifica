@@ -202,19 +202,34 @@ que ficou de fora em `UI_COMPONENT_INVENTORY.md §3`.
 **Ao criar uma calculadora nova**: usar `Input` (shadcn), `OptionChip` e
 `CalcCheckbox` — nunca redefinir uma classe de campo ou um `btn()` local.
 
-### 6.4 O que ainda não foi migrado (próximas etapas)
+### 6.4 Etapa 3 — botões de ação e título duplicado (23/09/26, concluída)
 
-- Botões de ação das calculadoras ("Adicionar à cotação" / "Copiar orçamento")
-  ainda são `<button>` cru com classe inline — deveriam ser o `Button` do
-  shadcn (`variant="outline"` e `default`).
-- `<select>` nativo (Vidro, Cavaletes, Letra Caixa, Recorte) usa `selectClass`
-  para parecer com o `Input`; migrar para o `Select` do shadcn muda API e
-  comportamento do dropdown — etapa própria.
-- Título duplicado: `ModernCalculatorWrapper` mostra o título da aba e algumas
-  calculadoras repetem o mesmo texto no próprio `<h2>` (ex.: "Calculadora de
-  Cavaletes" aparece duas vezes). Decidir qual dos dois fica.
-- Componentes mortos (`UI_COMPONENT_INVENTORY.md §4`) não foram migrados de
-  propósito.
+- **Botões de ação** ("Adicionar à cotação" / "Copiar orçamento") eram
+  `<button>` cru com classe inline em 14 calculadoras → viraram o `Button` do
+  shadcn: `variant="outline"` (secundária) e `default` (primária), ambos
+  `className="w-full"`. Efeito visual: a ação secundária deixou de ter borda
+  azul e passou a ser neutra — cor agora só na ação principal, como manda o
+  §3.2, e igual ao par Cancelar/Salvar de Configurações.
+- **Título duplicado** resolvido: 9 calculadoras repetiam no próprio `<h2>` o
+  mesmo texto que `ModernCalculatorWrapper` já mostrava como título da aba
+  (ex.: "Calculadora de Cavaletes" aparecia duas vezes). O `<h2>` duplicado
+  saiu; a descrição ficou. Onde o `<h2>` nomeia um **subtipo** ("Placa em PS",
+  "Placa em ACM", "Adesivos", "Calculadora de Etiquetas / Rótulos") ele
+  **permanece** — ali é título de seção sob o título da página, hierarquia
+  legítima, não duplicação.
+
+### 6.5 O que segue sem migrar (decisão consciente)
+
+- **`<select>` nativo continua nativo** (Vidro, Cavaletes, Letra Caixa,
+  Recorte). Já parece um `Input` via `selectClass`, então a consistência
+  visual — que era o objetivo — já está resolvida. Trocar pelo `Select` do
+  shadcn (Radix) custaria uma mudança de API em 4 telas e **tiraria o seletor
+  nativo do sistema operacional no celular**, que é melhor para quem usa em
+  tablet/celular no balcão. Pelo critério CONSISTÊNCIA > LEGIBILIDADE >
+  PRODUTIVIDADE > ESTÉTICA, não compensa. Só reavaliar se aparecer uma
+  necessidade real (busca dentro do select, opção com ícone/descrição rica).
+- **Componentes mortos** (`UI_COMPONENT_INVENTORY.md §4`) não foram migrados —
+  são histórico, mexer neles só aumentaria o diff sem efeito em produção.
 
 ## 7. Regra de decisão
 

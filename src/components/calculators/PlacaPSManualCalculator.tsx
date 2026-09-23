@@ -4,6 +4,7 @@ import { formatCurrency, ALIQUOTA_NF, PlacaPSConfig, ProductVariation } from '..
 import { useCotacao } from '../../contexts/CotacaoContext';
 import { Input } from '../ui/input';
 import { CalcCheckbox, OptionChip } from './CalcControls';
+import { Button } from '../ui/button';
 import { toast } from 'sonner';
 
 // Placa em PS com preço MANUAL, definido em Configurações (config.placaPS), NÃO
@@ -154,12 +155,12 @@ Valor: ${formatCurrency(calc.final)}`;
               </div>
 
               <div className="space-y-2">
-                <button type="button" onClick={handleAddCotacao} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-blue-600 text-blue-600 text-sm font-medium hover:bg-blue-50 transition-colors">
+                <Button type="button" variant="outline" onClick={handleAddCotacao} className="w-full">
                   <PlusCircle className="w-4 h-4" /> Adicionar à cotação
-                </button>
-                <button type="button" onClick={handleCopy} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors">
+                </Button>
+                <Button type="button" onClick={handleCopy} className="w-full">
                   <Copy className="w-4 h-4" /> Copiar orçamento
-                </button>
+                </Button>
               </div>
             </div>
           ) : null}

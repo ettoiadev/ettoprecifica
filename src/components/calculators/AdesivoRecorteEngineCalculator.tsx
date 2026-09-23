@@ -5,8 +5,9 @@ import { supabase } from '../../lib/supabase/client';
 import { useCotacao } from '../../contexts/CotacaoContext';
 import { useDeslocamentoCep } from '../../hooks/useDeslocamentoCep';
 import DeslocamentoField from './DeslocamentoField';
-import { CalcCheckbox, selectClass } from './CalcControls';
+import { CalcCheckbox, OptionChip, selectClass } from './CalcControls';
 import { Input } from '../ui/input';
+import { Button } from '../ui/button';
 import { toast } from 'sonner';
 
 // Painel de Adesivo de RECORTE precificado pelo MOTOR da skill (calc_adesivo_recorte
@@ -289,18 +290,13 @@ Valor: ${formatCurrency(precos.final)}`;
               { value: 'medida', label: 'Por medida' },
               { value: 'linear', label: 'Medida linear (m)' },
             ] as const).map((mo) => (
-              <button
+              <OptionChip
                 key={mo.value}
-                type="button"
+                active={modo === mo.value}
                 onClick={() => setModo(mo.value)}
-                className={`px-4 py-3 rounded-lg border text-sm font-medium transition-colors ${
-                  modo === mo.value
-                    ? 'bg-blue-50 border-blue-300 text-blue-700'
-                    : 'border-gray-300 text-gray-700 hover:bg-gray-50'
-                }`}
               >
                 {mo.label}
-              </button>
+              </OptionChip>
             ))}
           </div>
         </div>
@@ -448,12 +444,12 @@ Valor: ${formatCurrency(precos.final)}`;
               </div>
 
               <div className="space-y-2">
-                <button type="button" onClick={handleAddCotacao} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-blue-600 text-blue-600 text-sm font-medium hover:bg-blue-50 transition-colors">
+                <Button type="button" variant="outline" onClick={handleAddCotacao} className="w-full">
                   <PlusCircle className="w-4 h-4" /> Adicionar à cotação
-                </button>
-                <button type="button" onClick={handleCopy} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors">
+                </Button>
+                <Button type="button" onClick={handleCopy} className="w-full">
                   <Copy className="w-4 h-4" /> Copiar orçamento
-                </button>
+                </Button>
               </div>
             </div>
           )

@@ -14,7 +14,7 @@ fora de `src/components/ui/` em si):
 
 | Componente | Usos | Onde | Status |
 |---|---|---|---|
-| `button` | 5 | `ModernHeader`, `SettingsHeader`, `Auth`, `ProtectedRoute`, `CustomVariationsManager` | **Usar sempre** para botões de ação. Nas calculadoras, botão de *seleção* é o `OptionChip` (§3); os botões "Adicionar à cotação"/"Copiar orçamento" ainda são `<button>` cru — candidatos à próxima etapa. |
+| `button` | 19 | Todas as calculadoras (ações "Adicionar à cotação"/"Copiar orçamento") + `ModernHeader`, `SettingsHeader`, `Auth`, `ProtectedRoute`, `CustomVariationsManager` | **Usar sempre** para botão de ação: `variant="outline"` = secundária, `default` = primária. Botão de *seleção* (tipo/material/modo) não é este — é o `OptionChip` (§3). |
 | `input` | 17 | Todas as calculadoras (via `Input` direto) + `SettingsHeader`, `Auth`, `CustomVariationsManager` | Padrão desde 23/09/26 — ver §3. |
 | `card` | 4 | `ModernCalculatorWrapper`, `ConfigSection`, OrbynAdmin-style summary (nenhum hoje) | Base de painéis fora das calculadoras. |
 | `label` | 3 | `CustomVariationsManager`, formulários de auth | — |

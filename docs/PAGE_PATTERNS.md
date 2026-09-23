@@ -14,7 +14,9 @@ Estrutura real, já convergida em ~20 componentes (`src/components/calculators/*
 
 ```
 Page Header
-  título (h2, text-2xl font-bold text-gray-900)
+  título — vem do `ModernCalculatorWrapper` (mapa em Index.tsx), NÃO repetir
+    um <h2> com o mesmo texto dentro da calculadora. Um <h2> próprio só quando
+    nomeia um SUBTIPO dentro da aba (ex.: "Placa em PS" sob "Calculadora de Placas").
   descrição curta (p, text-gray-600) — 1-2 frases do que a calculadora faz
 
 Grid 2 colunas (lg:grid-cols-2, gap-8) — empilha em 1 coluna abaixo de lg
@@ -38,10 +40,15 @@ Grid 2 colunas (lg:grid-cols-2, gap-8) — empilha em 1 coluna abaixo de lg
       nota de NF incluída/desconto (text-xs, cinza ou âmbar)
       nota de unitário quando qtd > 1 (text-xs text-green-600)
     Composição/breakdown (linhas label: valor, text-sm text-gray-600)
-    Ações (space-y-2, botões w-full)
-      "Adicionar à cotação" — outline, borda azul
-      "Copiar orçamento" — primário, bg-blue-600
+    Ações (space-y-2, `Button` do shadcn, ambos w-full)
+      "Adicionar à cotação" — <Button variant="outline">  (secundária, neutra)
+      "Copiar orçamento"   — <Button>                     (primária, azul)
 ```
+
+Controles a usar (nunca redefinir classe local — ver `UI_COMPONENT_INVENTORY.md §3`):
+`Input` (shadcn) para campo numérico/texto · `OptionChip` para escolher
+tipo/material/modo · `CalcCheckbox` para opção liga/desliga · `selectClass`
+para `<select>` nativo · `Button` para ação.
 
 Regras fixas deste padrão:
 - O painel de orçamento nunca cabe em cards separados por informação — é **um**

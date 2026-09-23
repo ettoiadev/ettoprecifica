@@ -6,6 +6,7 @@ import { useCotacao } from '../../contexts/CotacaoContext';
 import { useDeslocamentoCep } from '../../hooks/useDeslocamentoCep';
 import DeslocamentoField from './DeslocamentoField';
 import { CalcCheckbox, OptionChip, selectClass } from './CalcControls';
+import { Button } from '../ui/button';
 import { toast } from 'sonner';
 
 // Calculadora de Cavaletes — preço do motor da skill (Edge Function
@@ -169,7 +170,6 @@ Valor: ${formatCurrency(precos.final)}`;
   return (
     <div className="p-6">
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Calculadora de Cavaletes</h2>
         <p className="text-gray-600">
           Estrutura em metalon+lona ou em madeira. Preço por tamanho fechado, do motor de
           precificação.
@@ -300,20 +300,12 @@ Valor: ${formatCurrency(precos.final)}`;
                   </div>
 
                   <div className="space-y-2">
-                    <button
-                      type="button"
-                      onClick={handleAddCotacao}
-                      className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-blue-600 text-blue-600 text-sm font-medium hover:bg-blue-50 transition-colors"
-                    >
+                    <Button type="button" variant="outline" onClick={handleAddCotacao} className="w-full">
                       <PlusCircle className="w-4 h-4" /> Adicionar à cotação
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleCopy}
-                      className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors"
-                    >
+                    </Button>
+                    <Button type="button" onClick={handleCopy} className="w-full">
                       <Copy className="w-4 h-4" /> Copiar orçamento
-                    </button>
+                    </Button>
                   </div>
                 </>
               )}
