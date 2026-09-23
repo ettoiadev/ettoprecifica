@@ -13,14 +13,14 @@ interface SettingsHeaderProps {
 
 const SettingsHeader: React.FC<SettingsHeaderProps> = ({ onSave, onClose, search, onSearchChange }) => {
   return (
-    <div className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/50 shadow-lg">
+    <div className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/50 shadow-sm">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col gap-4 py-5 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center space-x-3">
-            <div className="p-2 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 shadow-lg">
-              <Settings className="w-6 h-6 text-white" />
+            <div className="p-2 rounded-lg bg-primary">
+              <Settings className="w-6 h-6 text-primary-foreground" />
             </div>
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
+            <h1 className="text-2xl font-bold text-gray-900">
               Configurações
             </h1>
           </div>
@@ -43,7 +43,7 @@ const SettingsHeader: React.FC<SettingsHeaderProps> = ({ onSave, onClose, search
             <Button
               onClick={onSave}
               aria-label="Salvar configurações"
-              className="shrink-0 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg hover:shadow-xl"
+              className="shrink-0"
             >
               <Save className="w-4 h-4 md:mr-2" />
               <span className="hidden md:inline">Salvar</span>

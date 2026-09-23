@@ -117,32 +117,31 @@ de `Index.tsx`/`AdesivosCalculator.tsx`/`PlacasCalculator.tsx`:
 Nenhum desses arquivos deve ser usado como referência de padrão ao criar algo
 novo — são histórico, não exemplo.
 
-## 5. CSS utilitário paralelo (`src/index.css`)
+## 5. CSS utilitário paralelo (`src/index.css`) — **etapa 1 da migração já aplicada (23/09/26)**
 
-`index.css` define uma camada própria de "design tokens" em classes
-utilitárias (`@layer utilities`/`@layer base`), majoritariamente **não usada**
-pelas calculadoras (que preferem Tailwind cru repetido — ver §3):
+`index.css` tinha uma camada própria de "design tokens" em classes
+utilitárias, majoritariamente não usada pelas calculadoras (que preferem
+Tailwind cru repetido — ver §3). A etapa 1 da migração gradual (chrome:
+`ModernHeader`, `ModernTabs`, `ModernCalculatorWrapper`, `SettingsHeader`,
+`SettingsLayout`, `ConfigSection`, `Index.tsx`) já removeu os gradientes,
+`backdrop-blur`/sombra pesada em card estático e os blobs animados de fundo
+que essas classes serviam, e a limpeza do CSS órfão resultante foi feita
+junto (nenhuma tela nova foi tocada além dessas).
 
-| Classe | Definição | Uso real | Veredito |
-|---|---|---|---|
-| `.gradient-text` | Texto em gradiente azul→roxo | `ModernCalculatorWrapper` (título de cada calculadora, centralizado) | Remover do uso ativo na migração gradual — título vira `text-gray-900` sólido (`DESIGN_SYSTEM.md §6.1`). |
-| `.gradient-decorator` | Barra de gradiente azul→roxo | `ModernCalculatorWrapper` (decoração sob o título) | Remover. |
-| `.card-backdrop` | `bg-card/80 backdrop-blur-xl ... shadow-xl hover:shadow-2xl` | `ConfigSection` | Trocar por `Card` padrão (`shadow-sm`, sem blur) na migração gradual. |
-| `.text-title` / `.text-subtitle` / `.text-body` / `.text-caption` | Hierarquia de texto genérica | **Não encontrado em uso fora de `index.css`** | Camada paralela à tabela de tipografia real (`DESIGN_SYSTEM.md §4`, que documenta o padrão que as calculadoras já seguem de fato). Não usar nenhuma das duas onde já existe a outra — decidir qual fica é trabalho da migração gradual, não desta etapa. |
-| `.form-label`, `.form-description`, `.section-header` | Idem, específicas de formulário | Não encontrado em uso | Idem. |
-| `.input-enhanced`, `.checkbox-enhanced`, `.separator-enhanced`, `.button-hover-light` | Estilos "enhanced" de form | Não encontrado em uso | Idem. |
-| `.currency-value`, `.budget-price` | Cor azul fixa `rgb(0, 102, 229)` para valores monetários | Não encontrado em uso fora de `index.css` — as calculadoras usam `text-blue-600`/`text-primary` direto | Redundante com `--primary`. Considerar remover na limpeza. |
-| `.card-elevated`, `.summary-box`, `.bg-subtle` | Variações de card/fundo | Não encontrado em uso | Idem. |
-| `.elevation-1/2/3` | Sombras com tinta azul, intensidade crescente | Não encontrado em uso fora de `.card-elevated` (também não usada) | Candidato a remoção — nenhuma calculadora usa. |
-| `.glass` | Glassmorphism (`bg-white/20 backdrop-blur-xl`) | **Zero uso em todo o `src/`** | CSS morto — remover na limpeza (nunca usar em telas novas, mesmo antes de remover). |
-| `.animate-float`, `.animate-glow` (+ `@keyframes float`, `@keyframes glow`) | Animações decorativas | **Zero uso em todo o `src/`** | CSS morto — remover. |
-| `.focus-ring`, `.interactive-hover`, `.interactive-pressed` | Utilitários de interação | Não encontrado em uso | Candidatos a remoção ou a adoção real — decidir na migração gradual, não agora. |
+| Classe | Estava em uso? | Ação tomada |
+|---|---|---|
+| `.gradient-text`, `.gradient-decorator` | Só em `ModernCalculatorWrapper` (título centralizado + barra decorativa) | **Removidas do componente e do CSS.** Título agora é `text-gray-900` sólido, alinhado à esquerda. |
+| `.card-backdrop` | Só em `ConfigSection` | **Removida do componente e do CSS.** `Card` volta ao padrão shadcn (`shadow-sm`, sem blur). |
+| `.text-title` | Sim — é dependência de `.form-label` (`@apply text-title ...`), usado em `BudgetObservationsSettings.tsx` | **Mantida** (não é morta; a auditoria inicial não tinha cruzado a dependência via `@apply`). |
+| `.form-label` | Sim — `BudgetObservationsSettings.tsx` (3×) | **Mantida.** |
+| `.input-enhanced` | Sim — `BudgetObservationsSettings.tsx` (3×) e `SettingsPanel.tsx` (select mobile) | **Mantida.** |
+| `.text-subtitle`, `.text-body`, `.text-caption`, `.form-description`, `.section-header`, `.checkbox-enhanced`, `.separator-enhanced`, `.button-hover-light`, `.currency-value`, `.budget-price` (+ variável `--budget-price`), `.card-elevated`, `.summary-box`, `.bg-subtle`, `.elevation-1/2/3`, `.glass`, `.animate-float`/`.animate-glow` (+ `@keyframes`), `.focus-ring`, `.interactive-hover`, `.interactive-pressed` | Zero uso confirmado em `src/` | **Removidas do `index.css`.** CSS gerado caiu de 76,00kB para 68,70kB de código morto a menos. |
 
-Diagnóstico: existe uma tentativa anterior de sistema de design em CSS puro
-(provavelmente do scaffold inicial) que nunca foi de fato adotada pelo código
-que veio depois. Os arquivos `docs/DESIGN_SYSTEM.md` etc. desta entrega
-substituem essa tentativa como fonte da verdade — a limpeza do CSS morto é
-trabalho da migração gradual, não desta etapa (ver relatório de auditoria).
+`index.css` hoje só define os tokens do tema (`:root`), o reset base, o
+`scrollbar-hide` e as 3 classes acima que sobreviveram por terem consumidor
+real. Se precisar de uma dessas variações de texto/card no futuro, adicionar
+de volta com um caso de uso concreto, não "para manter simetria" com o que
+existia antes.
 
 ## 6. Como usar este inventário
 

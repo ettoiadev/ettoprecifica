@@ -106,9 +106,9 @@ const ConfigSection = React.memo<ConfigSectionProps>(({ title, section, fields, 
   const sectionListManagers = LIST_MANAGERS[section] || [];
 
   return (
-    <Card className="bg-card/80 backdrop-blur-xl border-border/50 shadow-lg hover:shadow-xl transition-all duration-300">
+    <Card>
       <CardHeader className="pb-4">
-        <CardTitle className="text-xl font-semibold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
+        <CardTitle className="text-xl font-semibold text-gray-900">
           {title}
         </CardTitle>
       </CardHeader>

@@ -18,16 +18,16 @@ const ModernHeader: React.FC<ModernHeaderProps> = ({ onSettingsClick }) => {
   };
 
   return (
-    <div className="sticky top-0 z-50 bg-background/90 backdrop-blur-xl border-b border-border shadow-lg">
+    <div className="sticky top-0 z-50 bg-background/90 backdrop-blur-xl border-b border-border shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center py-4">
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-3">
-              <div className="p-2 rounded-xl bg-gradient-to-br from-primary to-primary/80 shadow-lg">
+              <div className="p-2 rounded-lg bg-primary">
                 <Calculator className="w-6 h-6 text-primary-foreground" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                <h1 className="text-2xl font-bold text-gray-900">
                   Precificação CV
                 </h1>
                 {currentBudget && (

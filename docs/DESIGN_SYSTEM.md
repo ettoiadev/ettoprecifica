@@ -148,30 +148,36 @@ Esta seção existe para não fingir que o app já segue este Design System — 
 ainda não segue, em partes visíveis. É o material de trabalho da migração
 gradual (ver relatório entregue junto com esta fundação).
 
-### 6.1 O que hoje foge do alvo (não replicar em telas novas)
+### 6.1 O que fugia do alvo — **etapa 1 já corrigida em 23/09/26**
 
-- **Gradientes decorativos**: títulos em `bg-gradient-to-r ... bg-clip-text
-  text-transparent` (`ModernHeader`, `SettingsHeader`, `ModernCalculatorWrapper`
-  via `.gradient-text`, `ConfigSection`), botão "Salvar" com gradiente azul→roxo
-  (`SettingsHeader`), chip de ícone com gradiente (`ModernHeader`,
-  `SettingsHeader`), 11 gradientes de 2 cores diferentes por aba em `ModernTabs`.
-- **Glassmorphism / backdrop-blur**: `backdrop-blur-xl` em headers sticky e na
-  classe utilitária `.card-backdrop` (`bg-card/80 backdrop-blur-xl ... shadow-xl
-  hover:shadow-2xl`), usada nos cards de `ConfigSection`.
-- **Blobs decorativos animados**: `SettingsLayout` e `Index.tsx` têm cada um
-  dois círculos `blur-3xl animate-pulse` fixos de fundo, sem função — puro
-  enfeite de landing page.
-- **Título centralizado com barra decorativa**: `ModernCalculatorWrapper`
-  centraliza o `<h2>` e desenha uma barrinha de gradiente embaixo
-  (`gradient-decorator`). Isso é ornamento, não hierarquia.
-- **CSS morto/paralelo**: `.glass`, `.animate-float`, `.animate-glow` estão
-  definidos em `index.css` e **não são usados em nenhum lugar** — sobra de
-  template. Não usar; candidatos a remoção (ver inventário).
+A lista abaixo descrevia o estado do "chrome" (`Modern*`, `Settings*`,
+`Index.tsx`) antes da primeira etapa de migração gradual. Já foi resolvida —
+fica registrada como exemplo do que **não replicar** em telas novas, e como
+histórico do porquê a etapa 1 existiu:
 
-Nenhum desses pontos é "culpa" de uma tela específica — são resquícios do
-scaffold inicial (Lovable/shadcn "modern SaaS" starter) que sobreviveram nas
-telas de chrome (`Modern*`, `Settings*`) enquanto as ~20 calculadoras, escritas
-depois, já convergiram para algo mais sóbrio por conta própria.
+- ~~Gradientes decorativos em título/botão/chip de ícone (`ModernHeader`,
+  `SettingsHeader`, `ModernCalculatorWrapper` via `.gradient-text`,
+  `ConfigSection`), 11 gradientes de 2 cores diferentes por aba em
+  `ModernTabs`.~~ → títulos agora `text-gray-900` sólido; chips de ícone
+  `bg-primary` sólido; `ModernTabs` usa um único estado ativo (`bg-primary`),
+  sem cor por aba.
+- ~~`.card-backdrop` (`backdrop-blur-xl ... shadow-xl hover:shadow-2xl`) nos
+  cards de `ConfigSection`.~~ → `Card` padrão shadcn (`shadow-sm`).
+- ~~Blobs decorativos animados (`blur-3xl animate-pulse`) em `SettingsLayout`
+  e `Index.tsx`.~~ → removidos, fundo `bg-gray-50` plano.
+- ~~Título centralizado com barra decorativa em `ModernCalculatorWrapper`.~~ →
+  título alinhado à esquerda, sem decoração.
+- ~~CSS morto (`.glass`, `.animate-float`, `.animate-glow`, `.elevation-*` e
+  outras 10 classes sem consumidor).~~ → removido de `index.css` (ver
+  `UI_COMPONENT_INVENTORY.md §5`).
+
+`backdrop-blur-xl` **continua** em `ModernHeader`/`ModernTabs`/`SettingsHeader`
+— são headers sticky sobre conteúdo rolando por baixo, o caso em que a regra
+de `UI_RULES.md` permite blur (legibilidade), não decoração.
+
+O que ainda não foi tocado (etapas seguintes da migração gradual, ver
+`UI_COMPONENT_INVENTORY.md §3` e §6.3 abaixo): a duplicação de `btn()`/
+`inputClass`/checkbox cru dentro das ~20 calculadoras.
 
 ### 6.2 O que já está alinhado (preservar, não redesenhar)
 
