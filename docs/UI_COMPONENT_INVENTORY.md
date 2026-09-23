@@ -24,7 +24,8 @@ fora de `src/components/ui/` em si):
 | `dialog` | 1 | `CustomVariationsManager` (form de adicionar/editar item) | — |
 | `alert-dialog` | 1 | `CustomVariationsManager` (confirmar exclusão) | — |
 | `checkbox` | 1 | `calculators/CalcControls.tsx` (via `CalcCheckbox`, usado por 16 calculadoras) | Padrão desde 23/09/26 — usar sempre via `CalcCheckbox`, ver §3. |
-| `select`, `radio-group`, `switch`, `textarea`, `alert`, `aspect-ratio`, `breadcrumb`, `collapsible` | **0** | — | Instalados, não usados em lugar nenhum. |
+| `badge` | 1 | `ModernHeader` (indicador de ambiente quando não é produção) | Usar para status/rótulo curto. Padrão de cor de status em `DESIGN_SYSTEM.md §3.3`. |
+| `select`, `radio-group`, `switch`, `textarea`, `alert`, `aspect-ratio`, `breadcrumb`, `collapsible` | **0** | — | Instalados, não usados em lugar nenhum. `select`: decisão consciente de manter `<select>` nativo, ver `DESIGN_SYSTEM.md §6.5`. |
 | `table`, `pagination` | **0** | — | Instalados, não usados — não há tabela de dados no app hoje (ver `PAGE_PATTERNS.md#list-page`). |
 | `accordion`, `avatar`, `calendar`, `carousel`, `chart`, `command`, `context-menu`, `drawer`, `hover-card`, `input-otp`, `menubar`, `navigation-menu`, `progress`, `resizable`, `sidebar`, `slider`, `toggle`, `toggle-group`, `form` | **0** | — | Instalados, não usados. Sobra do scaffold inicial (provavelmente Lovable/shadcn starter completo). Não remover só por estarem sem uso — deixar disponíveis, mas não presumir que já estão adaptados ao tema até o primeiro uso real. |
 

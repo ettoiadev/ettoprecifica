@@ -7,6 +7,16 @@
 > 4. **Priorize a skill**: antes de criar qualquer objeto no banco ou calcular preço no app, cheque se a skill já tem a função/dado. O app só **consome**, nunca escreve preço.
 > 5. **Antes de criar ou alterar qualquer UI**, leia `/docs/DESIGN_SYSTEM.md`, `/docs/UI_RULES.md`, `/docs/PAGE_PATTERNS.md` e `/docs/UI_COMPONENT_INVENTORY.md` (fundação criada em 23/09/26 — ver seção "UI / Design System" abaixo). Não inventar um padrão visual novo quando já existe um documentado.
 
+## Versionamento (23/09/26)
+SemVer formalizado — processo completo em **`docs/VERSIONING.md`**, histórico em **`CHANGELOG.md`**.
+- **Fonte única da versão: `package.json`** (`"version"`). Nunca escrever número de versão em outro arquivo — `vite.config.ts` lê o package.json no build e injeta `__APP_VERSION__`/`__BUILD_COMMIT__`/`__BUILD_ENV__`, consumidos via `src/lib/version.ts`.
+- **Commit e ambiente vêm da Vercel**: `VERCEL_GIT_COMMIT_SHA` (cortado em 7) e `VERCEL_ENV`; fora da Vercel cai para `git rev-parse` e `'local'`. Nada mais é embutido no bundle (sem token/chave/URL interna).
+- **Exibição**: `v2.0.0` discreto no cabeçalho + badge de ambiente quando **não** é produção (assim dá pra saber que a aba aberta é Preview); detalhe completo em Configurações → Geral → "Sobre".
+- **Versão começa em 2.0.0** porque já era o valor do `package.json` e o sistema já está em produção — baixar para `0.x` seria falso. Marco zero; SemVer vale da próxima release em diante.
+- **Produção = branch `main`** (default do repo). Qualquer outra branch/PR vira Preview Deploy e **não** muda versão. Confirmar uma vez em Vercel → Settings → Git → Production Branch (essa config vive no painel, não no repo).
+- **A versão não sobe a cada commit.** Só release estável validada em produção ganha número novo + tag `vX.Y.Z` (criada à mão, depois de validar). Scripts: `npm run release:patch|minor|major` (usam `--no-git-tag-version`: mexem só no package.json, sem commitar nem taguear).
+- **Zero tags no repo até 23/09/26** — a primeira sai na primeira release por esse processo.
+
 ## UI / Design System (23/09/26)
 Fundação de referência visual criada a pedido do Étto para reduzir decisões de layout improvisadas — **documentação apenas, nenhuma tela foi redesenhada nesta etapa** (regras/dados/cálculos intocados). Fontes oficiais de UI a partir de agora: componentes já existentes no ettoprecifica → shadcn/ui (`src/components/ui/`) → OrbynAdmin (referência estrutural) → Lucide Icons.
 - **`/docs/DESIGN_SYSTEM.md`** — cor, tipografia, espaçamento, o que a UI atual já segue vs. o que ainda foge do alvo (gradientes decorativos, backdrop-blur, blobs animados de fundo — resquício do scaffold inicial, concentrado no "chrome": `ModernHeader`/`ModernTabs`/`ModernCalculatorWrapper`/`Settings*`).

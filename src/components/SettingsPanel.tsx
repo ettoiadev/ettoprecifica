@@ -8,6 +8,7 @@ import ConfigSection from './settings/ConfigSection';
 import BudgetObservationsSettings from './settings/BudgetObservationsSettings';
 import { settingsConfig } from './settings/settingsConfig';
 import { convertConfigToCurrency, convertCurrencyToNumbers } from './settings/configUtils';
+import { APP_NAME, APP_VERSION, BUILD_COMMIT, envLabel } from '../lib/version';
 
 interface Props {
   config: PricingConfig;
@@ -112,6 +113,33 @@ const SettingsPanel: React.FC<Props> = ({ config, onSave, onClose }) => {
               <p className="text-sm text-gray-500">
                 Suas configurações e orçamentos são salvos automaticamente e sincronizados na nuvem.
               </p>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-sm border p-6">
+            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+              <Info className="w-5 h-5 text-blue-600" />
+              Sobre
+            </h2>
+            <div className="space-y-1 max-w-sm">
+              <div className="flex justify-between text-sm text-gray-600">
+                <span>Sistema:</span>
+                <span className="text-gray-900">{APP_NAME}</span>
+              </div>
+              <div className="flex justify-between text-sm text-gray-600">
+                <span>Versão:</span>
+                <span className="text-gray-900">{APP_VERSION}</span>
+              </div>
+              {BUILD_COMMIT && (
+                <div className="flex justify-between text-sm text-gray-600">
+                  <span>Build:</span>
+                  <span className="font-mono text-gray-900">{BUILD_COMMIT}</span>
+                </div>
+              )}
+              <div className="flex justify-between text-sm text-gray-600">
+                <span>Ambiente:</span>
+                <span className="text-gray-900">{envLabel()}</span>
+              </div>
             </div>
           </div>
 

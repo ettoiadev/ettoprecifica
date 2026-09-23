@@ -2,7 +2,9 @@
 import React from 'react';
 import { Calculator, Settings, Download } from 'lucide-react';
 import { Button } from './ui/button';
+import { Badge } from './ui/badge';
 import { useBudgets } from '../hooks/useBudgets';
+import { envLabel, isProduction, versionLabel } from '../lib/version';
 
 interface ModernHeaderProps {
   onSettingsClick: () => void;
@@ -27,9 +29,17 @@ const ModernHeader: React.FC<ModernHeaderProps> = ({ onSettingsClick }) => {
                 <Calculator className="w-6 h-6 text-primary-foreground" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">
-                  Precificação CV
-                </h1>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-2xl font-bold text-gray-900">
+                    Precificação CV
+                  </h1>
+                  <span className="text-xs text-muted-foreground">{versionLabel()}</span>
+                  {!isProduction && (
+                    <Badge variant="secondary" className="font-medium">
+                      {envLabel()}
+                    </Badge>
+                  )}
+                </div>
                 {currentBudget && (
                   <p className="text-muted-foreground text-sm">
                     Orçamento: {currentBudget.name}
