@@ -15,6 +15,7 @@ import {
   AlertDialogTitle,
 } from '../ui/alert-dialog';
 import GuiaConteudo from './GuiaConteudo';
+import GuiaIndice from './GuiaIndice';
 import { useAuth } from '../../contexts/AuthContext';
 import { guideService, GuideSection } from '../../services/supabase/guideService';
 import { toast } from 'sonner';
@@ -141,7 +142,7 @@ const GuiaPanel: React.FC<Props> = ({ onClose }) => {
     <div className="min-h-screen bg-gray-50">
       {/* Cabeçalho */}
       <div className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/50 shadow-sm">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between gap-4 py-5">
             <div className="flex items-center space-x-3">
               <div className="p-2 rounded-lg bg-primary">
@@ -157,7 +158,7 @@ const GuiaPanel: React.FC<Props> = ({ onClose }) => {
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {carregando ? (
           <div className="flex items-center gap-2 text-sm text-gray-500">
             <Loader2 className="w-4 h-4 animate-spin" /> Carregando…
@@ -200,7 +201,8 @@ const GuiaPanel: React.FC<Props> = ({ onClose }) => {
 
             {secoes.map((s) => (
               <TabsContent key={s.id} value={s.id} className="mt-0">
-                <div className="bg-white rounded-lg border border-gray-200 p-6">
+                <div className="flex gap-8 items-start">
+                <div className="flex-1 min-w-0 bg-white rounded-lg border border-gray-200 p-6 lg:p-8">
                   {editando && s.id === abaAtiva ? (
                     <div className="space-y-4">
                       <div>
@@ -225,12 +227,21 @@ const GuiaPanel: React.FC<Props> = ({ onClose }) => {
                           placeholder="Escreva ou cole o conteúdo deste assunto…"
                           className="min-h-[420px] font-mono text-xs leading-relaxed"
                         />
-                        <p className="text-xs text-gray-500 mt-1">
-                          Texto livre: as quebras de linha são preservadas como você escrever. Para
-                          desenhar uma chapa, use uma linha no formato{' '}
-                          <code className="font-mono text-gray-700">#chapa: 200x100 peça 60x40 — Placa PS 2mm</code>{' '}
-                          (medidas em cm; a parte da peça e o rótulo são opcionais).
-                        </p>
+                        <div className="text-xs text-gray-500 mt-1.5 space-y-0.5">
+                          <p>Texto livre — as quebras de linha são preservadas. Além disso:</p>
+                          <p>
+                            • Linha em <span className="font-medium">MAIÚSCULAS</span> (ou começando
+                            com <code className="font-mono text-gray-700">##</code>) vira título de
+                            seção e entra no índice lateral.
+                          </p>
+                          <p>
+                            • Colunas separadas por 2 ou mais espaços viram tabela alinhada.
+                          </p>
+                          <p>
+                            • <code className="font-mono text-gray-700">#chapa: 200x100 peça 60x40 — Placa PS 2mm</code>{' '}
+                            vira um desenho da chapa (medidas em cm; peça e rótulo são opcionais).
+                          </p>
+                        </div>
                       </div>
                       <div className="flex items-center gap-2 pt-2 border-t border-gray-200">
                         <Button onClick={salvar} disabled={salvando}>
@@ -255,12 +266,12 @@ const GuiaPanel: React.FC<Props> = ({ onClose }) => {
                       </div>
                     </div>
                   ) : (
-                    <div className="space-y-4">
-                      <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <div className="flex items-start justify-between gap-4 pb-4 mb-5 border-b border-gray-200">
                         <div>
-                          <h2 className="text-lg font-semibold text-gray-900">{s.title}</h2>
+                          <h2 className="text-xl font-semibold text-gray-900">{s.title}</h2>
                           {s.updated_at && (
-                            <p className="text-xs text-gray-500 mt-0.5">
+                            <p className="text-xs text-gray-500 mt-1">
                               Atualizado em {formatarData(s.updated_at)}
                             </p>
                           )}
@@ -280,6 +291,8 @@ const GuiaPanel: React.FC<Props> = ({ onClose }) => {
                       )}
                     </div>
                   )}
+                </div>
+                {!(editando && s.id === abaAtiva) && <GuiaIndice conteudo={s.content} />}
                 </div>
               </TabsContent>
             ))}

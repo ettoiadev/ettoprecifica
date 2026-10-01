@@ -44,12 +44,35 @@ a consulta volta vazia — então o conteúdo não fica exposto publicamente.
 - **Nova aba**: cria um assunto novo já em modo de edição.
 - **Excluir aba**: dentro do modo de edição, com confirmação (apaga para todos).
 
-O conteúdo é **texto simples**, não Markdown: o que for digitado aparece como
-foi digitado (`whitespace-pre-wrap`). Foi decisão consciente não adicionar um
-renderizador de Markdown — o documento de origem é texto corrido numerado, e
-uma dependência nova só para formatar não se justifica
-(`docs/UI_RULES.md`). Se um dia precisar de negrito/tabela de verdade,
-aí sim vale reavaliar.
+O conteúdo é **texto simples**, não Markdown — mas a exibição reconhece três
+convenções que as pessoas já usam naturalmente ao escrever documento em texto
+puro, para o resultado não virar um paredão cinza (`guiaParser.ts`):
+
+| O que você escreve | Como aparece |
+|---|---|
+| `## Título` **ou** uma linha curta QUASE TODA EM MAIÚSCULAS | Título de seção, com régua embaixo e entrada no índice lateral |
+| 2+ linhas seguidas com colunas separadas por 2 ou mais espaços | Bloco monoespaçado — é o único jeito de o alinhamento por espaço funcionar de verdade |
+| `#chapa: 200x100 peça 60x40 — rótulo` | Desenho vetorial da chapa (ver abaixo) |
+| Qualquer outra coisa | Parágrafo, com as quebras de linha preservadas |
+
+A regra do título por maiúsculas é: linha de até 70 caracteres, sem pontuação
+final, com pelo menos 80% das letras maiúsculas. Isso pega
+`PLACA PS 2mm — APROVEITAMENTO DA CHAPA` (que tem "mm" minúsculo) sem pegar
+frase comum que começa com sigla, como
+`A CONFIRMAR: a espessura do ACM Madeira está cadastrada…`.
+
+Continua **não** havendo renderizador de Markdown: nada de negrito, link ou
+tabela de verdade, e nenhuma dependência nova — o parser são ~100 linhas
+próprias e, acima de tudo, **nada vira HTML** (ver "Por que não aceitamos HTML"
+abaixo). Se um dia precisar de formatação rica, aí sim vale reavaliar.
+
+## Por que não aceitamos HTML nem SVG colado
+
+Qualquer usuário logado edita o guia e o conteúdo é compartilhado. Se a tela
+renderizasse o campo como HTML, uma pessoa conseguiria injetar script que roda
+na sessão de todas as outras — XSS armazenado. Por isso o texto é sempre
+exibido como texto, e o único recurso "gráfico" (`#chapa:`) é um desenho que o
+**app gera a partir de números**, não marcação que o usuário escreve.
 
 ## Desenho de chapa (`#chapa:`)
 

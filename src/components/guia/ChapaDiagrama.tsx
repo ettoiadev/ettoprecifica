@@ -13,7 +13,10 @@ export interface ChapaSpec {
 }
 
 const LARGURA_MAX = 520;
-const ALTURA_MAX = 300;
+// Chapa sem peças desenhadas não precisa de área grande — seria um retângulo
+// oco ocupando meia tela. Com peças, vale a altura maior para elas caberem.
+const ALTURA_MAX_COM_PECAS = 260;
+const ALTURA_MAX_VAZIA = 150;
 
 const fmtCm = (v: number): string =>
   Number.isInteger(v) ? String(v) : v.toFixed(1).replace('.', ',');
@@ -35,19 +38,20 @@ const ChapaDiagrama: React.FC<{ spec: ChapaSpec }> = ({ spec }) => {
   const curto = Math.min(spec.larguraCm, spec.alturaCm);
   if (!(comprido > 0) || !(curto > 0)) return null;
 
-  const escala = Math.min(LARGURA_MAX / comprido, ALTURA_MAX / curto);
+  const temPeca = !!spec.pecaLarguraCm && !!spec.pecaAlturaCm;
+  const fit = temPeca
+    ? melhorAproveitamento(comprido, curto, spec.pecaLarguraCm!, spec.pecaAlturaCm!)
+    : null;
+
+  const alturaMax = fit && fit.total > 0 ? ALTURA_MAX_COM_PECAS : ALTURA_MAX_VAZIA;
+  const escala = Math.min(LARGURA_MAX / comprido, alturaMax / curto);
   const W = comprido * escala;
   const H = curto * escala;
 
   const margemEsq = 46;
   const margemTopo = 28;
   const svgW = W + margemEsq + 16;
-  const svgH = H + margemTopo + 34;
-
-  const temPeca = !!spec.pecaLarguraCm && !!spec.pecaAlturaCm;
-  const fit = temPeca
-    ? melhorAproveitamento(comprido, curto, spec.pecaLarguraCm!, spec.pecaAlturaCm!)
-    : null;
+  const svgH = H + margemTopo + 16;
 
   const areaChapaM2 = (comprido / 100) * (curto / 100);
   const areaPecasM2 = fit
@@ -78,10 +82,13 @@ const ChapaDiagrama: React.FC<{ spec: ChapaSpec }> = ({ spec }) => {
   const rotulo = `${fmtCm(comprido)} × ${fmtCm(curto)} cm`;
 
   return (
-    <figure className="my-4">
+    <figure className="my-4 bg-gray-50 border border-gray-200 rounded-md p-4 overflow-x-auto">
       <svg
         viewBox={`0 0 ${svgW} ${svgH}`}
-        className="w-full max-w-[560px] h-auto"
+        // Chapa sem corte não precisa de desenho grande: como o SVG estica até
+        // o limite mantendo a proporção, limitar a largura é o que encolhe a
+        // altura sem distorcer as cotas.
+        className={fit && fit.total > 0 ? 'w-full max-w-[560px] h-auto' : 'w-full max-w-[380px] h-auto'}
         role="img"
         aria-label={`Chapa de ${rotulo}${
           fit ? `, ${fit.total} peças de ${fmtCm(spec.pecaLarguraCm!)} por ${fmtCm(spec.pecaAlturaCm!)} cm` : ''
@@ -93,11 +100,25 @@ const ChapaDiagrama: React.FC<{ spec: ChapaSpec }> = ({ spec }) => {
           y={margemTopo}
           width={W}
           height={H}
-          fill="#ffffff"
+          fill={fit && fit.total > 0 ? '#ffffff' : '#f8fafc'}
           stroke="#94a3b8"
           strokeWidth={1.5}
+          rx={2}
         />
         {pecas}
+
+        {/* chapa sem corte: mostra a área no meio, em vez de um retângulo vazio */}
+        {!fit && (
+          <text
+            x={margemEsq + W / 2}
+            y={margemTopo + H / 2 + 4}
+            textAnchor="middle"
+            fontSize={12}
+            fill="#64748b"
+          >
+            {fmtM2((comprido / 100) * (curto / 100))} m²
+          </text>
+        )}
 
         {/* cota horizontal (em cima) */}
         <line x1={margemEsq} y1={margemTopo - 12} x2={margemEsq + W} y2={margemTopo - 12} stroke="#64748b" strokeWidth={1} />
@@ -136,7 +157,7 @@ const ChapaDiagrama: React.FC<{ spec: ChapaSpec }> = ({ spec }) => {
         )}
       </svg>
 
-      <figcaption className="text-xs text-gray-600 mt-1">
+      <figcaption className="text-xs text-gray-600 mt-2 pt-2 border-t border-gray-200">
         {spec.legenda ? <span className="font-medium text-gray-800">{spec.legenda} · </span> : null}
         Chapa {rotulo} ({fmtM2(areaChapaM2)} m²)
         {fit && fit.total > 0 && (
