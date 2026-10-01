@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Calculator, Settings, Download } from 'lucide-react';
+import { Calculator, Settings, Download, BookOpen } from 'lucide-react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { useBudgets } from '../hooks/useBudgets';
@@ -8,9 +8,10 @@ import { envLabel, isProduction, versionLabel } from '../lib/version';
 
 interface ModernHeaderProps {
   onSettingsClick: () => void;
+  onGuiaClick: () => void;
 }
 
-const ModernHeader: React.FC<ModernHeaderProps> = ({ onSettingsClick }) => {
+const ModernHeader: React.FC<ModernHeaderProps> = ({ onSettingsClick, onGuiaClick }) => {
   const { currentBudget, exportToPDF } = useBudgets();
 
   const handleExport = () => {
@@ -56,6 +57,11 @@ const ModernHeader: React.FC<ModernHeaderProps> = ({ onSettingsClick }) => {
                 <span className="hidden sm:inline">Exportar</span>
               </Button>
             )}
+
+            <Button variant="outline" size="sm" onClick={onGuiaClick} className="hover:bg-accent/50">
+              <BookOpen className="w-4 h-4 mr-2" />
+              <span className="hidden sm:inline">Guia</span>
+            </Button>
 
             <Button variant="outline" size="sm" onClick={onSettingsClick} className="hover:bg-accent/50">
               <Settings className="w-4 h-4 mr-2" />

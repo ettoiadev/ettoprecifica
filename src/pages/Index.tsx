@@ -12,6 +12,7 @@ import LaserManualCalculator from '../components/calculators/LaserManualCalculat
 import DtfManualCalculator from '../components/calculators/DtfManualCalculator';
 import CavaletesCalculator from '../components/calculators/CavaletesCalculator';
 import SettingsPanel from '../components/SettingsPanel';
+import GuiaPanel from '../components/guia/GuiaPanel';
 import ModernHeader from '../components/ModernHeader';
 import ModernTabs from '../components/ModernTabs';
 import ModernCalculatorWrapper from '../components/ModernCalculatorWrapper';
@@ -26,6 +27,7 @@ const Index = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('adesivos');
   const [showSettings, setShowSettings] = useState(false);
+  const [showGuia, setShowGuia] = useState(false);
   const [config, setConfig] = useState<PricingConfig>(migrateConfig(defaultConfig));
 
   useEffect(() => {
@@ -150,10 +152,14 @@ const Index = () => {
     }
   };
 
+  if (showGuia) {
+    return <GuiaPanel onClose={() => setShowGuia(false)} />;
+  }
+
   if (showSettings) {
     return (
-      <SettingsPanel 
-        config={config} 
+      <SettingsPanel
+        config={config}
         onSave={saveConfig}
         onClose={() => setShowSettings(false)}
       />
@@ -163,7 +169,10 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <ModernHeader onSettingsClick={() => setShowSettings(true)} />
+      <ModernHeader
+        onSettingsClick={() => setShowSettings(true)}
+        onGuiaClick={() => setShowGuia(true)}
+      />
 
       {/* Tab Navigation */}
       <ModernTabs activeTab={activeTab} onTabChange={setActiveTab} />

@@ -7,6 +7,15 @@
 > 4. **Priorize a skill**: antes de criar qualquer objeto no banco ou calcular preço no app, cheque se a skill já tem a função/dado. O app só **consome**, nunca escreve preço.
 > 5. **Antes de criar ou alterar qualquer UI**, leia `/docs/DESIGN_SYSTEM.md`, `/docs/UI_RULES.md`, `/docs/PAGE_PATTERNS.md` e `/docs/UI_COMPONENT_INVENTORY.md` (fundação criada em 23/09/26 — ver seção "UI / Design System" abaixo). Não inventar um padrão visual novo quando já existe um documentado.
 
+## Guia interno (01/10/26)
+Botão **Guia** no cabeçalho (ao lado de Configurações) → tela com os documentos de consulta da empresa em abas (Normas, Medidas, Matéria-prima, Prazos…), editáveis dentro do app. Detalhes em **`docs/GUIA.md`**.
+- Tabela **`guide_sections`** (Supabase, mesmo projeto): `slug`, `title`, `content`, `sort_order`, `updated_at/by`. Uma linha por aba.
+- **É compartilhada, não por vendedor** — ao contrário de `pricing_configs`/`budget_settings`. Norma da empresa é uma só; o que um salva, todos veem.
+- **Qualquer usuário logado edita** (o app não tem papéis — `profiles` não tem coluna de role). RLS ligada: sem login a consulta volta vazia, então o conteúdo não é público. Para restringir edição ao dono seria preciso criar o conceito de papel primeiro.
+- Conteúdo é **texto simples** (`whitespace-pre-wrap`), não Markdown — decisão consciente de não somar dependência de renderizador.
+- `GuiaPanel.tsx` + `guideService.ts`; usa `Tabs`/`Button`/`Input`/`Textarea`/`AlertDialog` do shadcn, nenhum componente visual novo.
+- O arquivo `regulamento-interno.md` na raiz é o **material de origem** do conteúdo da aba Normas. Depois de colado no app, a fonte da verdade passa a ser o banco — o .md fica só como original.
+
 ## Versionamento (23/09/26)
 SemVer formalizado — processo completo em **`docs/VERSIONING.md`**, histórico em **`CHANGELOG.md`**.
 - **Fonte única da versão: `package.json`** (`"version"`). Nunca escrever número de versão em outro arquivo — `vite.config.ts` lê o package.json no build e injeta `__APP_VERSION__`/`__BUILD_COMMIT__`/`__BUILD_ENV__`, consumidos via `src/lib/version.ts`.
@@ -41,8 +50,10 @@ SPA React de precificação usada por vendedores de uma empresa de comunicação
 - React 18.3 + TypeScript 5.5 + Vite 5.4 (SWC — **não faz typecheck no build**).
 - Tailwind + shadcn/ui, lucide-react, react-router-dom, sonner (toast), CotacaoContext (carrinho de cotação).
 - **Sempre rodar os dois separados** antes de commitar:
-  - `./node_modules/.bin/tsc --noEmit` (typecheck)
+  - `npm run typecheck` (= `tsc --noEmit -p tsconfig.app.json`)
   - `./node_modules/.bin/vite build` (esbuild é mais estrito que tsc; ex.: rejeita `??` misturado com `||` sem parênteses)
+- ⚠️ **`tsc --noEmit` puro NÃO checa nada** (descoberto 01/10/26): o `tsconfig.json` da raiz tem `"files": []` + project references, então o comando compila zero arquivos e **sempre sai 0**. Era o que este arquivo mandava rodar — ou seja, o "typecheck limpo" de muitos commits anteriores era vazio. Use `npm run typecheck` (aponta para `tsconfig.app.json`). Ao rodar direto no shell, cuidado com `| head`: o `$?` passa a ser o do `head`, não o do tsc.
+- **3 erros de tipo pré-existentes** em `src/pages/Index.tsx` (`deepMergeConfig`, linhas ~48/53/65) ficaram escondidos por isso. São imprecisão de tipagem (atribuição indexada sobre união de chaves), não bug de runtime — o merge funciona. Não corrigidos ainda porque `deepMergeConfig` é load-bearing (mescla a config salva do vendedor com o default); corrigir merece teste próprio.
 - Commit: `git add src supabase` (NÃO `-A` — evita pegar temporários). Mensagens terminam com `Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>`. Push em `main` quando o usuário pedir (ele já autorizou "sempre faça o push" para esses ajustes).
 
 ## Arquitetura de preço
