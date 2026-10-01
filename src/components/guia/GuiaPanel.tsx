@@ -14,6 +14,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '../ui/alert-dialog';
+import GuiaConteudo from './GuiaConteudo';
 import { useAuth } from '../../contexts/AuthContext';
 import { guideService, GuideSection } from '../../services/supabase/guideService';
 import { toast } from 'sonner';
@@ -225,7 +226,10 @@ const GuiaPanel: React.FC<Props> = ({ onClose }) => {
                           className="min-h-[420px] font-mono text-xs leading-relaxed"
                         />
                         <p className="text-xs text-gray-500 mt-1">
-                          Texto livre: as quebras de linha são preservadas como você escrever.
+                          Texto livre: as quebras de linha são preservadas como você escrever. Para
+                          desenhar uma chapa, use uma linha no formato{' '}
+                          <code className="font-mono text-gray-700">#chapa: 200x100 peça 60x40 — Placa PS 2mm</code>{' '}
+                          (medidas em cm; a parte da peça e o rótulo são opcionais).
                         </p>
                       </div>
                       <div className="flex items-center gap-2 pt-2 border-t border-gray-200">
@@ -268,9 +272,7 @@ const GuiaPanel: React.FC<Props> = ({ onClose }) => {
                       </div>
 
                       {s.content.trim() ? (
-                        <div className="whitespace-pre-wrap text-sm text-gray-700 leading-relaxed">
-                          {s.content}
-                        </div>
+                        <GuiaConteudo conteudo={s.content} />
                       ) : (
                         <p className="text-sm text-gray-500">
                           Nenhum conteúdo ainda — clique em <strong>Editar</strong> para escrever ou colar.

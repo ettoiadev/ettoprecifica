@@ -51,6 +51,31 @@ uma dependência nova só para formatar não se justifica
 (`docs/UI_RULES.md`). Se um dia precisar de negrito/tabela de verdade,
 aí sim vale reavaliar.
 
+## Desenho de chapa (`#chapa:`)
+
+Única exceção ao texto puro. Uma linha que comece com `#chapa:` vira um
+**desenho vetorial (SVG)** da chapa, com cotas e aproveitamento:
+
+```
+#chapa: 200x100
+#chapa: 200x100 peça 60x40
+#chapa: 200x100 peça 60x40 — Placa PS 2mm
+```
+
+- Medidas em **centímetros**; o primeiro par é a chapa, o segundo (opcional) é
+  a peça a cortar; o texto após `—` é um rótulo opcional.
+- O desenho é gerado pelo app a partir dos números — o texto do guia **nunca**
+  é interpretado como HTML/SVG, então não há como injetar marcação pelo campo
+  editável. É por isso que existe essa sintaxe em vez de deixar colar SVG.
+- A chapa é sempre desenhada com o lado maior na horizontal.
+- O aproveitamento mostrado é o **simples**: todas as peças na mesma
+  orientação, testando as duas rotações possíveis e escolhendo a que rende
+  mais. Não é um otimizador de corte — serve como referência rápida de quantas
+  peças saem de uma chapa, não como plano de corte definitivo.
+
+Componentes: `GuiaConteudo.tsx` (separa texto de desenho) e
+`ChapaDiagrama.tsx` (gera o SVG).
+
 ## Componentes
 
 `src/components/guia/GuiaPanel.tsx` + `src/services/supabase/guideService.ts`.
