@@ -58,6 +58,45 @@ function toNestCoordinates(polygon, scale) {
   return clone;
 }
 
+/*
+ * Afasta o contorno em `offset` mm. Porte do SvgNest.polygonOffset, que no
+ * original roda fora do worker (offsetTree) e por isso faltava aqui — era o
+ * motivo de `config.spacing` não ter efeito nenhum.
+ *
+ * Inflar a PEÇA em metade do vão resolve os dois lados de uma vez: duas peças
+ * encostadas ficam a `spacing` uma da outra, e a peça real fica a spacing/2 da
+ * borda da chapa (porque é o contorno inflado que precisa caber). Por isso, ao
+ * contrário do svgnest.js, a chapa aqui não é reduzida.
+ */
+function inflarPoligono(poly, offset, config) {
+  if (!offset) return poly;
+  var p = toClipperCoordinates(poly);
+  ClipperLib.JS.ScaleUpPath(p, config.clipperScale);
+
+  var co = new ClipperLib.ClipperOffset(2, config.curveTolerance * config.clipperScale);
+  co.AddPath(p, ClipperLib.JoinType.jtRound, ClipperLib.EndType.etClosedPolygon);
+  var saida = new ClipperLib.Paths();
+  co.Execute(saida, offset * config.clipperScale);
+  if (!saida || saida.length === 0) return poly;
+
+  // o offset pode devolver vários contornos; fica com o maior
+  var escolhido = 0;
+  var maiorArea = -Infinity;
+  for (var i = 0; i < saida.length; i++) {
+    var a = Math.abs(ClipperLib.Clipper.Area(saida[i]));
+    if (a > maiorArea) {
+      maiorArea = a;
+      escolhido = i;
+    }
+  }
+
+  var r = toNestCoordinates(saida[escolhido], config.clipperScale);
+  if (GeometryUtil.polygonArea(r) > 0) r.reverse();
+  r.id = poly.id;
+  r.source = poly.source;
+  return r;
+}
+
 function minkowskiDifference(A, B) {
   var Ac = toClipperCoordinates(A);
   ClipperLib.JS.ScaleUpPath(Ac, 10000000);
@@ -154,7 +193,19 @@ function generateNfp(pair, searchEdges, useHoles) {
 /** Avalia uma ordem/rotação candidata: gera os NFPs necessários e posiciona. */
 var diagnostico = { pares: 0, nfpOk: 0, nfpNulo: 0, placeNulo: 0, exemplos: [] };
 
-function avaliar(binPolygon, placelist, rotations, config, nfpCache) {
+/*
+ * `nfpCache` é indexado por ID de peça porque é assim que o placementworker
+ * (vendorizado, não mexemos) procura. Só que num letreiro as peças se REPETEM:
+ * 4 jogos de 5 letras são 20 ids mas 5 formas. Indexado por id, isso vira 190
+ * pares de no-fit-polygon em vez de 15 — e o NFP é a parte cara (20 peças
+ * passavam de 180s).
+ *
+ * Então calculamos uma vez por FORMA (`formaCache`, indexado por source) e
+ * apontamos todas as chaves de id para o mesmo resultado. É válido porque cada
+ * peça foi levada à própria origem na leitura do SVG: duas letras iguais têm
+ * coordenadas idênticas, e o NFP depende só disso.
+ */
+function avaliar(binPolygon, placelist, rotations, config, nfpCache, formaCache) {
   var ids = [];
   var i, j, key;
   for (i = 0; i < placelist.length; i++) {
@@ -163,32 +214,62 @@ function avaliar(binPolygon, placelist, rotations, config, nfpCache) {
   }
 
   var pares = [];
+  var registrar = function (A, B, chave, chaveForma) {
+    var str = JSON.stringify(chave);
+    if (nfpCache[str]) return;
+    pares.push({ A: A, B: B, key: chave, str: str, forma: JSON.stringify(chaveForma) });
+  };
+
   for (i = 0; i < placelist.length; i++) {
     var part = placelist[i];
-    key = { A: binPolygon.id, B: part.id, inside: true, Arotation: 0, Brotation: rotations[i] };
-    if (!nfpCache[JSON.stringify(key)]) pares.push({ A: binPolygon, B: part, key: key });
+    registrar(
+      binPolygon,
+      part,
+      { A: binPolygon.id, B: part.id, inside: true, Arotation: 0, Brotation: rotations[i] },
+      { A: -1, B: part.source, inside: true, Arotation: 0, Brotation: rotations[i] }
+    );
     for (j = 0; j < i; j++) {
       var placed = placelist[j];
-      key = {
-        A: placed.id,
-        B: part.id,
-        inside: false,
-        Arotation: rotations[j],
-        Brotation: rotations[i],
-      };
-      if (!nfpCache[JSON.stringify(key)]) pares.push({ A: placed, B: part, key: key });
+      registrar(
+        placed,
+        part,
+        {
+          A: placed.id,
+          B: part.id,
+          inside: false,
+          Arotation: rotations[j],
+          Brotation: rotations[i],
+        },
+        {
+          A: placed.source,
+          B: part.source,
+          inside: false,
+          Arotation: rotations[j],
+          Brotation: rotations[i],
+        }
+      );
     }
   }
 
   for (i = 0; i < pares.length; i++) {
-    var nfp = generateNfp(pares[i], config.exploreConcave, config.useHoles);
+    var par = pares[i];
+    var nfp;
+    if (Object.prototype.hasOwnProperty.call(formaCache, par.forma)) {
+      nfp = formaCache[par.forma];
+      diagnostico.reaproveitados++;
+    } else {
+      var t0 = Date.now();
+      nfp = generateNfp(par, config.exploreConcave, config.useHoles);
+      diagnostico.msNfp += Date.now() - t0;
+      diagnostico.calculados++;
+      formaCache[par.forma] = nfp;
+    }
     if (nfp) {
-      nfpCache[JSON.stringify(pares[i].key)] = nfp;
+      nfpCache[par.str] = nfp;
       diagnostico.nfpOk++;
     } else {
       diagnostico.nfpNulo++;
-      if (diagnostico.exemplos.length < 3)
-        diagnostico.exemplos.push(JSON.stringify(pares[i].key));
+      if (diagnostico.exemplos.length < 3) diagnostico.exemplos.push(par.str);
     }
   }
   diagnostico.pares += pares.length;
@@ -249,9 +330,14 @@ function prepararPeca(peca, indice) {
  * economizar), Y = largura útil (fixa). Enviar em pé faz ele empilhar numa
  * coluna estreita e desperdiçar comprimento.
  */
-function medir(resultado, bin, parts) {
+function medir(resultado, bin, parts, partsReais) {
+  // `parts` são os contornos inflados pelo espaçamento (é o que de fato ocupa a
+  // chapa, então é deles que sai a envolvente/faixa); `partsReais` são os
+  // contornos do arquivo, usados para área e para desenhar o encaixe.
   var porId = {};
+  var porReal = {};
   for (var i = 0; i < parts.length; i++) porId[parts[i].id] = parts[i];
+  for (var n = 0; n < partsReais.length; n++) porReal[partsReais[n].id] = partsReais[n];
 
   var folhas = [];
   var areaPecasTotal = 0;
@@ -266,23 +352,49 @@ function medir(resultado, bin, parts) {
     var pecasDesenhadas = [];
 
     for (var p = 0; p < pos.length; p++) {
-      var orig = porId[pos[p].id];
-      if (!orig) continue;
-      var girada = rotatePolygon(orig, pos[p].rotation);
-      var pontos = [];
-      for (var k = 0; k < girada.length; k++) {
-        var x = girada[k].x + pos[p].x;
-        var y = girada[k].y + pos[p].y;
-        pontos.push({ x: x, y: y });
+      var inflada = porId[pos[p].id];
+      if (!inflada) continue;
+      var real = porReal[pos[p].id] || inflada;
+
+      // envolvente/faixa: contorno inflado, que é o espaço realmente bloqueado
+      var giradaInflada = rotatePolygon(inflada, pos[p].rotation);
+      for (var k = 0; k < giradaInflada.length; k++) {
+        var x = giradaInflada[k].x + pos[p].x;
+        var y = giradaInflada[k].y + pos[p].y;
         if (x < minX) minX = x;
         if (x > maxX) maxX = x;
         if (y < minY) minY = y;
         if (y > maxY) maxY = y;
       }
+
+      // área e desenho: contorno do arquivo (o inflado é maior que a peça)
+      var girada = rotatePolygon(real, pos[p].rotation);
+      var pontos = [];
+      for (var q = 0; q < girada.length; q++) {
+        pontos.push({ x: girada[q].x + pos[p].x, y: girada[q].y + pos[p].y });
+      }
+      var furos = [];
+      if (girada.children) {
+        for (var c = 0; c < girada.children.length; c++) {
+          var furo = [];
+          for (var d = 0; d < girada.children[c].length; d++) {
+            furo.push({
+              x: girada.children[c][d].x + pos[p].x,
+              y: girada.children[c][d].y + pos[p].y,
+            });
+          }
+          furos.push(furo);
+        }
+      }
       var a = Math.abs(GeometryUtil.polygonArea(girada));
       areaFolha += a;
       areaPecasTotal += a;
-      pecasDesenhadas.push({ id: pos[p].id, rotation: pos[p].rotation, pontos: pontos });
+      pecasDesenhadas.push({
+        id: pos[p].id,
+        rotation: pos[p].rotation,
+        pontos: pontos,
+        furos: furos,
+      });
     }
 
     // X = sentido do comprimento da chapa (ver nota de orientação acima)
@@ -357,14 +469,37 @@ self.onmessage = function (e) {
     dados.config || {}
   );
   var bin = prepararBin(dados.bin);
-  var parts = dados.parts.map(prepararPeca);
+  var partsReais = dados.parts.map(prepararPeca);
+  // Os furos vêm numa lista paralela, não pendurados na peça: postMessage usa
+  // structured clone, que copia os ÍNDICES de um array mas descarta qualquer
+  // propriedade extra colada nele (`peca.children` sumiria no caminho).
+  if (dados.sources) {
+    for (var si = 0; si < partsReais.length; si++) {
+      if (typeof dados.sources[si] === 'number') partsReais[si].source = dados.sources[si];
+    }
+  }
+  if (dados.furos) {
+    for (var fi = 0; fi < partsReais.length; fi++) {
+      if (dados.furos[fi] && dados.furos[fi].length) partsReais[fi].children = dados.furos[fi];
+    }
+  }
+  // vão entre peças: ver inflarPoligono
+  var vao = Number(config.spacing) || 0;
+  var parts =
+    vao > 0
+      ? partsReais.map(function (p) {
+          return inflarPoligono(p, vao / 2, config);
+        })
+      : partsReais;
   var tentativas = config.tentativas || 8;
   var rotacoesPermitidas = config.rotations || [0, 90, 180, 270];
 
   try {
-    diagnostico = { pares: 0, nfpOk: 0, nfpNulo: 0, placeNulo: 0, exemplos: [] };
+    diagnostico = { pares: 0, nfpOk: 0, nfpNulo: 0, placeNulo: 0, reaproveitados: 0, calculados: 0, msNfp: 0, exemplos: [] };
     var rnd = prngComSemente(config.semente || 20261021);
     var nfpCache = {};
+    // indexado por FORMA (source), compartilhado entre as tentativas
+    var formaCache = {};
 
     // Ordem inicial: maior área primeiro — heurística clássica, costuma ser a
     // melhor semente para o encaixe.
@@ -385,7 +520,7 @@ self.onmessage = function (e) {
       // Atenção: placePaths devolve UM objeto {placements, fitness, area}.
       // No svgnest.js ele é chamado via Parallel.map(), que embrulha num array —
       // daí o `placements[0]` de lá. Chamando direto, o objeto já é o resultado.
-      var r = avaliar(bin, candidato, rotations, config, nfpCache);
+      var r = avaliar(bin, candidato, rotations, config, nfpCache, formaCache);
       if (r && typeof r.fitness === 'number') {
         if (!melhor || r.fitness < melhor.fitness) melhor = r;
       }
@@ -401,7 +536,11 @@ self.onmessage = function (e) {
       return;
     }
 
-    self.postMessage({ tipo: 'resultado', resultado: medir(melhor, bin, parts) });
+    self.postMessage({
+      tipo: 'resultado',
+      resultado: medir(melhor, bin, parts, partsReais),
+      diagnostico: diagnostico,
+    });
   } catch (err) {
     self.postMessage({ tipo: 'erro', mensagem: (err && err.message) || String(err) });
   }

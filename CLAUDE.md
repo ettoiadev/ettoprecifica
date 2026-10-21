@@ -17,6 +17,22 @@ Botão **Guia** no cabeçalho (ao lado de Configurações) → tela com os docum
 - `GuiaPanel.tsx` + `guideService.ts`; usa `Tabs`/`Button`/`Input`/`Textarea`/`AlertDialog` do shadcn, nenhum componente visual novo.
 - O arquivo `regulamento-interno.md` na raiz é o **material de origem** do conteúdo da aba Normas. Depois de colado no app, a fonte da verdade passa a ser o banco — o .md fica só como original.
 
+## Letra Caixa PVC por encaixe de SVG (21/10/26)
+Na aba **Letra Caixa**, material **PVC**, existe o seletor **"Como medir o material"**: *Medida da placa* (o que sempre existiu) ou ***Pelo arquivo (SVG)***, que sobe o vetor do letreiro, encaixa as letras na chapa e cobra pelo material consumido. Só o PVC tem isso — os outros materiais são por altura da letra, não por m².
+- **O motor NÃO mudou.** `calc_letra_caixa` continua sendo a fonte do preço; a área do encaixe entra como `largura_placa_m = área, altura_placa_m = 1` (gotcha 2). Confirmado por SQL: o PVC é **linear na área** (R$524/m² na espessura 20mm) e tem **piso de projeto de R$300** — por isso a área agregada precisa ir numa chamada só, senão o piso seria cobrado por peça.
+- **Três bases de cobrança**, escolhidas na tela, padrão **faixa ocupada**: *contorno real* (só o que vira letra), *faixa ocupada* (`comprimento usado × largura da chapa` — o que de fato se perde, porque o resto da chapa fica cortado) e *chapa inteira*. A diferença entre elas chega a 2,5× no mesmo arquivo: é decisão comercial, não técnica.
+- **Tamanho de chapa (1220×2440) e vão entre peças são campos na tela, não config.** Não estão em `pricing_configs` nem no banco da skill. Se precisarem virar padrão por vendedor, é o caminho normal de config (type + default + settingsConfig).
+- Arquivos: `src/lib/nesting/svgParaPecas.ts` (SVG → polígonos em mm), `src/hooks/useNesting.ts` (worker), `src/components/calculators/EncaixeSvgPanel.tsx` (tela), `public/nesting/*` (SVGnest vendorizado + `nest-worker.js`).
+
+**Armadilhas que custaram caro aqui — todas pegas no navegador, nenhuma pelo compilador:**
+1. **`getPointAtLength` na fronteira entre subpaths devolve o FIM do subpath anterior.** Amostrando a partir de `l0` exato, o vazado do "O" recebia um ponto do contorno externo: a peça ficava deformada (55×71mm em vez de 55×55) e a detecção de furo falhava em 100% dos casos. Corrigido amostrando no **meio de cada passo** (`i + 0.5`).
+2. **`postMessage` (structured clone) copia os índices de um array mas DESCARTA propriedade colada nele.** `peca.id`/`.source`/`.children` sumiam no caminho para o worker. Por isso furos e sources vão em **listas paralelas**, não pendurados na peça.
+3. **O cache de no-fit-polygon era indexado por peça, não por forma.** Num letreiro, 4 jogos de 5 letras são 20 ids mas 5 formas: 190 pares de NFP em vez de 15. 20 peças passavam de **180s**. Hoje o NFP é calculado uma vez por forma (`formaCache`) e a mesma referência é apontada em todas as chaves de id — o `placementworker.js` vendorizado continua intocado.
+4. **Vértice custa quadrático** (Minkowski é O(n×m)) e o NFP é **~98% do tempo** do encaixe (medido). Baixar de 31 para ~19 vértices por letra (tolerância 0,8mm, erro de área <1%) cortou mais que tudo. Resultado: **20 peças de 180s+ para 6,6s**.
+5. **Giro é caro, ordem é grátis**: cada combinação (giroA, giroB) entre duas formas é um NFP novo; embaralhar a ordem reaproveita o cache inteiro. Por isso os 4 ângulos só são liberados com **≤12 peças** (medido: 5 peças, 3s, 0,695 m² contra 0,808 m² com só 0°/180° — 16% de diferença no preço). Acima disso vai só 0°/180°.
+6. **A chapa tem que ir DEITADA** (X = comprimento): o `placementworker` pesa `width*2 + height`, então comprime no eixo X. Em pé, ele empilha numa coluna estreita e gasta mais chapa.
+- Teste de ponta a ponta: `.playwright/teste-encaixe-ui.mjs <arquivo.svg>` (sobe o arquivo pela interface, encaixa com vão 0 e 10mm, confere que o vão aumenta o consumo, e lê o preço final vindo da Edge Function).
+
 ## Versionamento (23/09/26)
 SemVer formalizado — processo completo em **`docs/VERSIONING.md`**, histórico em **`CHANGELOG.md`**.
 - **Fonte única da versão: `package.json`** (`"version"`). Nunca escrever número de versão em outro arquivo — `vite.config.ts` lê o package.json no build e injeta `__APP_VERSION__`/`__BUILD_COMMIT__`/`__BUILD_ENV__`, consumidos via `src/lib/version.ts`.

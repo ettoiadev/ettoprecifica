@@ -1,9 +1,10 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Loader2, AlertTriangle, Copy, PlusCircle } from 'lucide-react';
 import { formatCurrency, ALIQUOTA_NF_MOTOR } from '../../types/pricing';
 import { supabase } from '../../lib/supabase/client';
 import { useCotacao } from '../../contexts/CotacaoContext';
 import { CalcCheckbox, OptionChip, selectClass } from './CalcControls';
+import EncaixeSvgPanel, { type ResultadoEncaixeArea } from './EncaixeSvgPanel';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 import { toast } from 'sonner';
@@ -30,6 +31,9 @@ type Material = 'pvc' | 'acm' | 'galvanizado' | 'inox' | 'impressao_3d';
 //  - 'retro'   → retroiluminada (padrão +45%, via p_iluminado)
 //  - 'frontal' → frontal acrílico (tabela própria, LED já incluso, sem +45%)
 type Ilum = 'sem' | 'retro' | 'frontal';
+// Como a área de PVC é obtida: medida digitada na mão, ou calculada a partir do
+// encaixe das letras de um arquivo SVG na chapa.
+type ModoPvc = 'manual' | 'arquivo';
 
 const MATERIAL_LABEL: Record<Material, string> = {
   pvc: 'PVC',
@@ -64,8 +68,10 @@ const LetraCaixaCalculator: React.FC = () => {
   // PVC (por m² da placa)
   const [espessuras, setEspessuras] = useState<number[]>([10, 20, 30]);
   const [espessura, setEspessura] = useState<number>(20);
+  const [modoPvc, setModoPvc] = useState<ModoPvc>('manual');
   const [larguraPlaca, setLarguraPlaca] = useState<string>('');
   const [alturaPlaca, setAlturaPlaca] = useState<string>('');
+  const [encaixe, setEncaixe] = useState<ResultadoEncaixeArea | null>(null);
   // ACM/Galvanizado/Inox/Impressão 3D (por altura da letra × nº de caracteres)
   const [alturaCm, setAlturaCm] = useState<string>('');
   const [nCaracteres, setNCaracteres] = useState<string>('');
@@ -87,9 +93,18 @@ const LetraCaixaCalculator: React.FC = () => {
 
   const opcoesIlum = ILUM_OPTS[material];
 
+  // O motor cobra o PVC por m² da placa (confirmado: linear na área, com piso de
+  // projeto). Então a área do encaixe entra como largura = área, altura = 1 —
+  // mesmo padrão das outras abas, e o mínimo é aplicado uma vez só.
+  const usaArquivo = isPvc && modoPvc === 'arquivo';
+  const larguraEnvio = usaArquivo ? encaixe?.areaM2 ?? 0 : larguraPlacaNum;
+  const alturaEnvio = usaArquivo ? 1 : alturaPlacaNum;
+
   const entradaValida = isPvc
-    ? larguraPlacaNum > 0 && alturaPlacaNum > 0
+    ? larguraEnvio > 0 && alturaEnvio > 0
     : alturaCmNum > 0 && nCaracteresNum > 0;
+
+  const handleEncaixe = useCallback((r: ResultadoEncaixeArea | null) => setEncaixe(r), []);
 
   // Troca de material: mantém o modo de iluminação atual se for válido para o
   // novo material; senão cai para o primeiro disponível (ex.: Impressão 3D → frontal).
@@ -138,8 +153,8 @@ const LetraCaixaCalculator: React.FC = () => {
           ? {
               material,
               iluminado,
-              larguraPlaca: larguraPlacaNum,
-              alturaPlaca: alturaPlacaNum,
+              larguraPlaca: larguraEnvio,
+              alturaPlaca: alturaEnvio,
               espessura,
             }
           : {
@@ -167,8 +182,8 @@ const LetraCaixaCalculator: React.FC = () => {
     material,
     iluminacao,
     isPvc,
-    larguraPlacaNum,
-    alturaPlacaNum,
+    larguraEnvio,
+    alturaEnvio,
     espessura,
     alturaCmNum,
     nCaracteresNum,
@@ -180,10 +195,25 @@ const LetraCaixaCalculator: React.FC = () => {
 
   const descricao = useMemo(() => {
     if (isPvc) {
-      return `Letra caixa PVC ${espessura}mm ${larguraPlacaNum.toFixed(2)}×${alturaPlacaNum.toFixed(2)}m${ilumSuffix}`;
+      const medida = usaArquivo
+        ? `${larguraEnvio.toFixed(3)}m² (${encaixe?.totalPecas ?? 0} peças)`
+        : `${larguraPlacaNum.toFixed(2)}×${alturaPlacaNum.toFixed(2)}m`;
+      return `Letra caixa PVC ${espessura}mm ${medida}${ilumSuffix}`;
     }
     return `Letra caixa ${MATERIAL_LABEL[material]} ${alturaCmNum}cm ${nCaracteresNum} letras${ilumSuffix}`;
-  }, [isPvc, material, espessura, larguraPlacaNum, alturaPlacaNum, alturaCmNum, nCaracteresNum, ilumSuffix]);
+  }, [
+    isPvc,
+    usaArquivo,
+    encaixe,
+    larguraEnvio,
+    material,
+    espessura,
+    larguraPlacaNum,
+    alturaPlacaNum,
+    alturaCmNum,
+    nCaracteresNum,
+    ilumSuffix,
+  ]);
 
   // Preço válido: motor pode retornar preco_final nulo quando não há referência
   // de mercado (ex.: altura fora da faixa pesquisada) — nesse caso mostramos o alerta.
@@ -198,8 +228,11 @@ const LetraCaixaCalculator: React.FC = () => {
 
   const handleCopy = () => {
     if (!precos) return;
+    // Cópia limpa (vai para o cliente): medida e valor, sem a conta por trás.
     const detalhe = isPvc
-      ? `Placa: ${larguraPlacaNum.toFixed(2)} x ${alturaPlacaNum.toFixed(2)} m (${espessura}mm)`
+      ? usaArquivo
+        ? `Material: ${larguraEnvio.toFixed(2)} m² de PVC ${espessura}mm`
+        : `Placa: ${larguraPlacaNum.toFixed(2)} x ${alturaPlacaNum.toFixed(2)} m (${espessura}mm)`
       : `Letras: ${nCaracteresNum} × ${alturaCmNum} cm de altura`;
     const texto = `Letra Caixa — ${MATERIAL_LABEL[material]}${ilumSuffix}
 ${detalhe}
@@ -265,38 +298,64 @@ Valor: ${formatCurrency(precos.final)}`;
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-3">
-                  Dimensões da placa
+                  Como medir o material
                 </label>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs text-gray-500 mb-1">Largura (m)</label>
-                    <Input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={larguraPlaca}
-                      onChange={(e) => setLarguraPlaca(e.target.value)}
-                      placeholder="0.00"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-gray-500 mb-1">Altura (m)</label>
-                    <Input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={alturaPlaca}
-                      onChange={(e) => setAlturaPlaca(e.target.value)}
-                      placeholder="0.00"
-                    />
-                  </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <OptionChip
+                    onClick={() => setModoPvc('manual')}
+                    active={modoPvc === 'manual'}
+                    variant="neutral"
+                  >
+                    Medida da placa
+                  </OptionChip>
+                  <OptionChip
+                    onClick={() => setModoPvc('arquivo')}
+                    active={modoPvc === 'arquivo'}
+                    variant="neutral"
+                  >
+                    Pelo arquivo (SVG)
+                  </OptionChip>
                 </div>
-                {larguraPlacaNum > 0 && alturaPlacaNum > 0 && (
-                  <p className="text-sm text-gray-600 mt-2">
-                    Área: {(larguraPlacaNum * alturaPlacaNum).toFixed(2)} m²
-                  </p>
-                )}
               </div>
+
+              {modoPvc === 'manual' ? (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                    Dimensões da placa
+                  </label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">Largura (m)</label>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={larguraPlaca}
+                        onChange={(e) => setLarguraPlaca(e.target.value)}
+                        placeholder="0.00"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">Altura (m)</label>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={alturaPlaca}
+                        onChange={(e) => setAlturaPlaca(e.target.value)}
+                        placeholder="0.00"
+                      />
+                    </div>
+                  </div>
+                  {larguraPlacaNum > 0 && alturaPlacaNum > 0 && (
+                    <p className="text-sm text-gray-600 mt-2">
+                      Área: {(larguraPlacaNum * alturaPlacaNum).toFixed(2)} m²
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <EncaixeSvgPanel onResultado={handleEncaixe} />
+              )}
             </>
           ) : (
             <>
@@ -386,9 +445,11 @@ Valor: ${formatCurrency(precos.final)}`;
 
           {!entradaValida ? (
             <p className="text-sm text-gray-500">
-              {isPvc
-                ? 'Informe as dimensões da placa para ver o preço.'
-                : 'Informe a altura da letra e o nº de caracteres para ver o preço.'}
+              {usaArquivo
+                ? 'Envie o arquivo e calcule o encaixe para ver o preço.'
+                : isPvc
+                  ? 'Informe as dimensões da placa para ver o preço.'
+                  : 'Informe a altura da letra e o nº de caracteres para ver o preço.'}
             </p>
           ) : loading ? (
             <div className="flex items-center gap-2 text-sm text-gray-500">
@@ -433,10 +494,31 @@ Valor: ${formatCurrency(precos.final)}`;
                       <span>{MATERIAL_LABEL[material]}{isPvc ? ` ${espessura}mm` : ''}</span>
                     </div>
                     {isPvc ? (
-                      <div className="flex justify-between text-sm text-gray-600">
-                        <span>Preço de mercado:</span>
-                        <span>{formatCurrency(num(result.preco_cm_ou_m2_medio))}/m²</span>
-                      </div>
+                      <>
+                        <div className="flex justify-between text-sm text-gray-600">
+                          <span>Preço de mercado:</span>
+                          <span>{formatCurrency(num(result.preco_cm_ou_m2_medio))}/m²</span>
+                        </div>
+                        {usaArquivo && encaixe && (
+                          <>
+                            <div className="flex justify-between text-sm text-gray-600">
+                              <span>Material cobrado:</span>
+                              <span>{encaixe.areaM2.toFixed(3)} m²</span>
+                            </div>
+                            <div className="flex justify-between text-sm text-gray-600">
+                              <span>Peças encaixadas:</span>
+                              <span>
+                                {encaixe.totalPecas} em {encaixe.totalFolhas}{' '}
+                                {encaixe.totalFolhas === 1 ? 'chapa' : 'chapas'}
+                              </span>
+                            </div>
+                            <div className="flex justify-between text-sm text-gray-600">
+                              <span>Aproveitamento:</span>
+                              <span>{(encaixe.aproveitamento * 100).toFixed(1)}%</span>
+                            </div>
+                          </>
+                        )}
+                      </>
                     ) : (
                       <>
                         <div className="flex justify-between text-sm text-gray-600">
