@@ -6,8 +6,11 @@
 import React, { useRef } from 'react';
 import { Upload, AlertTriangle, FileWarning } from 'lucide-react';
 import { EXTENSOES_ACEITAS } from '../../lib/nesting/lerArquivo';
-import { BASE_AJUDA, BASE_LABEL, type BaseCobranca, type EncaixeSvg } from '../../hooks/useEncaixeSvg';
-import { OptionChip } from './CalcControls';
+import {
+  MARGEM_MINIMA_MM,
+  VAO_MINIMO_MM,
+  type EncaixeSvg,
+} from '../../hooks/useEncaixeSvg';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 
@@ -103,7 +106,7 @@ const EncaixeControles: React.FC<{ enc: EncaixeSvg }> = ({ enc }) => {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-3">Chapa e corte</label>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <div>
                 <label htmlFor="chapa-largura" className="block text-xs text-gray-500 mb-1">
                   Largura útil (mm)
@@ -137,14 +140,41 @@ const EncaixeControles: React.FC<{ enc: EncaixeSvg }> = ({ enc }) => {
                 <Input
                   id="chapa-vao"
                   type="number"
-                  min="0"
+                  min={VAO_MINIMO_MM}
                   step="1"
                   value={enc.espacamento}
                   onChange={(e) => enc.setEspacamento(e.target.value)}
                 />
               </div>
+              <div>
+                <label htmlFor="chapa-margem" className="block text-xs text-gray-500 mb-1">
+                  Margem da borda (mm)
+                </label>
+                <Input
+                  id="chapa-margem"
+                  type="number"
+                  min={MARGEM_MINIMA_MM}
+                  step="1"
+                  value={enc.margem}
+                  onChange={(e) => enc.setMargem(e.target.value)}
+                />
+              </div>
             </div>
+            <p className="text-xs text-gray-500 mt-2">
+              Mínimos de produção: {VAO_MINIMO_MM} mm entre letras e {MARGEM_MINIMA_MM} mm da borda
+              da chapa.
+            </p>
           </div>
+
+          {enc.abaixoDoMinimo && (
+            <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200 text-sm text-amber-800">
+              <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+              <span>
+                Valor abaixo do mínimo de produção. Calculei com {VAO_MINIMO_MM} mm entre letras e{' '}
+                {MARGEM_MINIMA_MM} mm de borda.
+              </span>
+            </div>
+          )}
 
           {enc.pecaNaoCabe && (
             <div className="flex items-start gap-2 p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700">
@@ -156,25 +186,38 @@ const EncaixeControles: React.FC<{ enc: EncaixeSvg }> = ({ enc }) => {
             </div>
           )}
 
-          {enc.areas && (
+          {enc.areaOcupada && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-3">
-                O que entra no preço
+                Material consumido
               </label>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {(['contorno', 'faixa', 'chapa'] as BaseCobranca[]).map((b) => (
-                  <OptionChip
-                    key={b}
-                    onClick={() => enc.setBase(b)}
-                    active={enc.base === b}
-                    variant="indigo"
-                  >
-                    <span className="block font-medium">{BASE_LABEL[b]}</span>
-                    <span className="block text-xs opacity-80">{fmt(enc.areas![b])} m²</span>
-                  </OptionChip>
-                ))}
+              <div className="rounded-lg border border-indigo-200 bg-indigo-50/60 p-4">
+                <div className="flex items-baseline justify-between">
+                  <span className="text-sm font-medium text-indigo-900">Área ocupada</span>
+                  <span className="text-xl font-bold text-indigo-900">
+                    {fmt(enc.areaOcupada.areaM2)} m²
+                  </span>
+                </div>
+                <p className="text-xs text-indigo-800/80 mt-1">
+                  É o que entra no preço: a faixa de chapa que o corte consome.
+                </p>
               </div>
-              <p className="text-xs text-gray-500 mt-2">{BASE_AJUDA[enc.base]}</p>
+              <div className="mt-2 space-y-1">
+                <div className="flex justify-between text-xs text-gray-500">
+                  <span>Contorno das letras</span>
+                  <span>
+                    {fmt(enc.areaOcupada.areaContornoM2)} m² ·{' '}
+                    {(enc.areaOcupada.aproveitamento * 100).toFixed(1)}% de aproveitamento
+                  </span>
+                </div>
+                <div className="flex justify-between text-xs text-gray-500">
+                  <span>Chapas abertas</span>
+                  <span>
+                    {enc.areaOcupada.totalFolhas} · {fmt(enc.areaOcupada.areaChapasM2)} m² (não
+                    cobrados)
+                  </span>
+                </div>
+              </div>
             </div>
           )}
         </>

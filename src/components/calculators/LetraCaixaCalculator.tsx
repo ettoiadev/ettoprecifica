@@ -76,7 +76,7 @@ const LetraCaixaCalculator: React.FC = () => {
   // Estado da precificação por arquivo. Vive aqui porque é compartilhado pelos
   // controles (coluna esquerda) e pela visualização (coluna direita).
   const enc = useEncaixeSvg();
-  const encaixe = enc.areaEscolhida;
+  const encaixe = enc.areaOcupada;
   // ACM/Galvanizado/Inox/Impressão 3D (por altura da letra × nº de caracteres)
   const [alturaCm, setAlturaCm] = useState<string>('');
   const [nCaracteres, setNCaracteres] = useState<string>('');

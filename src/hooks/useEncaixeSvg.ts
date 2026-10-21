@@ -9,23 +9,20 @@ import { lerArquivoVetorial } from '../lib/nesting/lerArquivo';
 import { escalarPecas, type LeituraVetorial } from '../lib/nesting/geometria';
 import { useNesting } from './useNesting';
 
-export type BaseCobranca = 'faixa' | 'contorno' | 'chapa';
+/**
+ * Regras de produção, não preferências: o corte precisa de vão entre as letras
+ * e de uma borda de respeito na chapa. Abaixo disso a peça não sai da máquina,
+ * então o cálculo usa esses mínimos mesmo que o vendedor digite menos.
+ */
+export const VAO_MINIMO_MM = 10;
+export const MARGEM_MINIMA_MM = 5;
 
-export const BASE_LABEL: Record<BaseCobranca, string> = {
-  contorno: 'Contorno real',
-  faixa: 'Faixa ocupada',
-  chapa: 'Chapa inteira',
-};
-
-export const BASE_AJUDA: Record<BaseCobranca, string> = {
-  contorno: 'Só o material que vira letra. Joga a sobra toda por nossa conta.',
-  faixa: 'O pedaço da chapa que o corte consome. É o que de fato se perde.',
-  chapa: 'A chapa inteira, mesmo a parte não usada. Para quando a sobra não serve.',
-};
-
-export interface AreaEscolhida {
+export interface AreaOcupada {
+  /** o que entra no preço: a faixa de chapa que o corte consome */
   areaM2: number;
-  base: BaseCobranca;
+  /** só o contorno das letras, para mostrar o aproveitamento */
+  areaContornoM2: number;
+  areaChapasM2: number;
   totalFolhas: number;
   totalPecas: number;
   aproveitamento: number;
@@ -40,8 +37,8 @@ export function useEncaixeSvg() {
   const [quantidade, setQuantidade] = useState('1');
   const [chapaLargura, setChapaLargura] = useState('1220');
   const [chapaComprimento, setChapaComprimento] = useState('2440');
-  const [espacamento, setEspacamento] = useState('5');
-  const [base, setBase] = useState<BaseCobranca>('faixa');
+  const [espacamento, setEspacamento] = useState(String(VAO_MINIMO_MM));
+  const [margem, setMargem] = useState(String(MARGEM_MINIMA_MM));
 
   const nesting = useNesting();
   const { rodar, limpar, resultado } = nesting;
@@ -50,7 +47,14 @@ export function useEncaixeSvg() {
   const quantidadeNum = Math.max(1, parseInt(quantidade, 10) || 1);
   const chapaLarguraNum = parseFloat(chapaLargura) || 0;
   const chapaComprimentoNum = parseFloat(chapaComprimento) || 0;
-  const espacamentoNum = Math.max(0, parseFloat(espacamento) || 0);
+  // digitado pelo vendedor, só para avisar que está abaixo do mínimo
+  const espacamentoDigitado = parseFloat(espacamento);
+  const margemDigitada = parseFloat(margem);
+  const espacamentoNum = Math.max(VAO_MINIMO_MM, espacamentoDigitado || 0);
+  const margemNum = Math.max(MARGEM_MINIMA_MM, margemDigitada || 0);
+  const abaixoDoMinimo =
+    (Number.isFinite(espacamentoDigitado) && espacamentoDigitado < VAO_MINIMO_MM) ||
+    (Number.isFinite(margemDigitada) && margemDigitada < MARGEM_MINIMA_MM);
 
   // O usuário informa a altura real do conjunto porque a medida gravada no
   // arquivo é pouco confiável (o Illustrator grava px querendo dizer pt).
@@ -124,31 +128,38 @@ export function useEncaixeSvg() {
       { largura: chapaLarguraNum, comprimento: chapaComprimentoNum },
       {
         espacamento: espacamentoNum,
+        margem: margemNum,
         rotacoes: muitasPecas ? [0, 180] : [0, 90, 180, 270],
         tentativas: muitasPecas ? 4 : 6,
       }
     );
-  }, [pecas, quantidadeNum, chapaLarguraNum, chapaComprimentoNum, espacamentoNum, rodar]);
+  }, [
+    pecas,
+    quantidadeNum,
+    chapaLarguraNum,
+    chapaComprimentoNum,
+    espacamentoNum,
+    margemNum,
+    rodar,
+  ]);
 
-  const areas = useMemo(() => {
+  /*
+   * O preço sai SEMPRE da faixa ocupada — a área de chapa que o corte consome.
+   * Não é escolha do vendedor: cobrar o contorno das letras jogaria o retalho
+   * por nossa conta, e cobrar a chapa inteira cobraria material que volta para
+   * o estoque. As outras duas áreas ficam à vista só como informação.
+   */
+  const areaOcupada: AreaOcupada | null = useMemo(() => {
     if (!resultado) return null;
     return {
-      contorno: resultado.areaPecas / 1e6,
-      faixa: resultado.areaFaixaOcupada / 1e6,
-      chapa: resultado.areaChapasInteiras / 1e6,
-    };
-  }, [resultado]);
-
-  const areaEscolhida: AreaEscolhida | null = useMemo(() => {
-    if (!resultado || !areas) return null;
-    return {
-      areaM2: areas[base],
-      base,
+      areaM2: resultado.areaFaixaOcupada / 1e6,
+      areaContornoM2: resultado.areaPecas / 1e6,
+      areaChapasM2: resultado.areaChapasInteiras / 1e6,
       totalFolhas: resultado.totalFolhas,
       totalPecas: resultado.totalPecas,
       aproveitamento: resultado.areaPecas / Math.max(resultado.areaFaixaOcupada, 1),
     };
-  }, [resultado, areas, base]);
+  }, [resultado]);
 
   return {
     // arquivo
@@ -172,6 +183,9 @@ export function useEncaixeSvg() {
     setChapaComprimento,
     espacamento,
     setEspacamento,
+    margem,
+    setMargem,
+    abaixoDoMinimo,
     chapaLarguraNum,
     chapaComprimentoNum,
     pecaNaoCabe,
@@ -182,10 +196,7 @@ export function useEncaixeSvg() {
     resultado,
     erro: nesting.erro,
     // preço
-    base,
-    setBase,
-    areas,
-    areaEscolhida,
+    areaOcupada,
   };
 }
 

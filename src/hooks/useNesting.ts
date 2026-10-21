@@ -47,6 +47,8 @@ export interface ChapaMm {
 export interface OpcoesEncaixe {
   /** vão entre peças, em mm */
   espacamento?: number;
+  /** distância mínima entre a peça e a borda da chapa, em mm */
+  margem?: number;
   tentativas?: number;
   /**
    * Giros permitidos. O padrão é só 0° e 180° porque cada combinação de giro
@@ -88,14 +90,24 @@ export function useNesting() {
       setResultado(null);
       setErro(null);
 
+      const espacamento = opcoes.espacamento ?? 0;
+      const margem = opcoes.margem ?? 0;
+      // O worker garante o vão inflando cada peça em metade dele, o que de
+      // quebra afasta a peça real em espacamento/2 da borda. Para a margem de
+      // borda ser independente do vão, o retângulo de colocação é a chapa
+      // recuada na diferença — que pode ser negativa (ver `desvio` no worker).
+      const desvio = margem - espacamento / 2;
+      const comprimentoUtil = chapa.comprimento - 2 * desvio;
+      const larguraUtil = chapa.largura - 2 * desvio;
+
       // A chapa vai DEITADA: X = comprimento (o que queremos economizar), Y =
       // largura útil. O placementworker do SVGnest comprime no eixo X, então
       // mandar em pé faz ele empilhar numa coluna e desperdiçar comprimento.
       const bin: Ponto[] = [
         { x: 0, y: 0 },
-        { x: chapa.comprimento, y: 0 },
-        { x: chapa.comprimento, y: chapa.largura },
-        { x: 0, y: chapa.largura },
+        { x: comprimentoUtil, y: 0 },
+        { x: comprimentoUtil, y: larguraUtil },
+        { x: 0, y: larguraUtil },
       ];
 
       const w = new Worker('/nesting/nest-worker.js');
@@ -130,7 +142,9 @@ export function useNesting() {
         // forma em vez de uma por peça (ver avaliar() no worker).
         sources: pecas.map((p) => p.id),
         config: {
-          spacing: opcoes.espacamento ?? 0,
+          spacing: espacamento,
+          margem,
+          chapaReal: { largura: chapa.largura, comprimento: chapa.comprimento },
           tentativas: opcoes.tentativas ?? 6,
           rotations: opcoes.rotacoes ?? [0, 180],
           curveTolerance: 0.3,

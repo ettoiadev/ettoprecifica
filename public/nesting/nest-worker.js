@@ -330,7 +330,11 @@ function prepararPeca(peca, indice) {
  * economizar), Y = largura útil (fixa). Enviar em pé faz ele empilhar numa
  * coluna estreita e desperdiçar comprimento.
  */
-function medir(resultado, bin, parts, partsReais) {
+function medir(resultado, bin, parts, partsReais, chapa, desvio) {
+  // `chapa` é a chapa REAL; `bin` é o retângulo onde as peças podem ser
+  // colocadas, que não é a mesma coisa quando a margem de borda difere de
+  // metade do vão (ver `desvio` no onmessage). `desvio` é a distância
+  // entre o canto do bin e o canto da chapa, para medir e desenhar na chapa.
   // `parts` são os contornos inflados pelo espaçamento (é o que de fato ocupa a
   // chapa, então é deles que sai a envolvente/faixa); `partsReais` são os
   // contornos do arquivo, usados para área e para desenhar o encaixe.
@@ -371,7 +375,7 @@ function medir(resultado, bin, parts, partsReais) {
       var girada = rotatePolygon(real, pos[p].rotation);
       var pontos = [];
       for (var q = 0; q < girada.length; q++) {
-        pontos.push({ x: girada[q].x + pos[p].x, y: girada[q].y + pos[p].y });
+        pontos.push({ x: girada[q].x + pos[p].x + desvio, y: girada[q].y + pos[p].y + desvio });
       }
       var furos = [];
       if (girada.children) {
@@ -379,8 +383,8 @@ function medir(resultado, bin, parts, partsReais) {
           var furo = [];
           for (var d = 0; d < girada.children[c].length; d++) {
             furo.push({
-              x: girada.children[c][d].x + pos[p].x,
-              y: girada.children[c][d].y + pos[p].y,
+              x: girada.children[c][d].x + pos[p].x + desvio,
+              y: girada.children[c][d].y + pos[p].y + desvio,
             });
           }
           furos.push(furo);
@@ -397,8 +401,12 @@ function medir(resultado, bin, parts, partsReais) {
       });
     }
 
-    // X = sentido do comprimento da chapa (ver nota de orientação acima)
-    var comprimentoUsado = maxX === -Infinity ? 0 : maxX;
+    // X = sentido do comprimento da chapa (ver nota de orientação acima).
+    // `maxX` é a borda do contorno INFLADO no sistema do bin; somando os dois
+    // desvios chega-se ao ponto de corte na chapa, já com a margem depois da
+    // última peça.
+    var comprimentoUsado =
+      maxX === -Infinity ? 0 : Math.min(chapa.comprimento, Math.max(0, maxX + 2 * desvio));
     folhas.push({
       pecas: pecasDesenhadas,
       envolvente:
@@ -407,21 +415,27 @@ function medir(resultado, bin, parts, partsReais) {
           : { x: minX, y: minY, largura: maxX - minX, altura: maxY - minY },
       areaPecas: areaFolha,
       comprimentoUsado: comprimentoUsado,
-      areaFaixaOcupada: comprimentoUsado * bin.height,
-      aproveitamento: areaFolha / (bin.width * bin.height),
+      areaFaixaOcupada: comprimentoUsado * chapa.largura,
+      aproveitamento: areaFolha / (chapa.comprimento * chapa.largura),
     });
   }
 
   return {
     fitness: resultado.fitness,
-    chapa: { largura: bin.width, altura: bin.height, area: bin.width * bin.height },
+    // "largura" aqui é o eixo X do desenho, que é o COMPRIMENTO da chapa
+    // (ela vai deitada); "altura" é a largura útil.
+    chapa: {
+      largura: chapa.comprimento,
+      altura: chapa.largura,
+      area: chapa.comprimento * chapa.largura,
+    },
     folhas: folhas,
     totalFolhas: folhas.length,
     totalPecas: resultado.placements.reduce(function (s, a) {
       return s + a.length;
     }, 0),
     areaPecas: areaPecasTotal,
-    areaChapasInteiras: folhas.length * bin.width * bin.height,
+    areaChapasInteiras: folhas.length * chapa.comprimento * chapa.largura,
     areaFaixaOcupada: folhas.reduce(function (s, x) {
       return s + x.areaFaixaOcupada;
     }, 0),
@@ -461,6 +475,7 @@ self.onmessage = function (e) {
       clipperScale: 10000000,
       curveTolerance: 0.3,
       spacing: 0,
+      margem: 0,
       rotations: [0, 90, 180, 270],
       useHoles: false,
       exploreConcave: false,
@@ -485,10 +500,29 @@ self.onmessage = function (e) {
   }
   // vão entre peças: ver inflarPoligono
   var vao = Number(config.spacing) || 0;
+  var margem = Number(config.margem) || 0;
+  /*
+   * Vão entre peças e margem de borda são regras DIFERENTES e precisam ficar
+   * independentes. Inflar a peça em vao/2 resolve só o vão: a peça real acaba
+   * ficando exatamente vao/2 da borda da chapa, que só por acaso é a margem
+   * desejada quando vao = 2 × margem.
+   *
+   * Então o retângulo onde as peças podem ser colocadas é a chapa recuada em
+   * (margem − vao/2) de cada lado. O recuo pode ser NEGATIVO (bin maior que a
+   * chapa): com vão de 20mm e margem de 5mm, o contorno inflado pode passar
+   * 5mm da borda, porque a peça real continua 10mm para dentro.
+   */
+  var desvio = margem - vao / 2;
+  var chapaReal = config.chapaReal || { largura: 0, comprimento: 0 };
+  // O offset arredonda os cantos em facetas, e a faceta corta para DENTRO:
+  // pedindo vao/2 exato, o vão medido saía ~0,3mm curto. Como o vão e a margem
+  // são mínimos de produção ("pelo menos 10mm"), soma-se a tolerância da curva
+  // para a folga real nunca ficar abaixo do pedido.
+  var inflar = vao > 0 ? vao / 2 + config.curveTolerance : 0;
   var parts =
-    vao > 0
+    inflar > 0
       ? partsReais.map(function (p) {
-          return inflarPoligono(p, vao / 2, config);
+          return inflarPoligono(p, inflar, config);
         })
       : partsReais;
   var tentativas = config.tentativas || 8;
@@ -538,7 +572,7 @@ self.onmessage = function (e) {
 
     self.postMessage({
       tipo: 'resultado',
-      resultado: medir(melhor, bin, parts, partsReais),
+      resultado: medir(melhor, bin, parts, partsReais, chapaReal, desvio),
       diagnostico: diagnostico,
     });
   } catch (err) {
