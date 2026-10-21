@@ -67,6 +67,9 @@ export interface PlacaPSConfig {
   cristal15mm: number;
   cristal2mm: number;
   cristal3mm: number;
+  /** Laminação: adicional opcional por m², somado ao preço/m² da placa (mesmo
+   *  modelo da laca de proteção da Lona). Editável em Configurações. */
+  laminacaoM2: number;
   notaFiscalPercentual: number;
   itens?: ProductVariation[];
 }
@@ -269,6 +272,7 @@ export const defaultConfig: PricingConfig = {
     cristal15mm: 290.0,
     cristal2mm: 330.0,
     cristal3mm: 390.0,
+    laminacaoM2: 40.0,
     notaFiscalPercentual: 9.31,
   },
   placaACM: {

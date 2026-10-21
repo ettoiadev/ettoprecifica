@@ -27,10 +27,12 @@ export const settingsConfig: ConfigSectionData[] = [
     ],
   },
   {
-    // Tipos de placa PS na lista abaixo (LIST_MANAGERS.placaPS).
+    // Tipos de placa PS na lista abaixo (LIST_MANAGERS.placaPS); aqui só a laminação.
     title: 'Placa PS',
     section: 'placaPS',
-    fields: [],
+    fields: [
+      { key: 'laminacaoM2', label: 'Laminação (adicional)', unit: 'm²' },
+    ],
   },
   {
     // Materiais de ACM na lista abaixo (LIST_MANAGERS.placaACM).

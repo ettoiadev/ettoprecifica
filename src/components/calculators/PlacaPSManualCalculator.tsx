@@ -21,6 +21,7 @@ const PlacaPSManualCalculator: React.FC<Props> = ({ config }) => {
   const [largura, setLargura] = useState<string>('');
   const [altura, setAltura] = useState<string>('');
   const [quantidade, setQuantidade] = useState<number>(1);
+  const [laminacao, setLaminacao] = useState<boolean>(false);
   const [incluirNota, setIncluirNota] = useState<boolean>(true);
 
   const { addItem } = useCotacao();
@@ -36,7 +37,11 @@ const PlacaPSManualCalculator: React.FC<Props> = ({ config }) => {
   const entradaValida = larguraNum > 0 && alturaNum > 0;
 
   const opcaoSel = opcoes.find((o) => o.id === tipo) ?? opcoes[0];
-  const precoM2 = opcaoSel?.price ?? 0;
+  const precoM2Base = opcaoSel?.price ?? 0;
+  // Laminação é adicional por m² somado ao preço/m² da placa (mesmo modelo da
+  // laca de proteção da Lona). Valor editável em Configurações > Placa PS.
+  const precoM2Laminacao = laminacao ? config.laminacaoM2 || 0 : 0;
+  const precoM2 = precoM2Base + precoM2Laminacao;
 
   const calc = useMemo(() => {
     if (!entradaValida) return null;
@@ -46,19 +51,28 @@ const PlacaPSManualCalculator: React.FC<Props> = ({ config }) => {
     const comNota = semNota * (1 + ALIQUOTA_NF / 100);
     const descontoNota = comNota - semNota;
     const final = incluirNota ? comNota : semNota;
-    return { areaUnit, areaTotal, semNota, comNota, descontoNota, final };
-  }, [entradaValida, larguraNum, alturaNum, qtd, precoM2, incluirNota]);
+    return {
+      areaUnit,
+      areaTotal,
+      adicionalLaminacao: precoM2Laminacao * areaTotal,
+      semNota,
+      comNota,
+      descontoNota,
+      final,
+    };
+  }, [entradaValida, larguraNum, alturaNum, qtd, precoM2, precoM2Laminacao, incluirNota]);
 
   const temPreco = !!calc && calc.final > 0;
 
   const descricao = useMemo(
-    () => `${opcaoSel?.label ?? 'Placa PS'} ${larguraNum.toFixed(2)}×${alturaNum.toFixed(2)}m${qtd > 1 ? ` (${qtd}un)` : ''}`,
-    [opcaoSel, larguraNum, alturaNum, qtd]
+    () =>
+      `${opcaoSel?.label ?? 'Placa PS'}${laminacao ? ' + laminação' : ''} ${larguraNum.toFixed(2)}×${alturaNum.toFixed(2)}m${qtd > 1 ? ` (${qtd}un)` : ''}`,
+    [opcaoSel, laminacao, larguraNum, alturaNum, qtd]
   );
 
   const handleCopy = () => {
     if (!temPreco || !calc) return;
-    const texto = `${opcaoSel?.label ?? 'Placa PS'}
+    const texto = `${opcaoSel?.label ?? 'Placa PS'}${laminacao ? ' + Laminação' : ''}
 Medida: ${larguraNum.toFixed(2)} x ${alturaNum.toFixed(2)} m — ${qtd} un
 Valor: ${formatCurrency(calc.final)}`;
     navigator.clipboard.writeText(texto).then(
@@ -116,6 +130,10 @@ Valor: ${formatCurrency(calc.final)}`;
             </div>
           </div>
 
+          <CalcCheckbox checked={laminacao} onCheckedChange={setLaminacao}>
+            Laminação — {formatCurrency(config.laminacaoM2 || 0)}/m²
+          </CalcCheckbox>
+
           <CalcCheckbox checked={incluirNota} onCheckedChange={setIncluirNota}>
             Emitir com nota fiscal ({ALIQUOTA_NF.toLocaleString('pt-BR')}%)
           </CalcCheckbox>
@@ -147,10 +165,23 @@ Valor: ${formatCurrency(calc.final)}`;
 
               <div className="space-y-1">
                 <div className="flex justify-between text-sm text-gray-600"><span>Placa:</span><span className="text-right">{opcaoSel.label}</span></div>
-                <div className="flex justify-between text-sm text-gray-600"><span>Preço/m²:</span><span>{formatCurrency(precoM2)}</span></div>
+                <div className="flex justify-between text-sm text-gray-600">
+                  <span>Preço/m²:</span>
+                  <span>
+                    {formatCurrency(precoM2)}
+                    {laminacao && (
+                      <span className="text-gray-500">
+                        {' '}({formatCurrency(precoM2Base)} + {formatCurrency(precoM2Laminacao)})
+                      </span>
+                    )}
+                  </span>
+                </div>
                 <div className="flex justify-between text-sm text-gray-600"><span>Área (un):</span><span>{calc.areaUnit.toFixed(2)} m²</span></div>
                 {qtd > 1 && (
                   <div className="flex justify-between text-sm text-gray-600"><span>Área total:</span><span>{calc.areaTotal.toFixed(2)} m²</span></div>
+                )}
+                {laminacao && calc.adicionalLaminacao > 0 && (
+                  <div className="flex justify-between text-sm text-gray-600"><span>Laminação:</span><span>{formatCurrency(calc.adicionalLaminacao)}</span></div>
                 )}
               </div>
 
