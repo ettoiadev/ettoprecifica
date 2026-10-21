@@ -4,7 +4,7 @@
  * bundler: o caminho é sempre '/nesting/nest-worker.js'.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { PecaSvg, Ponto } from '../lib/nesting/svgParaPecas';
+import type { PecaVetorial, Ponto } from '../lib/nesting/geometria';
 
 export interface PecaEncaixada {
   id: number;
@@ -81,7 +81,7 @@ export function useNesting() {
   }, [encerrar]);
 
   const rodar = useCallback(
-    (pecas: PecaSvg[], chapa: ChapaMm, opcoes: OpcoesEncaixe = {}) => {
+    (pecas: PecaVetorial[], chapa: ChapaMm, opcoes: OpcoesEncaixe = {}) => {
       encerrar();
       setEstado('rodando');
       setProgresso(0);

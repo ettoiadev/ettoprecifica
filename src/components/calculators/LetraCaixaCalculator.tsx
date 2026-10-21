@@ -1,10 +1,12 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Loader2, AlertTriangle, Copy, PlusCircle } from 'lucide-react';
 import { formatCurrency, ALIQUOTA_NF_MOTOR } from '../../types/pricing';
 import { supabase } from '../../lib/supabase/client';
 import { useCotacao } from '../../contexts/CotacaoContext';
 import { CalcCheckbox, OptionChip, selectClass } from './CalcControls';
-import EncaixeSvgPanel, { type ResultadoEncaixeArea } from './EncaixeSvgPanel';
+import EncaixeControles from './EncaixeControles';
+import EncaixeVisual from './EncaixeVisual';
+import { useEncaixeSvg } from '../../hooks/useEncaixeSvg';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 import { toast } from 'sonner';
@@ -71,7 +73,10 @@ const LetraCaixaCalculator: React.FC = () => {
   const [modoPvc, setModoPvc] = useState<ModoPvc>('manual');
   const [larguraPlaca, setLarguraPlaca] = useState<string>('');
   const [alturaPlaca, setAlturaPlaca] = useState<string>('');
-  const [encaixe, setEncaixe] = useState<ResultadoEncaixeArea | null>(null);
+  // Estado da precificação por arquivo. Vive aqui porque é compartilhado pelos
+  // controles (coluna esquerda) e pela visualização (coluna direita).
+  const enc = useEncaixeSvg();
+  const encaixe = enc.areaEscolhida;
   // ACM/Galvanizado/Inox/Impressão 3D (por altura da letra × nº de caracteres)
   const [alturaCm, setAlturaCm] = useState<string>('');
   const [nCaracteres, setNCaracteres] = useState<string>('');
@@ -103,8 +108,6 @@ const LetraCaixaCalculator: React.FC = () => {
   const entradaValida = isPvc
     ? larguraEnvio > 0 && alturaEnvio > 0
     : alturaCmNum > 0 && nCaracteresNum > 0;
-
-  const handleEncaixe = useCallback((r: ResultadoEncaixeArea | null) => setEncaixe(r), []);
 
   // Troca de material: mantém o modo de iluminação atual se for válido para o
   // novo material; senão cai para o primeiro disponível (ex.: Impressão 3D → frontal).
@@ -313,7 +316,7 @@ Valor: ${formatCurrency(precos.final)}`;
                     active={modoPvc === 'arquivo'}
                     variant="neutral"
                   >
-                    Pelo arquivo (SVG)
+                    Pelo arquivo (SVG/DXF)
                   </OptionChip>
                 </div>
               </div>
@@ -354,7 +357,7 @@ Valor: ${formatCurrency(precos.final)}`;
                   )}
                 </div>
               ) : (
-                <EncaixeSvgPanel onResultado={handleEncaixe} />
+                <EncaixeControles enc={enc} />
               )}
             </>
           ) : (
@@ -440,13 +443,16 @@ Valor: ${formatCurrency(precos.final)}`;
         </div>
 
         {/* Resultado */}
-        <div className="bg-gray-50 rounded-xl border border-gray-200 p-6">
+        <div className="space-y-6">
+          {usaArquivo && <EncaixeVisual enc={enc} />}
+
+          <div className="bg-gray-50 rounded-xl border border-gray-200 p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Orçamento</h3>
 
           {!entradaValida ? (
             <p className="text-sm text-gray-500">
               {usaArquivo
-                ? 'Envie o arquivo e calcule o encaixe para ver o preço.'
+                ? 'Envie o arquivo e organize as peças na chapa para ver o preço.'
                 : isPvc
                   ? 'Informe as dimensões da placa para ver o preço.'
                   : 'Informe a altura da letra e o nº de caracteres para ver o preço.'}
@@ -565,6 +571,7 @@ Valor: ${formatCurrency(precos.final)}`;
               )}
             </div>
           ) : null}
+          </div>
         </div>
       </div>
     </div>
