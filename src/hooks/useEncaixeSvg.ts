@@ -190,7 +190,10 @@ export function useEncaixeSvg() {
    * o estoque. As outras duas áreas ficam à vista só como informação.
    */
   const areaOcupada: AreaOcupada | null = useMemo(() => {
-    if (!resultado) return null;
+    // Peça que ficou de fora derruba o orçamento inteiro: cobrar só as que
+    // couberam sairia MUITO abaixo do custo real (num teste, 0,257 m² em vez
+    // de 1,843 m²). Sem preço até o encaixe fechar.
+    if (!resultado || resultado.pecasFora > 0) return null;
     return {
       areaM2: resultado.areaFaixaOcupada / 1e6,
       areaContornoM2: resultado.areaPecas / 1e6,
@@ -242,6 +245,7 @@ export function useEncaixeSvg() {
     duracaoMs: nesting.duracaoMs,
     // preço
     areaOcupada,
+    pecasFora: resultado?.pecasFora ?? 0,
   };
 }
 

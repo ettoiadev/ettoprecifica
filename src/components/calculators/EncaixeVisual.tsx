@@ -197,6 +197,18 @@ const EncaixeVisual: React.FC<{ enc: EncaixeSvg }> = ({ enc }) => {
         )
       )}
 
+      {enc.pecasFora > 0 && (
+        <div className="flex items-start gap-2 p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700">
+          <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+          <span>
+            {enc.pecasFora}{' '}
+            {enc.pecasFora === 1 ? 'peça não coube no encaixe' : 'peças não couberam no encaixe'} —
+            sem preço até resolver. Libere mais ângulos em "Giro das peças", aumente a chapa ou
+            reduza o tamanho do conjunto.
+          </span>
+        </div>
+      )}
+
       {enc.erro && (
         <div className="flex items-start gap-2 p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700">
           <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />

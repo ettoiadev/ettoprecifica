@@ -35,6 +35,8 @@ export interface ResultadoEncaixe {
   areaPecas: number;
   areaChapasInteiras: number;
   areaFaixaOcupada: number;
+  /** peças que entraram e não saíram colocadas — se > 0, não dá para orçar */
+  pecasFora: number;
 }
 
 export interface ChapaMm {

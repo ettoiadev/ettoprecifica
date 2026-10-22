@@ -442,6 +442,23 @@ function medir(resultado, bin, parts, partsReais, chapa, desvio) {
   };
 }
 
+/**
+ * Em quais dos giros permitidos a peça ainda cabe na chapa.
+ *
+ * Existe porque o giro de cada peça é SORTEADO a cada tentativa: uma peça que
+ * só cabe em pé podia tirar 0° em todas as tentativas, ficar de fora do
+ * encaixe e, pior, sumir do preço sem avisar. Sorteando só entre os giros
+ * viáveis, toda peça que cabe é colocada.
+ */
+function rotacoesViaveis(peca, bin, permitidas) {
+  var ok = [];
+  for (var i = 0; i < permitidas.length; i++) {
+    var b = GeometryUtil.getPolygonBounds(rotatePolygon(peca, permitidas[i]));
+    if (b.width <= bin.width && b.height <= bin.height) ok.push(permitidas[i]);
+  }
+  return ok;
+}
+
 function embaralhar(arr, rnd) {
   var a = arr.slice(0);
   for (var i = a.length - 1; i > 0; i--) {
@@ -541,14 +558,44 @@ self.onmessage = function (e) {
       return Math.abs(GeometryUtil.polygonArea(b)) - Math.abs(GeometryUtil.polygonArea(a));
     });
 
+    var viaveisPorId = {};
+    var foraDaChapa = [];
+    for (var vi = 0; vi < parts.length; vi++) {
+      var lista = rotacoesViaveis(parts[vi], bin, rotacoesPermitidas);
+      viaveisPorId[parts[vi].id] = lista;
+      if (lista.length === 0) foraDaChapa.push(parts[vi].id);
+    }
+    if (foraDaChapa.length > 0) {
+      // Checa se algum giro fora dos permitidos resolveria, para a mensagem
+      // poder dizer o que fazer em vez de só reclamar.
+      var salvaria = rotacoesViaveis(parts[0], bin, [0, 90, 180, 270]).length > 0;
+      for (var fi = 0; fi < foraDaChapa.length && salvaria; fi++) {
+        var alvo = null;
+        for (var pi = 0; pi < parts.length; pi++)
+          if (parts[pi].id === foraDaChapa[fi]) alvo = parts[pi];
+        salvaria = alvo ? rotacoesViaveis(alvo, bin, [0, 90, 180, 270]).length > 0 : false;
+      }
+      self.postMessage({
+        tipo: 'erro',
+        mensagem:
+          foraDaChapa.length +
+          (foraDaChapa.length === 1 ? ' peça não cabe' : ' peças não cabem') +
+          ' nesta chapa' +
+          (salvaria
+            ? ' sem girar. Escolha um giro de 90° em "Giro das peças", ou use uma chapa maior.'
+            : ', em nenhum giro. Reduza o tamanho do conjunto ou use uma chapa maior.'),
+        pecasFora: foraDaChapa.length,
+      });
+      return;
+    }
+
     var melhor = null;
     for (var t = 0; t < tentativas; t++) {
       var candidato = t === 0 ? ordenado : embaralhar(ordenado, rnd);
       var rotations = [];
       for (var i = 0; i < candidato.length; i++) {
-        rotations.push(
-          t === 0 ? 0 : rotacoesPermitidas[Math.floor(rnd() * rotacoesPermitidas.length)]
-        );
+        var viaveis = viaveisPorId[candidato[i].id];
+        rotations.push(t === 0 ? viaveis[0] : viaveis[Math.floor(rnd() * viaveis.length)]);
       }
 
       // Atenção: placePaths devolve UM objeto {placements, fitness, area}.
@@ -570,11 +617,11 @@ self.onmessage = function (e) {
       return;
     }
 
-    self.postMessage({
-      tipo: 'resultado',
-      resultado: medir(melhor, bin, parts, partsReais, chapaReal, desvio),
-      diagnostico: diagnostico,
-    });
+    var medido = medir(melhor, bin, parts, partsReais, chapaReal, desvio);
+    // Rede de segurança: peça que entrou e não saiu colocada não pode virar
+    // preço. Orçar só as que couberam cobraria menos do que o serviço custa.
+    medido.pecasFora = parts.length - medido.totalPecas;
+    self.postMessage({ tipo: 'resultado', resultado: medido, diagnostico: diagnostico });
   } catch (err) {
     self.postMessage({ tipo: 'erro', mensagem: (err && err.message) || String(err) });
   }
