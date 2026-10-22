@@ -27,17 +27,16 @@ export const MARGEM_MINIMA_MM = 5;
  * numa chapa larga não ganha nada girando. Girar rende quando a peça é grande
  * perto da chapa; aí vale esperar.
  */
-export type Giro = 'auto' | 'sem' | 'meia' | 'quarto' | 'oitavo';
+export type Giro = 'sem' | 'meia' | 'quarto' | 'oitavo';
 
 export const GIRO_LABEL: Record<Giro, string> = {
-  auto: 'Automático',
   sem: 'Sem giro — mais rápido',
   meia: '180° — meia volta',
   quarto: '90° — 4 ângulos',
   oitavo: '45° — 8 ângulos, mais lento',
 };
 
-const GIRO_ANGULOS: Record<Exclude<Giro, 'auto'>, number[]> = {
+const GIRO_ANGULOS: Record<Giro, number[]> = {
   sem: [0],
   meia: [0, 180],
   quarto: [0, 90, 180, 270],
@@ -45,16 +44,22 @@ const GIRO_ANGULOS: Record<Exclude<Giro, 'auto'>, number[]> = {
 };
 
 /**
- * Com poucas peças, liberar os 4 giros melhora o encaixe e custa pouco
- * (medido: 5 peças, 3s, 0,695 m² contra 0,808 m² só com 0°/180°). Com muitas
- * peças a chapa enche de qualquer jeito e os ângulos extras só fazem esperar.
+ * O giro é SEMPRE o que o vendedor escolheu — não existe modo automático.
+ * Existiu, e era ruim: a regra "até 12 peças usa 4 ângulos, acima usa 0°/180°"
+ * fazia o PREÇO mudar ao acrescentar uma letra no letreiro, por um motivo
+ * invisível que não dá para explicar ao cliente.
  */
-const LIMITE_GIRO_LIVRE = 12;
+export const GIRO_PADRAO: Giro = 'meia';
 
-function angulosDe(giro: Giro, totalPecas: number): number[] {
-  if (giro !== 'auto') return GIRO_ANGULOS[giro];
-  return totalPecas <= LIMITE_GIRO_LIVRE ? GIRO_ANGULOS.quarto : GIRO_ANGULOS.meia;
-}
+/**
+ * Quantas ordens/giros diferentes testar antes de escolher o melhor encaixe.
+ *
+ * 20 não é chute: é onde o cache de no-fit-polygon satura. Abaixo disso o giro
+ * é desperdiçado — com 6 tentativas, 2 giros davam 0,822 m² e ficavam PIORES
+ * que não girar (0,769); com 20, dão 0,673 m². No mesmo letreiro de 5 letras,
+ * R$431 contra R$353. Acima de 20 não melhorou mais (60 deu o mesmo).
+ */
+const TENTATIVAS = 20;
 
 export interface AreaOcupada {
   /** o que entra no preço: a faixa de chapa que o corte consome */
@@ -78,7 +83,7 @@ export function useEncaixeSvg() {
   const [chapaComprimento, setChapaComprimento] = useState('2440');
   const [espacamento, setEspacamento] = useState(String(VAO_MINIMO_MM));
   const [margem, setMargem] = useState(String(MARGEM_MINIMA_MM));
-  const [giro, setGiro] = useState<Giro>('auto');
+  const [giro, setGiro] = useState<Giro>(GIRO_PADRAO);
 
   const nesting = useNesting();
   const { rodar, limpar, resultado } = nesting;
@@ -161,15 +166,14 @@ export function useEncaixeSvg() {
     if (pecas.length === 0 || chapaLarguraNum <= 0 || chapaComprimentoNum <= 0) return;
     const todas = [];
     for (let j = 0; j < quantidadeNum; j++) todas.push(...pecas);
-    const muitasPecas = todas.length > LIMITE_GIRO_LIVRE;
     rodar(
       todas,
       { largura: chapaLarguraNum, comprimento: chapaComprimentoNum },
       {
         espacamento: espacamentoNum,
         margem: margemNum,
-        rotacoes: angulosDe(giro, todas.length),
-        tentativas: muitasPecas ? 4 : 6,
+        rotacoes: GIRO_ANGULOS[giro],
+        tentativas: TENTATIVAS,
       }
     );
   }, [
@@ -231,7 +235,7 @@ export function useEncaixeSvg() {
     setMargem,
     giro,
     setGiro,
-    angulos: angulosDe(giro, totalPecas),
+    angulos: GIRO_ANGULOS[giro],
     abaixoDoMinimo,
     chapaLarguraNum,
     chapaComprimentoNum,

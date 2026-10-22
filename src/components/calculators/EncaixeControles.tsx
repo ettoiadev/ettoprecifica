@@ -179,15 +179,16 @@ const EncaixeControles: React.FC<{ enc: EncaixeSvg }> = ({ enc }) => {
                 onChange={(e) => enc.setGiro(e.target.value as Giro)}
                 className={selectClass}
               >
-                {(['auto', 'sem', 'meia', 'quarto', 'oitavo'] as Giro[]).map((g) => (
+                {(['sem', 'meia', 'quarto', 'oitavo'] as Giro[]).map((g) => (
                   <option key={g} value={g}>
                     {GIRO_LABEL[g]}
                   </option>
                 ))}
               </select>
               <p className="text-xs text-gray-500 mt-2">
-                Cada ângulo a mais multiplica o trabalho do encaixe. Com muitas peças pequenas numa
-                chapa larga, girar costuma dar a mesma área e só demorar mais.
+                Girar costuma economizar material quando as peças são grandes perto da chapa, e
+                não muda nada quando são pequenas — só demora mais. Compare a área e o tempo que
+                aparecem depois de organizar.
               </p>
             </div>
           </div>

@@ -603,7 +603,26 @@ self.onmessage = function (e) {
       // daí o `placements[0]` de lá. Chamando direto, o objeto já é o resultado.
       var r = avaliar(bin, candidato, rotations, config, nfpCache, formaCache);
       if (r && typeof r.fitness === 'number') {
-        if (!melhor || r.fitness < melhor.fitness) melhor = r;
+        /*
+         * Escolhe a tentativa pelo que é COBRADO, não pelo `fitness` do
+         * SVGnest. O fitness dele é nº de chapas + largura do ÚLTIMO bin
+         * dividida pela área — não é a faixa ocupada somada, que é o nosso
+         * preço. Escolhendo por fitness, uma tentativa de placar melhor podia
+         * ter faixa pior, e foi por isso que liberar mais ângulos chegava a
+         * SUBIR o preço: a tentativa boa existia e era descartada.
+         *
+         * Medir por tentativa é barato (percorre as peças colocadas) perto do
+         * no-fit-polygon, que é ~98% do tempo.
+         */
+        var m = medir(r, bin, parts, partsReais, chapaReal, desvio);
+        m.pecasFora = parts.length - m.totalPecas;
+        if (
+          !melhor ||
+          m.pecasFora < melhor.pecasFora ||
+          (m.pecasFora === melhor.pecasFora && m.areaFaixaOcupada < melhor.areaFaixaOcupada)
+        ) {
+          melhor = m;
+        }
       }
       self.postMessage({ tipo: 'progresso', valor: (t + 1) / tentativas });
     }
@@ -617,11 +636,10 @@ self.onmessage = function (e) {
       return;
     }
 
-    var medido = medir(melhor, bin, parts, partsReais, chapaReal, desvio);
-    // Rede de segurança: peça que entrou e não saiu colocada não pode virar
-    // preço. Orçar só as que couberam cobraria menos do que o serviço custa.
-    medido.pecasFora = parts.length - medido.totalPecas;
-    self.postMessage({ tipo: 'resultado', resultado: medido, diagnostico: diagnostico });
+    // `melhor` já vem medido (ver escolha por área acima). `pecasFora` é a
+    // rede de segurança: peça que entrou e não saiu colocada não pode virar
+    // preço — orçar só as que couberam cobraria menos do que o serviço custa.
+    self.postMessage({ tipo: 'resultado', resultado: melhor, diagnostico: diagnostico });
   } catch (err) {
     self.postMessage({ tipo: 'erro', mensagem: (err && err.message) || String(err) });
   }
