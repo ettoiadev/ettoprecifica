@@ -190,6 +190,8 @@ const EncaixeVisual: React.FC<{ enc: EncaixeSvg }> = ({ enc }) => {
             <p className="text-xs text-gray-500">
               A linha tracejada marca onde a chapa foi cortada — à direita dela sobra material
               inteiro.
+              {enc.duracaoMs !== null &&
+                ` Organizado em ${(enc.duracaoMs / 1000).toFixed(1)} s.`}
             </p>
           </>
         )

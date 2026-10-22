@@ -7,10 +7,13 @@ import React, { useRef } from 'react';
 import { Upload, AlertTriangle, FileWarning } from 'lucide-react';
 import { EXTENSOES_ACEITAS } from '../../lib/nesting/lerArquivo';
 import {
+  GIRO_LABEL,
   MARGEM_MINIMA_MM,
   VAO_MINIMO_MM,
+  type Giro,
   type EncaixeSvg,
 } from '../../hooks/useEncaixeSvg';
+import { selectClass } from './CalcControls';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 
@@ -100,7 +103,8 @@ const EncaixeControles: React.FC<{ enc: EncaixeSvg }> = ({ enc }) => {
             <p className="-mt-3 text-xs text-gray-500">
               Conjunto: {enc.conjunto.largura.toFixed(0)} × {enc.conjunto.altura.toFixed(0)} mm ·
               maior peça {enc.maiorPeca.largura.toFixed(0)} × {enc.maiorPeca.altura.toFixed(0)} mm ·{' '}
-              {enc.totalPecas} peças
+              {enc.totalPecas} peças em {enc.totalFormas}{' '}
+              {enc.totalFormas === 1 ? 'forma' : 'formas distintas'}
             </p>
           )}
 
@@ -164,6 +168,28 @@ const EncaixeControles: React.FC<{ enc: EncaixeSvg }> = ({ enc }) => {
               Mínimos de produção: {VAO_MINIMO_MM} mm entre letras e {MARGEM_MINIMA_MM} mm da borda
               da chapa.
             </p>
+
+            <div className="mt-4">
+              <label htmlFor="chapa-giro" className="block text-xs text-gray-500 mb-1">
+                Giro das peças
+              </label>
+              <select
+                id="chapa-giro"
+                value={enc.giro}
+                onChange={(e) => enc.setGiro(e.target.value as Giro)}
+                className={selectClass}
+              >
+                {(['auto', 'sem', 'meia', 'quarto', 'oitavo'] as Giro[]).map((g) => (
+                  <option key={g} value={g}>
+                    {GIRO_LABEL[g]}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-500 mt-2">
+                Cada ângulo a mais multiplica o trabalho do encaixe. Com muitas peças pequenas numa
+                chapa larga, girar costuma dar a mesma área e só demorar mais.
+              </p>
+            </div>
           </div>
 
           {enc.abaixoDoMinimo && (

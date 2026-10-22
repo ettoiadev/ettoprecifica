@@ -65,6 +65,8 @@ export function useNesting() {
   const [progresso, setProgresso] = useState(0);
   const [resultado, setResultado] = useState<ResultadoEncaixe | null>(null);
   const [erro, setErro] = useState<string | null>(null);
+  // quanto demorou: é o que deixa o vendedor entender o custo de cada ângulo
+  const [duracaoMs, setDuracaoMs] = useState<number | null>(null);
   const workerRef = useRef<Worker | null>(null);
 
   const encerrar = useCallback(() => {
@@ -80,6 +82,7 @@ export function useNesting() {
     setProgresso(0);
     setResultado(null);
     setErro(null);
+    setDuracaoMs(null);
   }, [encerrar]);
 
   const rodar = useCallback(
@@ -89,6 +92,8 @@ export function useNesting() {
       setProgresso(0);
       setResultado(null);
       setErro(null);
+      setDuracaoMs(null);
+      const inicio = performance.now();
 
       const espacamento = opcoes.espacamento ?? 0;
       const margem = opcoes.margem ?? 0;
@@ -118,6 +123,7 @@ export function useNesting() {
         if (d?.tipo === 'progresso') {
           setProgresso(d.valor);
         } else if (d?.tipo === 'resultado') {
+          setDuracaoMs(performance.now() - inicio);
           setResultado(d.resultado as ResultadoEncaixe);
           setEstado('pronto');
           encerrar();
@@ -137,10 +143,10 @@ export function useNesting() {
         bin,
         parts: pecas.map((p) => p.contorno),
         furos: pecas.map((p) => p.furos),
-        // qual FORMA cada peça é: num letreiro de 4 jogos, as 20 peças são 5
-        // formas repetidas, e o worker calcula o no-fit-polygon uma vez por
-        // forma em vez de uma por peça (ver avaliar() no worker).
-        sources: pecas.map((p) => p.id),
+        // qual FORMA cada peça é: num letreiro as letras se repetem, e o
+        // worker calcula o no-fit-polygon uma vez por forma em vez de uma por
+        // peça (ver avaliar() no worker e agruparFormas() na leitura).
+        sources: pecas.map((p) => p.forma),
         config: {
           spacing: espacamento,
           margem,
@@ -156,5 +162,5 @@ export function useNesting() {
     [encerrar]
   );
 
-  return { rodar, limpar, estado, progresso, resultado, erro };
+  return { rodar, limpar, estado, progresso, resultado, erro, duracaoMs };
 }

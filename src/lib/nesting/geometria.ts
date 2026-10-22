@@ -11,6 +11,12 @@ export interface Ponto {
 
 export interface PecaVetorial {
   id: number;
+  /**
+   * Qual FORMA esta peça é. Num letreiro as letras se repetem ("A" quatro
+   * vezes), e o no-fit-polygon só precisa ser calculado uma vez por forma —
+   * é o que faz o encaixe de um letreiro inteiro sair em segundos.
+   */
+  forma: number;
   nome: string;
   /** contorno externo, em mm, com o canto da bounding box na origem */
   contorno: Ponto[];
@@ -52,6 +58,14 @@ export const TOLERANCIA_MM = 0.8;
 
 /** Menor contorno que ainda é peça, e não sujeira de arquivo (mm²). */
 const AREA_MINIMA = 4;
+
+/**
+ * Folga para duas peças serem consideradas a mesma forma. Folgado de
+ * propósito: o mesmo glifo exportado em posições diferentes facetar um arco de
+ * um jeito levemente diferente é normal, e 0,3mm é bem menor que os 0,8mm de
+ * simplificação que o contorno já sofreu.
+ */
+const TOL_FORMA_MM = 0.3;
 
 /** Área com sinal (positiva = horário no sistema do SVG, com Y para baixo). */
 export function areaPoligono(pts: Ponto[]): number {
@@ -130,6 +144,50 @@ function bbox(pts: Ponto[]) {
  * miolo do "A"); senão é peça nova. Isso cobre tanto "cada letra num path"
  * quanto "a palavra inteira num path só".
  */
+/**
+ * Mesma forma? Compara ponto a ponto NA MESMA ORDEM — de propósito.
+ *
+ * Dois polígonos iguais com vértice inicial diferente são a mesma forma
+ * geometricamente, mas NÃO podem compartilhar no-fit-polygon: o
+ * `placementworker` ancora a posição em `path[0]`, então o encaixe sairia
+ * deslocado. Exigindo a mesma ordem, e copiando o contorno canônico para a
+ * duplicata logo em seguida, o compartilhamento fica provadamente correto.
+ */
+function mesmaForma(a: PecaVetorial, b: PecaVetorial): boolean {
+  if (a.contorno.length !== b.contorno.length) return false;
+  if (Math.abs(a.largura - b.largura) > TOL_FORMA_MM) return false;
+  if (Math.abs(a.altura - b.altura) > TOL_FORMA_MM) return false;
+  for (let i = 0; i < a.contorno.length; i++) {
+    const p = a.contorno[i];
+    const q = b.contorno[i];
+    if (Math.hypot(p.x - q.x, p.y - q.y) > TOL_FORMA_MM) return false;
+  }
+  return true;
+}
+
+/**
+ * Agrupa peças iguais. A duplicata passa a APONTAR para o contorno da
+ * canônica (mesma referência, não uma cópia parecida), porque o cache de NFP
+ * é compartilhado por forma e geometria "quase igual" daria posição errada.
+ */
+function agruparFormas(pecas: PecaVetorial[]): void {
+  const canonicas: PecaVetorial[] = [];
+  for (const p of pecas) {
+    const igual = canonicas.find((c) => mesmaForma(c, p));
+    if (igual) {
+      p.forma = igual.forma;
+      p.contorno = igual.contorno;
+      p.furos = igual.furos;
+      p.largura = igual.largura;
+      p.altura = igual.altura;
+      p.area = igual.area;
+    } else {
+      p.forma = canonicas.length;
+      canonicas.push(p);
+    }
+  }
+}
+
 export function montarLeitura(contornos: Contorno[], avisos: string[]): LeituraVetorial {
   const limpos = contornos
     .map((c) => ({ ...c, pts: simplificar(c.pts, TOLERANCIA_MM) }))
@@ -153,6 +211,7 @@ export function montarLeitura(contornos: Contorno[], avisos: string[]): LeituraV
     }
     pecas.push({
       id: pecas.length,
+      forma: pecas.length,
       nome: c.nome,
       contorno: c.pts,
       furos: [],
@@ -179,6 +238,8 @@ export function montarLeitura(contornos: Contorno[], avisos: string[]): LeituraV
     p.contorno = p.contorno.map((pt) => ({ x: pt.x - b.minX, y: pt.y - b.minY }));
     p.furos = p.furos.map((f) => f.map((pt) => ({ x: pt.x - b.minX, y: pt.y - b.minY })));
   }
+
+  agruparFormas(pecas);
 
   return {
     pecas,

@@ -17,6 +17,45 @@ import { useNesting } from './useNesting';
 export const VAO_MINIMO_MM = 10;
 export const MARGEM_MINIMA_MM = 5;
 
+/**
+ * Em que ângulos as peças podem girar para encaixar.
+ *
+ * É o controle de velocidade do encaixe, não um detalhe estético: cada
+ * combinação (giro da peça A, giro da peça B) exige um no-fit-polygon novo, e
+ * o NFP é ~98% do tempo. Num letreiro de 36 letras, medido: sem giro 5s,
+ * 0°/180° 14s, 4 ângulos 37s — com a MESMA área de chapa, porque letra baixa
+ * numa chapa larga não ganha nada girando. Girar rende quando a peça é grande
+ * perto da chapa; aí vale esperar.
+ */
+export type Giro = 'auto' | 'sem' | 'meia' | 'quarto' | 'oitavo';
+
+export const GIRO_LABEL: Record<Giro, string> = {
+  auto: 'Automático',
+  sem: 'Sem giro — mais rápido',
+  meia: '180° — meia volta',
+  quarto: '90° — 4 ângulos',
+  oitavo: '45° — 8 ângulos, mais lento',
+};
+
+const GIRO_ANGULOS: Record<Exclude<Giro, 'auto'>, number[]> = {
+  sem: [0],
+  meia: [0, 180],
+  quarto: [0, 90, 180, 270],
+  oitavo: [0, 45, 90, 135, 180, 225, 270, 315],
+};
+
+/**
+ * Com poucas peças, liberar os 4 giros melhora o encaixe e custa pouco
+ * (medido: 5 peças, 3s, 0,695 m² contra 0,808 m² só com 0°/180°). Com muitas
+ * peças a chapa enche de qualquer jeito e os ângulos extras só fazem esperar.
+ */
+const LIMITE_GIRO_LIVRE = 12;
+
+function angulosDe(giro: Giro, totalPecas: number): number[] {
+  if (giro !== 'auto') return GIRO_ANGULOS[giro];
+  return totalPecas <= LIMITE_GIRO_LIVRE ? GIRO_ANGULOS.quarto : GIRO_ANGULOS.meia;
+}
+
 export interface AreaOcupada {
   /** o que entra no preço: a faixa de chapa que o corte consome */
   areaM2: number;
@@ -39,6 +78,7 @@ export function useEncaixeSvg() {
   const [chapaComprimento, setChapaComprimento] = useState('2440');
   const [espacamento, setEspacamento] = useState(String(VAO_MINIMO_MM));
   const [margem, setMargem] = useState(String(MARGEM_MINIMA_MM));
+  const [giro, setGiro] = useState<Giro>('auto');
 
   const nesting = useNesting();
   const { rodar, limpar, resultado } = nesting;
@@ -67,6 +107,9 @@ export function useEncaixeSvg() {
   );
 
   const totalPecas = pecas.length * quantidadeNum;
+  // Quantas formas DISTINTAS existem. É o número que explica a demora: o
+  // encaixe custa por forma, não por peça.
+  const totalFormas = useMemo(() => new Set(pecas.map((p) => p.forma)).size, [pecas]);
 
   const conjunto = useMemo(
     () => ({
@@ -118,22 +161,19 @@ export function useEncaixeSvg() {
     if (pecas.length === 0 || chapaLarguraNum <= 0 || chapaComprimentoNum <= 0) return;
     const todas = [];
     for (let j = 0; j < quantidadeNum; j++) todas.push(...pecas);
-    // Com poucas peças, liberar os 4 giros melhora bastante o encaixe e custa
-    // quase nada (medido: 5 peças, 3s, faixa 0,695 m² contra 0,808 m² só com
-    // 0°/180°). Com muitas peças a chapa enche de qualquer jeito e os 4 giros
-    // só triplicam a espera (20 peças: 19s contra 6,6s), sem ganho de área.
-    const muitasPecas = todas.length > 12;
+    const muitasPecas = todas.length > LIMITE_GIRO_LIVRE;
     rodar(
       todas,
       { largura: chapaLarguraNum, comprimento: chapaComprimentoNum },
       {
         espacamento: espacamentoNum,
         margem: margemNum,
-        rotacoes: muitasPecas ? [0, 180] : [0, 90, 180, 270],
+        rotacoes: angulosDe(giro, todas.length),
         tentativas: muitasPecas ? 4 : 6,
       }
     );
   }, [
+    giro,
     pecas,
     quantidadeNum,
     chapaLarguraNum,
@@ -175,6 +215,7 @@ export function useEncaixeSvg() {
     conjunto,
     pecas,
     totalPecas,
+    totalFormas,
     maiorPeca,
     // chapa
     chapaLargura,
@@ -185,6 +226,9 @@ export function useEncaixeSvg() {
     setEspacamento,
     margem,
     setMargem,
+    giro,
+    setGiro,
+    angulos: angulosDe(giro, totalPecas),
     abaixoDoMinimo,
     chapaLarguraNum,
     chapaComprimentoNum,
@@ -195,6 +239,7 @@ export function useEncaixeSvg() {
     progresso: nesting.progresso,
     resultado,
     erro: nesting.erro,
+    duracaoMs: nesting.duracaoMs,
     // preço
     areaOcupada,
   };
