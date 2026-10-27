@@ -4,7 +4,7 @@ import AdesivosCalculator from '../components/calculators/AdesivosCalculator';
 import LonaCalculator from '../components/calculators/LonaCalculator';
 import PlacasCalculator from '../components/calculators/PlacasCalculator';
 import FachadaManualCalculator from '../components/calculators/FachadaManualCalculator';
-import Acm3dCalculator from '../components/calculators/Acm3dCalculator';
+import ToldoCalculator from '../components/calculators/ToldoCalculator';
 import LetraCaixaCalculator from '../components/calculators/LetraCaixaCalculator';
 import VidroCalculator from '../components/calculators/VidroCalculator';
 import LuminosoCalculator from '../components/calculators/LuminosoCalculator';
@@ -112,7 +112,7 @@ const Index = () => {
       'lona': 'Calculadora de Lona',
       'placas': 'Calculadora de Placas',
       'fachada': 'Calculadora de Fachada Simples',
-      'acm3d': 'Cotação de Fachada em ACM 3D',
+      'toldo': 'Calculadora de Toldo',
       'letra-caixa': 'Calculadora de Letra Caixa',
       'vidro': 'Calculadora de Vidro Temperado',
       'luminoso': 'Calculadora de Luminoso',
@@ -133,8 +133,8 @@ const Index = () => {
         return <PlacasCalculator configPS={config.placaPS} configACM={config.placaACM} />;
       case 'fachada':
         return <FachadaManualCalculator config={config.fachada} />;
-      case 'acm3d':
-        return <Acm3dCalculator />;
+      case 'toldo':
+        return <ToldoCalculator config={config.toldo} />;
       case 'letra-caixa':
         return <LetraCaixaCalculator />;
       case 'vidro':

@@ -188,6 +188,28 @@ export interface EtiquetasConfig {
   notaFiscalPercentual: number;
 }
 
+/*
+ * Toldo (27/10/26, substituiu a aba ACM3D). Três tipos, com unidades de
+ * cobrança DIFERENTES: cortina e articulado por METRO LINEAR da largura; fixo
+ * por METRO QUADRADO. Preços são campos fixos (três tipos estáveis), não lista
+ * dinâmica — mesmo critério da Lona.
+ *
+ * `lonaLarguraUtil` é o que decide a solda: a lona vem em rolo de 1,40m, mas
+ * só 1,35m é aproveitável depois do acabamento. Toldo mais largo que isso
+ * precisa de faixas emendadas, e a emenda é vertical.
+ */
+export interface ToldoConfig {
+  cortinaMetroLinear: number;
+  articuladoMetroLinear: number;
+  fixoM2: number;
+  /** solda vertical entre faixas de lona, por metro de emenda */
+  soldaMetroLinear: number;
+  /** acabamento viseira, só no toldo cortina, por metro de largura */
+  viseiraMetroLinear: number;
+  /** largura aproveitável do rolo de lona, em METROS (não é dinheiro) */
+  lonaLarguraUtil: number;
+}
+
 // Novas configurações solicitadas
 export interface NotaFiscalConfig {
   percentual: number;
@@ -236,6 +258,7 @@ export interface PricingConfig {
   laser: LaserConfig;
   dtf: DtfConfig;
   etiquetas: EtiquetasConfig;
+  toldo: ToldoConfig;
   notaFiscal: NotaFiscalConfig;
   arteFinal: ArteFinalConfig;
   cartaoCredito: CartaoCreditoConfig;
@@ -348,6 +371,14 @@ export const defaultConfig: PricingConfig = {
     precoM2: 100.0,
     minPorUnidade: 0.25,
     notaFiscalPercentual: 9.31,
+  },
+  toldo: {
+    cortinaMetroLinear: 520.0,
+    articuladoMetroLinear: 580.0,
+    fixoM2: 480.0,
+    soldaMetroLinear: 9.0,
+    viseiraMetroLinear: 50.0,
+    lonaLarguraUtil: 1.35,
   },
   notaFiscal: {
     percentual: 15.0,

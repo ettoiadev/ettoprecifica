@@ -1,5 +1,5 @@
 import React from 'react';
-import { FileText, Package, Layers, Building, Boxes, Type, Shield, Lightbulb, Zap, Shirt, PanelTop } from 'lucide-react';
+import { FileText, Package, Layers, Building, Umbrella, Type, Shield, Lightbulb, Zap, Shirt, PanelTop } from 'lucide-react';
 interface ModernTabsProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
@@ -13,7 +13,7 @@ const ModernTabs: React.FC<ModernTabsProps> = ({
     { id: 'lona', label: 'Lona', icon: Package },
     { id: 'placas', label: 'Placas', icon: Layers },
     { id: 'fachada', label: 'Fachada', icon: Building },
-    { id: 'acm3d', label: 'ACM3D', icon: Boxes },
+    { id: 'toldo', label: 'Toldo', icon: Umbrella },
     { id: 'letra-caixa', label: 'Letra Caixa', icon: Type },
     { id: 'vidro', label: 'Vidro', icon: Shield },
     { id: 'luminoso', label: 'Luminoso', icon: Lightbulb },

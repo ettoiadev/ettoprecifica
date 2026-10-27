@@ -69,6 +69,18 @@ export const settingsConfig: ConfigSectionData[] = [
     fields: [],
   },
   {
+    title: 'Toldo',
+    section: 'toldo',
+    fields: [
+      { key: 'cortinaMetroLinear', label: 'Toldo cortina (manivela)', unit: 'm linear' },
+      { key: 'articuladoMetroLinear', label: 'Toldo articulado (manivela)', unit: 'm linear' },
+      { key: 'fixoM2', label: 'Toldo fixo', unit: 'm²' },
+      { key: 'viseiraMetroLinear', label: 'Acabamento viseira (cortina)', unit: 'm linear' },
+      { key: 'soldaMetroLinear', label: 'Serviço de solda', unit: 'm de emenda' },
+      { key: 'lonaLarguraUtil', label: 'Largura aproveitável da lona', unit: 'm' },
+    ],
+  },
+  {
     // Acabamentos de Lona na lista abaixo (LIST_MANAGERS.lona); aqui só a laca.
     title: 'Lona',
     section: 'lona',

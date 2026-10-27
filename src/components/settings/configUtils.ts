@@ -27,6 +27,10 @@ const isMeasurementField = (section: string, field: string) => {
       field.includes('comprimentoBarra')) {
     return true;
   }
+  // Largura aproveitável do rolo de lona do toldo: é medida em metros, não R$
+  if (section === 'toldo' && field === 'lonaLarguraUtil') {
+    return true;
+  }
   return false;
 };
 
