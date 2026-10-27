@@ -17,6 +17,13 @@ Botão **Guia** no cabeçalho (ao lado de Configurações) → tela com os docum
 - `GuiaPanel.tsx` + `guideService.ts`; usa `Tabs`/`Button`/`Input`/`Textarea`/`AlertDialog` do shadcn, nenhum componente visual novo.
 - O arquivo `regulamento-interno.md` na raiz é o **material de origem** do conteúdo da aba Normas. Depois de colado no app, a fonte da verdade passa a ser o banco — o .md fica só como original.
 
+## Encaixe por arquivo — também no Laser (27/10/26)
+A mesma precificação por gasto de material da Letra Caixa foi ligada na aba **Laser** (`LaserManualCalculator`): seletor **"Como medir o material"** → *Medida da peça* (o que sempre existiu) ou *Pelo arquivo (SVG/DXF)*. A área do encaixe entra no lugar de `largura × altura × qtd` e o preço continua `área × R$/m²` do material escolhido, NF `ALIQUOTA_NF` 9,35%, deslocamento à parte. Reaproveita `useEncaixeSvg`/`EncaixeControles`/`EncaixeVisual` sem duplicar nada.
+- **O vão depende da MÁQUINA, não do produto** — por isso `useEncaixeSvg` passou a receber um **`PerfilEncaixe`**. A roteadora tira o vão inteiro da fresa (10mm); o laser corta com fenda de décimos de milímetro. Usar os 10mm no laser encareceria o orçamento à toa. `PERFIL_ROTEADORA` = vão 10 (mín. 10) / borda 5 (mín. 5); `PERFIL_LASER` = vão 5 (mín. 2) / borda 5 (mín. 3).
+- ⚠️ **Os números do laser são ESTIMATIVA, não vieram da produção** — confirmar com o Étto. A chapa 1220×2440 também é só o valor inicial do campo (acrílico costuma vir 1000×2000); é editável na tela.
+- No modo arquivo a **quantidade vem do painel de encaixe** ("jogos"), já embutida na área — o campo Quantidade some para não multiplicar duas vezes.
+- Teste: `.playwright/teste-laser-encaixe.mjs <arquivo>` (confere os dois modos e o preço final).
+
 ## Letra Caixa PVC por encaixe de SVG (21/10/26)
 Na aba **Letra Caixa**, material **PVC**, existe o seletor **"Como medir o material"**: *Medida da placa* (o que sempre existiu) ou ***Pelo arquivo (SVG)***, que sobe o vetor do letreiro, encaixa as letras na chapa e cobra pelo material consumido. Só o PVC tem isso — os outros materiais são por altura da letra, não por m².
 - **A tela é de duas colunas**: controles à esquerda, **pré-visualização à direita** (`EncaixeVisual`) com duas abas — *Arquivo* (o desenho como veio, cada peça no lugar original) e *Encaixe* (o resultado folha a folha) — e o botão **"Organizar automaticamente"**. A aba *Arquivo* existe para o vendedor conferir que o sistema entendeu o desenho ANTES de olhar o preço: se a letra aparecer quebrada ali, o orçamento está errado. O estado mora em `useEncaixeSvg` porque as duas colunas usam os mesmos dados.

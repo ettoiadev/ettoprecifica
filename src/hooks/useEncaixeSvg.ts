@@ -10,12 +10,51 @@ import { escalarPecas, type LeituraVetorial } from '../lib/nesting/geometria';
 import { useNesting } from './useNesting';
 
 /**
- * Regras de produção, não preferências: o corte precisa de vão entre as letras
+ * Regras de produção, não preferências: o corte precisa de vão entre as peças
  * e de uma borda de respeito na chapa. Abaixo disso a peça não sai da máquina,
  * então o cálculo usa esses mínimos mesmo que o vendedor digite menos.
+ *
+ * O vão depende da MÁQUINA, não do produto: a roteadora tira o vão inteiro da
+ * fresa (a ferramenta precisa passar entre as peças), enquanto o laser corta
+ * com fenda de décimos de milímetro. Usar o mínimo da roteadora no laser
+ * encareceria o orçamento sem motivo nenhum.
  */
-export const VAO_MINIMO_MM = 10;
-export const MARGEM_MINIMA_MM = 5;
+export interface PerfilEncaixe {
+  /** piso de produção, aplicado mesmo se o vendedor digitar menos */
+  vaoMinimo: number;
+  /** valor que já vem preenchido no campo */
+  vaoPadrao: number;
+  margemMinima: number;
+  margemPadrao: number;
+  chapaLargura: number;
+  chapaComprimento: number;
+}
+
+/** Letra caixa em PVC, cortada na roteadora: o vão é o diâmetro da fresa. */
+export const PERFIL_ROTEADORA: PerfilEncaixe = {
+  vaoMinimo: 10,
+  vaoPadrao: 10,
+  margemMinima: 5,
+  margemPadrao: 5,
+  chapaLargura: 1220,
+  chapaComprimento: 2440,
+};
+
+/**
+ * Corte a laser. A fenda é desprezível, então o vão existe só para a peça não
+ * encostar na vizinha e para a chapa não empenar com o calor.
+ * ATENÇÃO: 5mm de vão e 5mm de borda são uma ESTIMATIVA, não um número vindo
+ * da produção — confirmar com o Étto. A chapa 1220×2440 também é só o valor
+ * inicial do campo; acrílico costuma vir 1000×2000.
+ */
+export const PERFIL_LASER: PerfilEncaixe = {
+  vaoMinimo: 2,
+  vaoPadrao: 5,
+  margemMinima: 3,
+  margemPadrao: 5,
+  chapaLargura: 1220,
+  chapaComprimento: 2440,
+};
 
 /**
  * Em que ângulos as peças podem girar para encaixar.
@@ -72,17 +111,17 @@ export interface AreaOcupada {
   aproveitamento: number;
 }
 
-export function useEncaixeSvg() {
+export function useEncaixeSvg(perfil: PerfilEncaixe = PERFIL_ROTEADORA) {
   const [nomeArquivo, setNomeArquivo] = useState('');
   const [leitura, setLeitura] = useState<LeituraVetorial | null>(null);
   const [erroLeitura, setErroLeitura] = useState<string | null>(null);
 
   const [alturaRealCm, setAlturaRealCm] = useState('');
   const [quantidade, setQuantidade] = useState('1');
-  const [chapaLargura, setChapaLargura] = useState('1220');
-  const [chapaComprimento, setChapaComprimento] = useState('2440');
-  const [espacamento, setEspacamento] = useState(String(VAO_MINIMO_MM));
-  const [margem, setMargem] = useState(String(MARGEM_MINIMA_MM));
+  const [chapaLargura, setChapaLargura] = useState(String(perfil.chapaLargura));
+  const [chapaComprimento, setChapaComprimento] = useState(String(perfil.chapaComprimento));
+  const [espacamento, setEspacamento] = useState(String(perfil.vaoPadrao));
+  const [margem, setMargem] = useState(String(perfil.margemPadrao));
   const [giro, setGiro] = useState<Giro>(GIRO_PADRAO);
 
   const nesting = useNesting();
@@ -95,11 +134,11 @@ export function useEncaixeSvg() {
   // digitado pelo vendedor, só para avisar que está abaixo do mínimo
   const espacamentoDigitado = parseFloat(espacamento);
   const margemDigitada = parseFloat(margem);
-  const espacamentoNum = Math.max(VAO_MINIMO_MM, espacamentoDigitado || 0);
-  const margemNum = Math.max(MARGEM_MINIMA_MM, margemDigitada || 0);
+  const espacamentoNum = Math.max(perfil.vaoMinimo, espacamentoDigitado || 0);
+  const margemNum = Math.max(perfil.margemMinima, margemDigitada || 0);
   const abaixoDoMinimo =
-    (Number.isFinite(espacamentoDigitado) && espacamentoDigitado < VAO_MINIMO_MM) ||
-    (Number.isFinite(margemDigitada) && margemDigitada < MARGEM_MINIMA_MM);
+    (Number.isFinite(espacamentoDigitado) && espacamentoDigitado < perfil.vaoMinimo) ||
+    (Number.isFinite(margemDigitada) && margemDigitada < perfil.margemMinima);
 
   // O usuário informa a altura real do conjunto porque a medida gravada no
   // arquivo é pouco confiável (o Illustrator grava px querendo dizer pt).
@@ -209,6 +248,7 @@ export function useEncaixeSvg() {
   }, [resultado]);
 
   return {
+    perfil,
     // arquivo
     nomeArquivo,
     leitura,

@@ -5,6 +5,9 @@ import { useCotacao } from '../../contexts/CotacaoContext';
 import { useDeslocamentoCep } from '../../hooks/useDeslocamentoCep';
 import DeslocamentoField from './DeslocamentoField';
 import { CalcCheckbox, OptionChip } from './CalcControls';
+import EncaixeControles from './EncaixeControles';
+import EncaixeVisual from './EncaixeVisual';
+import { useEncaixeSvg, PERFIL_LASER } from '../../hooks/useEncaixeSvg';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 import { toast } from 'sonner';
@@ -17,6 +20,11 @@ interface Props {
   config: LaserConfig;
 }
 
+// Como a área cobrada é obtida: medida digitada, ou encaixe das peças de um
+// arquivo vetorial na chapa (mesmo motor da Letra Caixa, com o perfil do
+// laser — ver PERFIL_LASER).
+type ModoMedida = 'manual' | 'arquivo';
+
 
 const LaserManualCalculator: React.FC<Props> = ({ config }) => {
   const deslocamento = useDeslocamentoCep();
@@ -27,6 +35,8 @@ const LaserManualCalculator: React.FC<Props> = ({ config }) => {
   const [altura, setAltura] = useState<string>('');
   const [quantidade, setQuantidade] = useState<number>(1);
   const [incluirNota, setIncluirNota] = useState<boolean>(true);
+  const [modo, setModo] = useState<ModoMedida>('manual');
+  const enc = useEncaixeSvg(PERFIL_LASER);
 
   const { addItem } = useCotacao();
 
@@ -50,15 +60,20 @@ const LaserManualCalculator: React.FC<Props> = ({ config }) => {
   const alturaNum = parseFloat(altura) || 0;
   const qtd = quantidade > 0 ? quantidade : 1;
   const custoDeslocamentoNum = parseFloat(custoDeslocamento) || 0;
-  const entradaValida = larguraNum > 0 && alturaNum > 0;
+
+  // No modo arquivo a quantidade vem do próprio painel de encaixe ("jogos"),
+  // já embutida na área — multiplicar de novo cobraria em dobro.
+  const usaArquivo = modo === 'arquivo';
+  const areaArquivo = enc.areaOcupada?.areaM2 ?? 0;
+  const entradaValida = usaArquivo ? areaArquivo > 0 : larguraNum > 0 && alturaNum > 0;
 
   const opcaoSel = opcoes.find((o) => o.id === material) ?? opcoes[0];
   const precoM2 = opcaoSel?.price ?? 0;
 
   const calc = useMemo(() => {
     if (!entradaValida) return null;
-    const areaUnit = larguraNum * alturaNum;
-    const areaTotal = areaUnit * qtd;
+    const areaUnit = usaArquivo ? areaArquivo : larguraNum * alturaNum;
+    const areaTotal = usaArquivo ? areaArquivo : areaUnit * qtd;
     const produtoSemNota = precoM2 * areaTotal;
     const desloc = incluirDeslocamento ? custoDeslocamentoNum : 0;
     const semNota = produtoSemNota + desloc;
@@ -66,19 +81,25 @@ const LaserManualCalculator: React.FC<Props> = ({ config }) => {
     const descontoNota = comNota - semNota;
     const final = incluirNota ? comNota : semNota;
     return { areaUnit, areaTotal, produtoSemNota, desloc, semNota, comNota, descontoNota, final };
-  }, [entradaValida, larguraNum, alturaNum, qtd, precoM2, incluirDeslocamento, custoDeslocamentoNum, incluirNota]);
+  }, [entradaValida, usaArquivo, areaArquivo, larguraNum, alturaNum, qtd, precoM2, incluirDeslocamento, custoDeslocamentoNum, incluirNota]);
 
   const temPreco = !!calc && calc.final > 0;
 
-  const descricao = useMemo(
-    () => `Laser ${opcaoSel?.label ?? ''} ${larguraNum.toFixed(2)}×${alturaNum.toFixed(2)}m${qtd > 1 ? ` (${qtd}un)` : ''}`,
-    [opcaoSel, larguraNum, alturaNum, qtd]
-  );
+  const descricao = useMemo(() => {
+    const medida = usaArquivo
+      ? `${areaArquivo.toFixed(3)}m² (${enc.areaOcupada?.totalPecas ?? 0} peças)`
+      : `${larguraNum.toFixed(2)}×${alturaNum.toFixed(2)}m${qtd > 1 ? ` (${qtd}un)` : ''}`;
+    return `Laser ${opcaoSel?.label ?? ''} ${medida}`;
+  }, [opcaoSel, usaArquivo, areaArquivo, enc.areaOcupada, larguraNum, alturaNum, qtd]);
 
   const handleCopy = () => {
     if (!temPreco || !calc) return;
+    // Cópia limpa (vai para o cliente): medida e valor, sem a conta por trás.
+    const medida = usaArquivo
+      ? `Material: ${areaArquivo.toFixed(2)} m²`
+      : `Medida: ${larguraNum.toFixed(2)} x ${alturaNum.toFixed(2)} m — ${qtd} un`;
     const texto = `${opcaoSel?.label ?? 'Laser'}
-Medida: ${larguraNum.toFixed(2)} x ${alturaNum.toFixed(2)} m — ${qtd} un
+${medida}
 Valor: ${formatCurrency(calc.final)}`;
     navigator.clipboard.writeText(texto).then(
       () => toast.success('Orçamento copiado!'),
@@ -96,29 +117,46 @@ Valor: ${formatCurrency(calc.final)}`;
     <div className="p-6">
       <div className="mb-6">
         <p className="text-gray-600">
-          Corte a laser por m², conforme o material. Preços definidos manualmente em Configurações.
+          Corte a laser por m², conforme o material. Informe a medida da peça ou envie o arquivo
+          vetorial para cobrar pelo material que o corte consome. Preços definidos em Configurações.
         </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="space-y-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-3">Dimensões e quantidade</label>
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">Largura (m)</label>
-                <Input type="number" min="0" step="0.01" value={largura} onChange={(e) => setLargura(e.target.value)} placeholder="0.00" />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">Altura (m)</label>
-                <Input type="number" min="0" step="0.01" value={altura} onChange={(e) => setAltura(e.target.value)} placeholder="0.00" />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">Quantidade</label>
-                <Input type="number" min="1" step="1" value={quantidade || ''} onChange={(e) => setQuantidade(parseInt(e.target.value) || 1)} placeholder="1" />
-              </div>
+            <label className="block text-sm font-medium text-gray-700 mb-3">Como medir o material</label>
+            <div className="grid grid-cols-2 gap-3">
+              <OptionChip onClick={() => setModo('manual')} active={modo === 'manual'} variant="neutral">
+                Medida da peça
+              </OptionChip>
+              <OptionChip onClick={() => setModo('arquivo')} active={modo === 'arquivo'} variant="neutral">
+                Pelo arquivo (SVG/DXF)
+              </OptionChip>
             </div>
           </div>
+
+          {usaArquivo ? (
+            <EncaixeControles enc={enc} />
+          ) : (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-3">Dimensões e quantidade</label>
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label htmlFor="laser-largura" className="block text-xs text-gray-500 mb-1">Largura (m)</label>
+                  <Input id="laser-largura" type="number" min="0" step="0.01" value={largura} onChange={(e) => setLargura(e.target.value)} placeholder="0.00" />
+                </div>
+                <div>
+                  <label htmlFor="laser-altura" className="block text-xs text-gray-500 mb-1">Altura (m)</label>
+                  <Input id="laser-altura" type="number" min="0" step="0.01" value={altura} onChange={(e) => setAltura(e.target.value)} placeholder="0.00" />
+                </div>
+                <div>
+                  <label htmlFor="laser-qtd" className="block text-xs text-gray-500 mb-1">Quantidade</label>
+                  <Input id="laser-qtd" type="number" min="1" step="1" value={quantidade || ''} onChange={(e) => setQuantidade(parseInt(e.target.value) || 1)} placeholder="1" />
+                </div>
+              </div>
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-3">Material</label>
@@ -150,11 +188,18 @@ Valor: ${formatCurrency(calc.final)}`;
           <DeslocamentoField {...deslocamento} />
         </div>
 
-        <div className="bg-gray-50 rounded-xl border border-gray-200 p-6">
+        <div className="space-y-6">
+          {usaArquivo && <EncaixeVisual enc={enc} />}
+
+          <div className="bg-gray-50 rounded-xl border border-gray-200 p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Orçamento</h3>
 
           {!entradaValida ? (
-            <p className="text-sm text-gray-500">Informe as dimensões para ver o preço.</p>
+            <p className="text-sm text-gray-500">
+              {usaArquivo
+                ? 'Envie o arquivo e organize as peças na chapa para ver o preço.'
+                : 'Informe as dimensões para ver o preço.'}
+            </p>
           ) : temPreco && calc && opcaoSel ? (
             <div className="space-y-4">
               <div className="bg-white rounded-lg border border-gray-200 p-4">
@@ -167,7 +212,7 @@ Valor: ${formatCurrency(calc.final)}`;
                     Sem nota fiscal — desconto de {formatCurrency(calc.descontoNota)} ({ALIQUOTA_NF.toLocaleString('pt-BR')}%)
                   </div>
                 )}
-                {qtd > 1 && (
+                {!usaArquivo && qtd > 1 && (
                   <div className="mt-1 text-xs text-green-600 font-medium">
                     {qtd} un · unitário {formatCurrency(calc.final / qtd)}
                   </div>
@@ -177,9 +222,25 @@ Valor: ${formatCurrency(calc.final)}`;
               <div className="space-y-1">
                 <div className="flex justify-between text-sm text-gray-600"><span>Material:</span><span className="text-right">{opcaoSel.label}</span></div>
                 <div className="flex justify-between text-sm text-gray-600"><span>Preço/m²:</span><span>{formatCurrency(precoM2)}</span></div>
-                <div className="flex justify-between text-sm text-gray-600"><span>Área (un):</span><span>{calc.areaUnit.toFixed(3)} m²</span></div>
-                {qtd > 1 && (
-                  <div className="flex justify-between text-sm text-gray-600"><span>Área total:</span><span>{calc.areaTotal.toFixed(3)} m²</span></div>
+                {usaArquivo && enc.areaOcupada ? (
+                  <>
+                    <div className="flex justify-between text-sm text-gray-600"><span>Material cobrado:</span><span>{calc.areaTotal.toFixed(3)} m²</span></div>
+                    <div className="flex justify-between text-sm text-gray-600">
+                      <span>Peças encaixadas:</span>
+                      <span>
+                        {enc.areaOcupada.totalPecas} em {enc.areaOcupada.totalFolhas}{' '}
+                        {enc.areaOcupada.totalFolhas === 1 ? 'chapa' : 'chapas'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm text-gray-600"><span>Aproveitamento:</span><span>{(enc.areaOcupada.aproveitamento * 100).toFixed(1)}%</span></div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex justify-between text-sm text-gray-600"><span>Área (un):</span><span>{calc.areaUnit.toFixed(3)} m²</span></div>
+                    {qtd > 1 && (
+                      <div className="flex justify-between text-sm text-gray-600"><span>Área total:</span><span>{calc.areaTotal.toFixed(3)} m²</span></div>
+                    )}
+                  </>
                 )}
                 {incluirDeslocamento && calc.desloc > 0 && (
                   <div className="flex justify-between text-sm text-gray-600"><span>Deslocamento:</span><span>{formatCurrency(calc.desloc)}</span></div>
@@ -196,6 +257,7 @@ Valor: ${formatCurrency(calc.final)}`;
               </div>
             </div>
           ) : null}
+          </div>
         </div>
       </div>
     </div>

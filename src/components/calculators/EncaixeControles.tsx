@@ -6,13 +6,7 @@
 import React, { useRef } from 'react';
 import { Upload, AlertTriangle, FileWarning } from 'lucide-react';
 import { EXTENSOES_ACEITAS } from '../../lib/nesting/lerArquivo';
-import {
-  GIRO_LABEL,
-  MARGEM_MINIMA_MM,
-  VAO_MINIMO_MM,
-  type Giro,
-  type EncaixeSvg,
-} from '../../hooks/useEncaixeSvg';
+import { GIRO_LABEL, type Giro, type EncaixeSvg } from '../../hooks/useEncaixeSvg';
 import { selectClass } from './CalcControls';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
@@ -144,7 +138,7 @@ const EncaixeControles: React.FC<{ enc: EncaixeSvg }> = ({ enc }) => {
                 <Input
                   id="chapa-vao"
                   type="number"
-                  min={VAO_MINIMO_MM}
+                  min={enc.perfil.vaoMinimo}
                   step="1"
                   value={enc.espacamento}
                   onChange={(e) => enc.setEspacamento(e.target.value)}
@@ -157,7 +151,7 @@ const EncaixeControles: React.FC<{ enc: EncaixeSvg }> = ({ enc }) => {
                 <Input
                   id="chapa-margem"
                   type="number"
-                  min={MARGEM_MINIMA_MM}
+                  min={enc.perfil.margemMinima}
                   step="1"
                   value={enc.margem}
                   onChange={(e) => enc.setMargem(e.target.value)}
@@ -165,8 +159,8 @@ const EncaixeControles: React.FC<{ enc: EncaixeSvg }> = ({ enc }) => {
               </div>
             </div>
             <p className="text-xs text-gray-500 mt-2">
-              Mínimos de produção: {VAO_MINIMO_MM} mm entre letras e {MARGEM_MINIMA_MM} mm da borda
-              da chapa.
+              Mínimos de produção: {enc.perfil.vaoMinimo} mm entre peças e{' '}
+              {enc.perfil.margemMinima} mm da borda da chapa.
             </p>
 
             <div className="mt-4">
@@ -197,8 +191,8 @@ const EncaixeControles: React.FC<{ enc: EncaixeSvg }> = ({ enc }) => {
             <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200 text-sm text-amber-800">
               <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
               <span>
-                Valor abaixo do mínimo de produção. Calculei com {VAO_MINIMO_MM} mm entre letras e{' '}
-                {MARGEM_MINIMA_MM} mm de borda.
+                Valor abaixo do mínimo de produção. Calculei com {enc.perfil.vaoMinimo} mm entre
+                peças e {enc.perfil.margemMinima} mm de borda.
               </span>
             </div>
           )}
