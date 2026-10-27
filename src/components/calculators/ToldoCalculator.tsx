@@ -60,7 +60,8 @@ const ToldoCalculator: React.FC<Props> = ({ config }) => {
   const { incluirDeslocamento, custoDeslocamento } = deslocamento;
   const { addItem } = useCotacao();
 
-  const [tipo, setTipo] = useState<TipoToldo>('cortina');
+  // Fixo primeiro, e já selecionado: é o que o Étto mais orça.
+  const [tipo, setTipo] = useState<TipoToldo>('fixo');
   const [largura, setLargura] = useState<string>('');
   const [vertical, setVertical] = useState<string>(''); // caída (cortina/articulado) ou projeção (fixo)
   const [quantidade, setQuantidade] = useState<string>('1');
@@ -236,7 +237,7 @@ Valor: ${formatCurrency(calc.final)}`;
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-3">Tipo de toldo</label>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {(['cortina', 'articulado', 'fixo'] as TipoToldo[]).map((t) => (
+              {(['fixo', 'cortina', 'articulado'] as TipoToldo[]).map((t) => (
                 <OptionChip key={t} onClick={() => setTipo(t)} active={tipo === t} variant="indigo">
                   <span className="block font-medium">{TIPO_LABEL[t]}</span>
                   <span className="block text-xs opacity-70 mt-0.5">
