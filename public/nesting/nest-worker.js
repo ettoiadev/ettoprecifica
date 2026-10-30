@@ -190,8 +190,57 @@ function generateNfp(pair, searchEdges, useHoles) {
   return nfp;
 }
 
+/*
+ * Gira um NFP já pronto. É a peça que falta para a identidade abaixo (`avaliar`):
+ * girar um polígono custa uma multiplicação por vértice, contra a soma de
+ * Minkowski inteira.
+ */
+function rotarNfp(nfp, graus) {
+  if (!nfp || graus === 0) return nfp;
+  var saida = [];
+  for (var i = 0; i < nfp.length; i++) saida.push(rotatePolygon(nfp[i], graus));
+  return saida;
+}
+
+/*
+ * Espelha um NFP para obter o do par TROCADO, pela identidade:
+ *
+ *   NFP(P, Q girado δ) = −girar( NFP(Q, P girado −δ), δ ) + P[0] + girar(Q,δ)[0]
+ *
+ * Vem de { p − q } = −{ q − p }: trocar quem é fixo e quem desliza reflete o
+ * no-fit-polygon pela origem. A reflexão é um giro de 180°, então preserva área
+ * com sinal — o sentido do polígono não muda e a decisão de inverter cai do
+ * mesmo lado.
+ *
+ * Devolve `undefined` quando não dá para derivar (fonte vazia), `null` quando o
+ * derivado é rejeitado pela mesma regra do generateNfp (NFP menor que a peça
+ * fixa — e aqui a peça fixa é OUTRA, por isso o teste é refeito, não herdado).
+ */
+function espelharNfp(fonte, delta, P, Q) {
+  if (!fonte || fonte.length === 0) return undefined;
+  var ang = (delta * Math.PI) / 180;
+  var cos = Math.cos(ang);
+  var sin = Math.sin(ang);
+  var cx = P[0].x + (Q[0].x * cos - Q[0].y * sin);
+  var cy = P[0].y + (Q[0].x * sin + Q[0].y * cos);
+  var saida = [];
+  for (var i = 0; i < fonte.length; i++) {
+    var poly = fonte[i];
+    var novo = [];
+    for (var j = 0; j < poly.length; j++) {
+      var x = poly[j].x;
+      var y = poly[j].y;
+      novo.push({ x: cx - (x * cos - y * sin), y: cy - (x * sin + y * cos) });
+    }
+    if (GeometryUtil.polygonArea(novo) > 0) novo.reverse();
+    saida.push(novo);
+  }
+  if (Math.abs(GeometryUtil.polygonArea(saida[0])) < Math.abs(GeometryUtil.polygonArea(P))) return null;
+  return saida;
+}
+
 /** Avalia uma ordem/rotação candidata: gera os NFPs necessários e posiciona. */
-var diagnostico = { pares: 0, nfpOk: 0, nfpNulo: 0, placeNulo: 0, exemplos: [] };
+var diagnostico = { pares: 0, nfpOk: 0, nfpNulo: 0, placeNulo: 0, reaproveitados: 0, derivados: 0, espelhados: 0, calculados: 0, msNfp: 0, exemplos: [] };
 
 /*
  * `nfpCache` é indexado por ID de peça porque é assim que o placementworker
@@ -205,7 +254,7 @@ var diagnostico = { pares: 0, nfpOk: 0, nfpNulo: 0, placeNulo: 0, exemplos: [] }
  * peça foi levada à própria origem na leitura do SVG: duas letras iguais têm
  * coordenadas idênticas, e o NFP depende só disso.
  */
-function avaliar(binPolygon, placelist, rotations, config, nfpCache, formaCache) {
+function avaliar(binPolygon, placelist, rotations, config, nfpCache, formaCache, baseCache) {
   var ids = [];
   var i, j, key;
   for (i = 0; i < placelist.length; i++) {
@@ -217,7 +266,24 @@ function avaliar(binPolygon, placelist, rotations, config, nfpCache, formaCache)
   var registrar = function (A, B, chave, chaveForma) {
     var str = JSON.stringify(chave);
     if (nfpCache[str]) return;
-    pares.push({ A: A, B: B, key: chave, str: str, forma: JSON.stringify(chaveForma) });
+    var par = { A: A, B: B, key: chave, str: str, forma: JSON.stringify(chaveForma) };
+    /*
+     * Para par peça-peça, só o giro RELATIVO entre as duas importa (ver a
+     * identidade em `avaliar`). Guardamos a chave da base (giro de A zerado) e
+     * o giro de A, que será aplicado ao resultado.
+     */
+    if (!chave.inside) {
+      par.giro = chaveForma.Arotation;
+      par.delta = (((chaveForma.Brotation - chaveForma.Arotation) % 360) + 360) % 360;
+      par.base = JSON.stringify({ A: chaveForma.A, B: chaveForma.B, delta: par.delta });
+      // chave do par TROCADO, de onde o NFP pode ser espelhado em vez de calculado
+      par.troca = JSON.stringify({
+        A: chaveForma.B,
+        B: chaveForma.A,
+        delta: (360 - par.delta) % 360,
+      });
+    }
+    pares.push(par);
   };
 
   for (i = 0; i < placelist.length; i++) {
@@ -251,12 +317,58 @@ function avaliar(binPolygon, placelist, rotations, config, nfpCache, formaCache)
     }
   }
 
+  var temCache = function (cache, chave) {
+    return Object.prototype.hasOwnProperty.call(cache, chave);
+  };
+
   for (i = 0; i < pares.length; i++) {
     var par = pares[i];
     var nfp;
-    if (Object.prototype.hasOwnProperty.call(formaCache, par.forma)) {
+    if (temCache(formaCache, par.forma)) {
       nfp = formaCache[par.forma];
       diagnostico.reaproveitados++;
+    } else if (par.base) {
+      /*
+       * Identidade que economiza a maior parte do trabalho:
+       *
+       *   NFP(A girado θ, B girado φ) = girar( NFP(A, B girado φ−θ), θ )
+       *
+       * Ou seja, só o giro RELATIVO entre as duas peças muda a forma do
+       * no-fit-polygon; o giro de A apenas gira o resultado inteiro. Vale
+       * porque a soma de Minkowski comuta com rotação, e o deslocamento que a
+       * rotina aplica no fim (B[0]) gira junto, então os dois se cancelam.
+       *
+       * Sem isso, R giros permitidos custam R² pares por par de formas. Com
+       * isso custam R, e os outros saem de uma multiplicação por vértice.
+       * A área não muda ao girar, então as duas decisões que o generateNfp
+       * toma por área — descartar NFP menor que a peça e inverter o sentido —
+       * caem do mesmo lado na base e no derivado.
+       */
+      var base;
+      if (temCache(baseCache, par.base)) {
+        base = baseCache[par.base];
+        diagnostico.derivados++;
+      } else {
+        // o par trocado serve: espelhar sai muito mais barato que refazer o Minkowski
+        base = temCache(baseCache, par.troca)
+          ? espelharNfp(baseCache[par.troca], par.delta, par.A, par.B)
+          : undefined;
+        if (base === undefined) {
+          var tb = Date.now();
+          base = generateNfp(
+            { A: par.A, B: par.B, key: { inside: false, Arotation: 0, Brotation: par.delta } },
+            config.exploreConcave,
+            config.useHoles
+          );
+          diagnostico.msNfp += Date.now() - tb;
+          diagnostico.calculados++;
+        } else {
+          diagnostico.espelhados++;
+        }
+        baseCache[par.base] = base;
+      }
+      nfp = par.giro ? rotarNfp(base, par.giro) : base;
+      formaCache[par.forma] = nfp;
     } else {
       var t0 = Date.now();
       nfp = generateNfp(par, config.exploreConcave, config.useHoles);
@@ -546,11 +658,13 @@ self.onmessage = function (e) {
   var rotacoesPermitidas = config.rotations || [0, 90, 180, 270];
 
   try {
-    diagnostico = { pares: 0, nfpOk: 0, nfpNulo: 0, placeNulo: 0, reaproveitados: 0, calculados: 0, msNfp: 0, exemplos: [] };
+    diagnostico = { pares: 0, nfpOk: 0, nfpNulo: 0, placeNulo: 0, reaproveitados: 0, derivados: 0, espelhados: 0, calculados: 0, msNfp: 0, exemplos: [] };
     var rnd = prngComSemente(config.semente || 20261021);
     var nfpCache = {};
     // indexado por FORMA (source), compartilhado entre as tentativas
     var formaCache = {};
+    // indexado por (formaA, formaB, giro RELATIVO) — ver a identidade em avaliar
+    var baseCache = {};
 
     // Ordem inicial: maior área primeiro — heurística clássica, costuma ser a
     // melhor semente para o encaixe.
@@ -590,6 +704,25 @@ self.onmessage = function (e) {
     }
 
     var melhor = null;
+    var melhorT = -1;
+    /*
+     * Fatia de tentativas deste worker. As tentativas são independentes entre
+     * si, então N workers podem dividi-las — e o posicionamento é 75–85% do
+     * tempo quando há muitas peças.
+     *
+     * O sorteio NÃO pode mudar por causa disso: o PRNG é consumido em
+     * sequência, então a tentativa 7 depende de todos os sorteios anteriores.
+     * Por isso cada worker percorre TODAS as tentativas e sorteia todas (custa
+     * um embaralhamento, microssegundos), mas só avalia as suas. A sequência
+     * sorteada é a mesma de antes e o resultado é bit a bit o mesmo — só que
+     * repartido.
+     */
+    var fatia = config.fatia && config.fatia.total > 1 ? config.fatia : null;
+    var minhas = 0;
+    for (var ct = 0; ct < tentativas; ct++)
+      if (!fatia || ct % fatia.total === fatia.indice) minhas++;
+    var feitas = 0;
+
     for (var t = 0; t < tentativas; t++) {
       var candidato = t === 0 ? ordenado : embaralhar(ordenado, rnd);
       var rotations = [];
@@ -597,11 +730,12 @@ self.onmessage = function (e) {
         var viaveis = viaveisPorId[candidato[i].id];
         rotations.push(t === 0 ? viaveis[0] : viaveis[Math.floor(rnd() * viaveis.length)]);
       }
+      if (fatia && t % fatia.total !== fatia.indice) continue;
 
       // Atenção: placePaths devolve UM objeto {placements, fitness, area}.
       // No svgnest.js ele é chamado via Parallel.map(), que embrulha num array —
       // daí o `placements[0]` de lá. Chamando direto, o objeto já é o resultado.
-      var r = avaliar(bin, candidato, rotations, config, nfpCache, formaCache);
+      var r = avaliar(bin, candidato, rotations, config, nfpCache, formaCache, baseCache);
       if (r && typeof r.fitness === 'number') {
         /*
          * Escolhe a tentativa pelo que é COBRADO, não pelo `fitness` do
@@ -622,24 +756,28 @@ self.onmessage = function (e) {
           (m.pecasFora === melhor.pecasFora && m.areaFaixaOcupada < melhor.areaFaixaOcupada)
         ) {
           melhor = m;
+          melhorT = t;
         }
       }
-      self.postMessage({ tipo: 'progresso', valor: (t + 1) / tentativas });
+      feitas++;
+      self.postMessage({ tipo: 'progresso', valor: minhas ? feitas / minhas : 1 });
     }
 
-    if (!melhor) {
-      self.postMessage({
-        tipo: 'erro',
-        mensagem: 'Nenhuma peça coube na chapa.',
-        diagnostico: diagnostico,
-      });
-      return;
-    }
-
+    /*
+     * Fatia sem resultado não é erro: outra fatia pode ter conseguido. Quem
+     * decide é quem junta (o hook), quando TODAS vierem vazias.
+     */
     // `melhor` já vem medido (ver escolha por área acima). `pecasFora` é a
     // rede de segurança: peça que entrou e não saiu colocada não pode virar
     // preço — orçar só as que couberam cobraria menos do que o serviço custa.
-    self.postMessage({ tipo: 'resultado', resultado: melhor, diagnostico: diagnostico });
+    // `tentativa` serve para o desempate na junção das fatias: empate em área
+    // fica com a tentativa de índice menor, como ficaria rodando em série.
+    self.postMessage({
+      tipo: 'resultado',
+      resultado: melhor,
+      tentativa: melhorT,
+      diagnostico: diagnostico,
+    });
   } catch (err) {
     self.postMessage({ tipo: 'erro', mensagem: (err && err.message) || String(err) });
   }

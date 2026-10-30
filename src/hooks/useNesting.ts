@@ -69,11 +69,11 @@ export function useNesting() {
   const [erro, setErro] = useState<string | null>(null);
   // quanto demorou: é o que deixa o vendedor entender o custo de cada ângulo
   const [duracaoMs, setDuracaoMs] = useState<number | null>(null);
-  const workerRef = useRef<Worker | null>(null);
+  const workersRef = useRef<Worker[]>([]);
 
   const encerrar = useCallback(() => {
-    workerRef.current?.terminate();
-    workerRef.current = null;
+    for (const w of workersRef.current) w.terminate();
+    workersRef.current = [];
   }, []);
 
   useEffect(() => encerrar, [encerrar]);
@@ -117,31 +117,83 @@ export function useNesting() {
         { x: 0, y: larguraUtil },
       ];
 
-      const w = new Worker('/nesting/nest-worker.js');
-      workerRef.current = w;
+      const tentativas = opcoes.tentativas ?? 6;
+      /*
+       * As tentativas são independentes, então são repartidas entre vários
+       * workers — com muitas peças o posicionamento chega a 85% do tempo. Cada
+       * worker refaz os mesmos sorteios e avalia só a fatia dele, então o
+       * resultado é o mesmo de rodar em série (ver `fatia` no worker).
+       *
+       * Deixa um núcleo livre para a interface não travar, e não passa de 4:
+       * cada worker recalcula os no-fit-polygons da fatia dele, então worker
+       * demais só duplica trabalho.
+       */
+      const nucleos = navigator.hardwareConcurrency || 4;
+      /*
+       * Só vale dividir quando o posicionamento pesa, ou seja, com muitas
+       * peças. Com poucas, o no-fit-polygon é quase todo o tempo e cada worker
+       * refaz os mesmos — medido, 5 peças ficavam ~18% MAIS lentas repartidas.
+       * Entre 15 e 25 peças a diferença some no ruído de medição; de 30 para
+       * cima o ganho é consistente (45 peças: 1,4× a 2,0× em 6 medições). Daí
+       * o limiar, deliberadamente alto: não trocar um ganho duvidoso por uma
+       * perda certa nos letreiros pequenos, que são a maioria.
+       *
+       * Isto muda só o TEMPO, nunca o resultado: `.playwright/teste-paralelo.mjs`
+       * mostra área igual até a sexta casa e o mesmo desenho peça a peça com 1,
+       * 3 e 4 workers. É por isso que pode depender do número de peças, ao
+       * contrário do giro (ver "não existe modo Automático" no CLAUDE.md).
+       */
+      const PECAS_PARA_DIVIDIR = 26;
+      const quantos =
+        pecas.length >= PECAS_PARA_DIVIDIR
+          ? Math.max(1, Math.min(4, nucleos - 1, tentativas))
+          : 1;
 
-      w.onmessage = (e: MessageEvent) => {
-        const d = e.data;
-        if (d?.tipo === 'progresso') {
-          setProgresso(d.valor);
-        } else if (d?.tipo === 'resultado') {
-          setDuracaoMs(performance.now() - inicio);
-          setResultado(d.resultado as ResultadoEncaixe);
-          setEstado('pronto');
-          encerrar();
-        } else if (d?.tipo === 'erro') {
-          setErro(d.mensagem || 'Falha no encaixe.');
-          setEstado('erro');
-          encerrar();
-        }
-      };
-      w.onerror = (ev) => {
-        setErro(ev.message || 'Falha ao carregar o encaixe.');
+      const parciais: { resultado: ResultadoEncaixe | null; tentativa: number }[] = [];
+      const progressos = new Array(quantos).fill(0);
+      let encerrado = false;
+
+      const falhar = (mensagem: string) => {
+        if (encerrado) return;
+        encerrado = true;
+        setErro(mensagem);
         setEstado('erro');
         encerrar();
       };
 
-      w.postMessage({
+      const juntar = () => {
+        if (encerrado || parciais.length < quantos) return;
+        encerrado = true;
+        // melhor fatia pelo MESMO critério de dentro do worker; empate fica com
+        // a tentativa de índice menor, como ficaria em série.
+        let melhor: { resultado: ResultadoEncaixe | null; tentativa: number } | null = null;
+        for (const p of parciais) {
+          if (!p.resultado) continue;
+          if (
+            !melhor ||
+            !melhor.resultado ||
+            p.resultado.pecasFora < melhor.resultado.pecasFora ||
+            (p.resultado.pecasFora === melhor.resultado.pecasFora &&
+              (p.resultado.areaFaixaOcupada < melhor.resultado.areaFaixaOcupada ||
+                (p.resultado.areaFaixaOcupada === melhor.resultado.areaFaixaOcupada &&
+                  p.tentativa < melhor.tentativa)))
+          ) {
+            melhor = p;
+          }
+        }
+        if (!melhor || !melhor.resultado) {
+          setErro('Nenhuma peça coube na chapa.');
+          setEstado('erro');
+          encerrar();
+          return;
+        }
+        setDuracaoMs(performance.now() - inicio);
+        setResultado(melhor.resultado);
+        setEstado('pronto');
+        encerrar();
+      };
+
+      const payload = {
         bin,
         parts: pecas.map((p) => p.contorno),
         furos: pecas.map((p) => p.furos),
@@ -153,13 +205,34 @@ export function useNesting() {
           spacing: espacamento,
           margem,
           chapaReal: { largura: chapa.largura, comprimento: chapa.comprimento },
-          tentativas: opcoes.tentativas ?? 6,
+          tentativas,
           rotations: opcoes.rotacoes ?? [0, 180],
           curveTolerance: 0.3,
           exploreConcave: false,
           useHoles: false,
         },
-      });
+      };
+
+      for (let k = 0; k < quantos; k++) {
+        const w = new Worker('/nesting/nest-worker.js');
+        workersRef.current.push(w);
+        w.onmessage = (e: MessageEvent) => {
+          const d = e.data;
+          if (d?.tipo === 'progresso') {
+            progressos[k] = d.valor;
+            setProgresso(progressos.reduce((a, b) => a + b, 0) / quantos);
+          } else if (d?.tipo === 'resultado') {
+            parciais.push({ resultado: d.resultado ?? null, tentativa: d.tentativa ?? -1 });
+            juntar();
+          } else if (d?.tipo === 'erro') {
+            // erro do worker é condição global (peça que não cabe na chapa):
+            // todas as fatias chegariam na mesma, então para tudo na primeira.
+            falhar(d.mensagem || 'Falha no encaixe.');
+          }
+        };
+        w.onerror = (ev) => falhar(ev.message || 'Falha ao carregar o encaixe.');
+        w.postMessage({ ...payload, config: { ...payload.config, fatia: { indice: k, total: quantos } } });
+      }
     },
     [encerrar]
   );
