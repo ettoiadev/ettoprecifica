@@ -117,6 +117,32 @@ Valor: ${formatCurrency(calc.final)}`;
         </p>
       </div>
 
+      {/* Medida antes do tipo — mesma ordem da Lona (a pedido do Étto, 30/10/26).
+          Fica FORA da grade de 2 colunas da página, mas limitada a metade da
+          largura (w-1/2 menos o pr-4 = 543px, a mesma da coluna da esquerda),
+          senão os 3 campos esticariam pelos 1118px da linha inteira. Some no
+          modo motor: o painel de recorte 1/2 cores tem os campos de medida dele,
+          com alternância entre medida e metro linear. */}
+      {!isEngine && (
+        <div className="mb-6 lg:w-1/2 lg:pr-4">
+          <label className="block text-sm font-medium text-gray-700 mb-3">Dimensões e quantidade</label>
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <label htmlFor="adesivo-largura" className="block text-xs text-gray-500 mb-1">Largura (m)</label>
+              <Input id="adesivo-largura" type="number" min="0" step="0.01" value={largura} onChange={(e) => setLargura(e.target.value)} placeholder="0.00" />
+            </div>
+            <div>
+              <label htmlFor="adesivo-altura" className="block text-xs text-gray-500 mb-1">Altura (m)</label>
+              <Input id="adesivo-altura" type="number" min="0" step="0.01" value={altura} onChange={(e) => setAltura(e.target.value)} placeholder="0.00" />
+            </div>
+            <div>
+              <label htmlFor="adesivo-quantidade" className="block text-xs text-gray-500 mb-1">Quantidade</label>
+              <Input id="adesivo-quantidade" type="number" min="1" step="1" value={quantidade || ''} onChange={(e) => setQuantidade(parseInt(e.target.value) || 1)} placeholder="1" />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Seleção de tipo (sempre visível) — fica no topo porque alguns tipos
           trocam o corpo inteiro da calculadora (recorte 1/2 cores usam o motor).
           Por ficar FORA da grade de 2 colunas da página, a lista vai em 2
@@ -148,24 +174,6 @@ Valor: ${formatCurrency(calc.final)}`;
       ) : (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-3">Dimensões e quantidade</label>
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <label htmlFor="adesivo-largura" className="block text-xs text-gray-500 mb-1">Largura (m)</label>
-                <Input id="adesivo-largura" type="number" min="0" step="0.01" value={largura} onChange={(e) => setLargura(e.target.value)} placeholder="0.00" />
-              </div>
-              <div>
-                <label htmlFor="adesivo-altura" className="block text-xs text-gray-500 mb-1">Altura (m)</label>
-                <Input id="adesivo-altura" type="number" min="0" step="0.01" value={altura} onChange={(e) => setAltura(e.target.value)} placeholder="0.00" />
-              </div>
-              <div>
-                <label htmlFor="adesivo-quantidade" className="block text-xs text-gray-500 mb-1">Quantidade</label>
-                <Input id="adesivo-quantidade" type="number" min="1" step="1" value={quantidade || ''} onChange={(e) => setQuantidade(parseInt(e.target.value) || 1)} placeholder="1" />
-              </div>
-            </div>
-          </div>
-
           {mascaraDisponivel && (
             <div>
               <CalcCheckbox checked={incluirMascara} onCheckedChange={setIncluirMascara}>
