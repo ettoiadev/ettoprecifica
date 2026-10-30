@@ -98,14 +98,29 @@ Valor: ${formatCurrency(calc.final)}`;
         <div className="space-y-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-3">Tipo de fachada</label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-2">
               {opcoes.length === 0 ? (
                 <span className="text-sm text-gray-500">Nenhum tipo cadastrado — adicione em Configurações.</span>
               ) : opcoes.map((o) => (
                 <OptionChip key={o.id} onClick={() => setTipo(o.id)} active={tipo === o.id} variant="indigo">
-                  <div className="text-base font-semibold">{o.label}</div>
-                  <div className="text-xs opacity-70 mt-0.5">
-                    {o.description ? `${o.description} · ` : ''}{formatCurrency(o.price)}/m²
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium">{o.label}</div>
+                      {o.description && (
+                        <div className="text-xs opacity-70 mt-0.5">{o.description}</div>
+                      )}
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <div className="text-sm font-semibold tabular-nums">
+                        {formatCurrency(o.price)}
+                        <span className="text-xs font-normal opacity-70">/m²</span>
+                      </div>
+                      {o.minPrice != null && o.minPrice > 0 && (
+                        <div className="text-xs opacity-70 tabular-nums">
+                          mín. {formatCurrency(o.minPrice)}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </OptionChip>
               ))}
@@ -116,12 +131,12 @@ Valor: ${formatCurrency(calc.final)}`;
             <label className="block text-sm font-medium text-gray-700 mb-3">Dimensões</label>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs text-gray-500 mb-1">Largura (m)</label>
-                <Input type="number" min="0" step="0.01" value={largura} onChange={(e) => setLargura(e.target.value)} placeholder="0.00" />
+                <label htmlFor="fachada-largura" className="block text-xs text-gray-500 mb-1">Largura (m)</label>
+                <Input id="fachada-largura" type="number" min="0" step="0.01" value={largura} onChange={(e) => setLargura(e.target.value)} placeholder="0.00" />
               </div>
               <div>
-                <label className="block text-xs text-gray-500 mb-1">Altura (m)</label>
-                <Input type="number" min="0" step="0.01" value={altura} onChange={(e) => setAltura(e.target.value)} placeholder="0.00" />
+                <label htmlFor="fachada-altura" className="block text-xs text-gray-500 mb-1">Altura (m)</label>
+                <Input id="fachada-altura" type="number" min="0" step="0.01" value={altura} onChange={(e) => setAltura(e.target.value)} placeholder="0.00" />
               </div>
             </div>
             {entradaValida && (
@@ -164,6 +179,12 @@ Valor: ${formatCurrency(calc.final)}`;
                 <div className="flex justify-between text-sm text-gray-600"><span>Tipo:</span><span className="text-right">{opcaoSel.label}</span></div>
                 <div className="flex justify-between text-sm text-gray-600"><span>Preço/m²:</span><span>{formatCurrency(precoM2)}</span></div>
                 <div className="flex justify-between text-sm text-gray-600"><span>Área:</span><span>{calc.area.toFixed(2)} m²</span></div>
+                {opcaoSel.minPrice != null && opcaoSel.minPrice > 0 && (
+                  <div className="flex justify-between text-sm text-gray-600">
+                    <span>Mínimo do tipo:</span>
+                    <span>{formatCurrency(opcaoSel.minPrice)}</span>
+                  </div>
+                )}
                 {incluirDeslocamento && calc.desloc > 0 && (
                   <div className="flex justify-between text-sm text-gray-600"><span>Deslocamento:</span><span>{formatCurrency(calc.desloc)}</span></div>
                 )}

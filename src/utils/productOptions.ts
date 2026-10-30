@@ -136,15 +136,45 @@ const DTF_BASE: ItemBase[] = [
 ];
 
 // Mínimos = os do motor (fachada ACM R$500, lona R$300), sobre o preço sem nota.
+/*
+ * Ordem pedida pelo Étto em 30/10/26: as duas lonas simples primeiro (são as
+ * que ele mais orça), depois o resto. A ordem daqui só vale para config NOVA —
+ * quem já salvou tem a própria lista. Ver ORDEM_FACHADA_ANTIGA abaixo.
+ */
 const FACHADA_BASE: ItemBase[] = [
+  { id: 'lonaCantoneira', label: 'Fachada em Lona — Cantoneira', description: 'Lona esticada com rebites e cantoneira', priceKey: 'lonaCantoneira', minPrice: 300 },
+  { id: 'lonaIlhos', label: 'Fachada em Lona — Ilhós', description: 'Ilhós + abraçadeiras de nylon', priceKey: 'lonaIlhos', minPrice: 300 },
   { id: 'acmSimples', label: 'Fachada ACM — Simples', description: 'Estrutura em metalon + ACM', priceKey: 'acmSimples', minPrice: 500 },
   { id: 'acmRecortesDobras', label: 'Fachada ACM — Recortes/dobras', description: 'ACM com recortes e dobras', priceKey: 'acmRecortesDobras', minPrice: 500 },
   { id: 'acmLetraPvc', label: 'Fachada ACM + Letra PVC', description: 'ACM com letras em PVC', priceKey: 'acmLetraPvc', minPrice: 500 },
   { id: 'acmLetraIluminada', label: 'Fachada ACM + Letra iluminada', description: 'ACM com letras iluminadas', priceKey: 'acmLetraIluminada', minPrice: 500 },
-  { id: 'lonaCantoneira', label: 'Fachada em Lona — Cantoneira', description: 'Lona esticada com rebites e cantoneira', priceKey: 'lonaCantoneira', minPrice: 300 },
-  { id: 'lonaIlhos', label: 'Fachada em Lona — Ilhós', description: 'Ilhós + abraçadeiras de nylon', priceKey: 'lonaIlhos', minPrice: 300 },
   { id: 'lonaIluminada', label: 'Fachada em Lona iluminada (backlight)', description: 'Lona translúcida para backlight', priceKey: 'lonaIluminada', minPrice: 300 },
 ];
+
+/**
+ * Ordem que a Fachada tinha até 30/10/26. Serve para reordenar UMA VEZ a lista
+ * de quem já salvou a config: se a ordem salva for exatamente esta, ninguém
+ * mexeu nela e dá para aplicar a nova com segurança. Se o vendedor tiver
+ * reordenado à mão (ou adicionado/removido tipo), a lista dele fica como está
+ * — mudar seria desfazer uma escolha dele.
+ */
+const ORDEM_FACHADA_ANTIGA = [
+  'acmSimples',
+  'acmRecortesDobras',
+  'acmLetraPvc',
+  'acmLetraIluminada',
+  'lonaCantoneira',
+  'lonaIlhos',
+  'lonaIluminada',
+];
+
+const reordenarFachadaIntocada = (itens: ProductVariation[]): ProductVariation[] => {
+  const ids = itens.map((i) => i.id);
+  if (ids.length !== ORDEM_FACHADA_ANTIGA.length) return itens;
+  if (!ids.every((id, i) => id === ORDEM_FACHADA_ANTIGA[i])) return itens;
+  const nova = FACHADA_BASE.map((b) => itens.find((i) => i.id === b.id)).filter(Boolean);
+  return nova.length === itens.length ? (nova as ProductVariation[]) : itens;
+};
 
 // Seções que têm lista editável `itens` (semeadas por migrateConfig).
 const ITENS_BASE: Record<string, ItemBase[]> = {
@@ -217,6 +247,17 @@ export const migrateConfig = (config: PricingConfig): PricingConfig => {
       } as never;
     }
   });
+
+  // Reordena a Fachada de quem já tinha a lista salva, mas só se ela estiver
+  // intocada (ver reordenarFachadaIntocada). Sem isso, a nova ordem valeria
+  // apenas para config nova e o Étto continuaria vendo a antiga.
+  const fachada = next.fachada as unknown as Record<string, unknown> | undefined;
+  if (fachada && Array.isArray(fachada.itens)) {
+    next.fachada = {
+      ...(fachada as object),
+      itens: reordenarFachadaIntocada(fachada.itens as ProductVariation[]),
+    } as never;
+  }
 
   return next;
 };
