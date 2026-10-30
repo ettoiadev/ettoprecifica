@@ -102,16 +102,16 @@ Valor: ${formatCurrency(calc.final)}`;
             <label className="block text-sm font-medium text-gray-700 mb-3">Dimensões e quantidade</label>
             <div className="grid grid-cols-3 gap-4">
               <div>
-                <label className="block text-xs text-gray-500 mb-1">Largura (m)</label>
-                <Input type="number" min="0" step="0.01" value={largura} onChange={(e) => setLargura(e.target.value)} placeholder="0.00" />
+                <label htmlFor="placa-ps-largura" className="block text-xs text-gray-500 mb-1">Largura (m)</label>
+                <Input id="placa-ps-largura" type="number" min="0" step="0.01" value={largura} onChange={(e) => setLargura(e.target.value)} placeholder="0.00" />
               </div>
               <div>
-                <label className="block text-xs text-gray-500 mb-1">Altura (m)</label>
-                <Input type="number" min="0" step="0.01" value={altura} onChange={(e) => setAltura(e.target.value)} placeholder="0.00" />
+                <label htmlFor="placa-ps-altura" className="block text-xs text-gray-500 mb-1">Altura (m)</label>
+                <Input id="placa-ps-altura" type="number" min="0" step="0.01" value={altura} onChange={(e) => setAltura(e.target.value)} placeholder="0.00" />
               </div>
               <div>
-                <label className="block text-xs text-gray-500 mb-1">Quantidade</label>
-                <Input type="number" min="1" step="1" value={quantidade || ''} onChange={(e) => setQuantidade(parseInt(e.target.value) || 1)} placeholder="1" />
+                <label htmlFor="placa-ps-quantidade" className="block text-xs text-gray-500 mb-1">Quantidade</label>
+                <Input id="placa-ps-quantidade" type="number" min="1" step="1" value={quantidade || ''} onChange={(e) => setQuantidade(parseInt(e.target.value) || 1)} placeholder="1" />
               </div>
             </div>
           </div>

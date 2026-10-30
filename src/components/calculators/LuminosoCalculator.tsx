@@ -246,8 +246,9 @@ Valor: ${formatCurrency(precos.final)}`;
             <label className="block text-sm font-medium text-gray-700 mb-3">Dimensões</label>
             {forma === 'circular' ? (
               <div>
-                <label className="block text-xs text-gray-500 mb-1">Diâmetro (m)</label>
+                <label htmlFor="luminoso-diametro" className="block text-xs text-gray-500 mb-1">Diâmetro (m)</label>
                 <Input
+                  id="luminoso-diametro"
                   type="number"
                   min="0"
                   step="0.01"
@@ -259,8 +260,9 @@ Valor: ${formatCurrency(precos.final)}`;
             ) : (
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs text-gray-500 mb-1">Largura (m)</label>
+                  <label htmlFor="luminoso-largura" className="block text-xs text-gray-500 mb-1">Largura (m)</label>
                   <Input
+                    id="luminoso-largura"
                     type="number"
                     min="0"
                     step="0.01"
@@ -270,8 +272,9 @@ Valor: ${formatCurrency(precos.final)}`;
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-500 mb-1">Altura (m)</label>
+                  <label htmlFor="luminoso-altura" className="block text-xs text-gray-500 mb-1">Altura (m)</label>
                   <Input
+                    id="luminoso-altura"
                     type="number"
                     min="0"
                     step="0.01"

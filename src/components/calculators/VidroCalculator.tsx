@@ -192,8 +192,9 @@ Valor: ${formatCurrency(precos.final)}`;
             <label className="block text-sm font-medium text-gray-700 mb-3">Dimensões (por peça)</label>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs text-gray-500 mb-1">Largura (m)</label>
+                <label htmlFor="vidro-largura" className="block text-xs text-gray-500 mb-1">Largura (m)</label>
                 <Input
+                  id="vidro-largura"
                   type="number"
                   min="0"
                   step="0.01"
@@ -203,8 +204,9 @@ Valor: ${formatCurrency(precos.final)}`;
                 />
               </div>
               <div>
-                <label className="block text-xs text-gray-500 mb-1">Altura (m)</label>
+                <label htmlFor="vidro-altura" className="block text-xs text-gray-500 mb-1">Altura (m)</label>
                 <Input
+                  id="vidro-altura"
                   type="number"
                   min="0"
                   step="0.01"

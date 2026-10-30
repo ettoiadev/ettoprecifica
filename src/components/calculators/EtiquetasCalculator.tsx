@@ -105,16 +105,16 @@ Valor: ${formatCurrency(calc.final)}`;
             <label className="block text-sm font-medium text-gray-700 mb-3">Medida e quantidade</label>
             <div className="grid grid-cols-3 gap-4">
               <div>
-                <label className="block text-xs text-gray-500 mb-1">Largura (cm)</label>
-                <Input type="number" min="0" step="0.1" value={largura} onChange={(e) => setLargura(e.target.value)} placeholder="0.0" />
+                <label htmlFor="etiqueta-largura" className="block text-xs text-gray-500 mb-1">Largura (cm)</label>
+                <Input id="etiqueta-largura" type="number" min="0" step="0.1" value={largura} onChange={(e) => setLargura(e.target.value)} placeholder="0.0" />
               </div>
               <div>
-                <label className="block text-xs text-gray-500 mb-1">Altura (cm)</label>
-                <Input type="number" min="0" step="0.1" value={altura} onChange={(e) => setAltura(e.target.value)} placeholder="0.0" />
+                <label htmlFor="etiqueta-altura" className="block text-xs text-gray-500 mb-1">Altura (cm)</label>
+                <Input id="etiqueta-altura" type="number" min="0" step="0.1" value={altura} onChange={(e) => setAltura(e.target.value)} placeholder="0.0" />
               </div>
               <div>
-                <label className="block text-xs text-gray-500 mb-1">Quantidade</label>
-                <Input type="number" min="1" step="1" value={quantidade} onChange={(e) => setQuantidade(e.target.value)} placeholder="0" />
+                <label htmlFor="etiqueta-quantidade" className="block text-xs text-gray-500 mb-1">Quantidade</label>
+                <Input id="etiqueta-quantidade" type="number" min="1" step="1" value={quantidade} onChange={(e) => setQuantidade(e.target.value)} placeholder="0" />
               </div>
             </div>
           </div>

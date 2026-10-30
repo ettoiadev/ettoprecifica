@@ -328,8 +328,9 @@ Valor: ${formatCurrency(precos.final)}`;
                   </label>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs text-gray-500 mb-1">Largura (m)</label>
+                      <label htmlFor="letra-caixa-largura" className="block text-xs text-gray-500 mb-1">Largura (m)</label>
                       <Input
+                        id="letra-caixa-largura"
                         type="number"
                         min="0"
                         step="0.01"
@@ -339,8 +340,9 @@ Valor: ${formatCurrency(precos.final)}`;
                       />
                     </div>
                     <div>
-                      <label className="block text-xs text-gray-500 mb-1">Altura (m)</label>
+                      <label htmlFor="letra-caixa-altura" className="block text-xs text-gray-500 mb-1">Altura (m)</label>
                       <Input
+                        id="letra-caixa-altura"
                         type="number"
                         min="0"
                         step="0.01"

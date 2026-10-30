@@ -319,12 +319,12 @@ Valor: ${formatCurrency(precos.final)}`;
               <label className="block text-sm font-medium text-gray-700 mb-3">Dimensões (retângulo)</label>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs text-gray-500 mb-1">Largura (m)</label>
-                  <Input type="number" min="0" step="0.01" value={largura} onChange={(e) => setLargura(e.target.value)} placeholder="0.00" />
+                  <label htmlFor="recorte-largura" className="block text-xs text-gray-500 mb-1">Largura (m)</label>
+                  <Input id="recorte-largura" type="number" min="0" step="0.01" value={largura} onChange={(e) => setLargura(e.target.value)} placeholder="0.00" />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-500 mb-1">Altura (m)</label>
-                  <Input type="number" min="0" step="0.01" value={altura} onChange={(e) => setAltura(e.target.value)} placeholder="0.00" />
+                  <label htmlFor="recorte-altura" className="block text-xs text-gray-500 mb-1">Altura (m)</label>
+                  <Input id="recorte-altura" type="number" min="0" step="0.01" value={altura} onChange={(e) => setAltura(e.target.value)} placeholder="0.00" />
                 </div>
               </div>
             </div>

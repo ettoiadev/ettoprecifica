@@ -31,8 +31,9 @@ const DeslocamentoField: React.FC<UseDeslocamentoCepReturn> = ({
         <div className="mt-3 space-y-3">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs text-gray-500 mb-1">CEP do cliente</label>
+              <label htmlFor="desloc-cep-do-cliente" className="block text-xs text-gray-500 mb-1">CEP do cliente</label>
               <Input
+                id="desloc-cep-do-cliente"
                 type="text"
                 inputMode="numeric"
                 value={cepDestino}
@@ -42,8 +43,9 @@ const DeslocamentoField: React.FC<UseDeslocamentoCepReturn> = ({
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Tempo estimado de instalação (h)</label>
+              <label htmlFor="desloc-tempo-estimado-de-instalacao" className="block text-xs text-gray-500 mb-1">Tempo estimado de instalação (h)</label>
               <Input
+                id="desloc-tempo-estimado-de-instalacao"
                 type="number"
                 min="0"
                 step="0.5"
@@ -76,8 +78,9 @@ const DeslocamentoField: React.FC<UseDeslocamentoCepReturn> = ({
           )}
 
           <div>
-            <label className="block text-xs text-gray-500 mb-1">Valor do deslocamento (R$)</label>
+            <label htmlFor="desloc-valor-do-deslocamento" className="block text-xs text-gray-500 mb-1">Valor do deslocamento (R$)</label>
             <Input
+              id="desloc-valor-do-deslocamento"
               type="number"
               min="0"
               step="0.01"
