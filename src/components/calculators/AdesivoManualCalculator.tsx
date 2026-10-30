@@ -118,13 +118,17 @@ Valor: ${formatCurrency(calc.final)}`;
       </div>
 
       {/* Seleção de tipo (sempre visível) — fica no topo porque alguns tipos
-          trocam o corpo inteiro da calculadora (recorte 1/2 cores usam o motor). */}
+          trocam o corpo inteiro da calculadora (recorte 1/2 cores usam o motor).
+          Por ficar FORA da grade de 2 colunas da página, a lista vai em 2
+          colunas: numa só, o chip ocuparia a largura inteira (1118px, o dobro
+          das outras abas) e o preço ficaria longe demais do nome. Com 2, o chip
+          fica com ~550px — a mesma largura de Lona/Placas/Fachada. */}
       <div className="mb-6">
         <label className="block text-sm font-medium text-gray-700 mb-3">Tipo de adesivo</label>
         {opcoes.length === 0 ? (
           <span className="text-sm text-gray-500">Nenhum tipo cadastrado — adicione em Configurações.</span>
         ) : (
-          <div className="grid grid-cols-1 gap-2">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
             {opcoes.map((o) => (
               <OptionChip key={o.id} onClick={() => setMaterialId(o.id)} active={materialId === o.id} variant="indigo">
                 <ChipProduto
