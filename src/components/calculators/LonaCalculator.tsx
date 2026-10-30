@@ -4,7 +4,7 @@ import { formatCurrency, ALIQUOTA_NF, LonaConfig, ProductVariation } from '../..
 import { useCotacao } from '../../contexts/CotacaoContext';
 import { useDeslocamentoCep } from '../../hooks/useDeslocamentoCep';
 import DeslocamentoField from './DeslocamentoField';
-import { CalcCheckbox, OptionChip } from './CalcControls';
+import { CalcCheckbox, OptionChip, ChipProduto } from './CalcControls';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 import { toast } from 'sonner';
@@ -123,12 +123,12 @@ Valor: ${formatCurrency(calc.final)}`;
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-3">Acabamento</label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-2">
               {opcoes.length === 0 ? (
                 <span className="text-sm text-gray-500">Nenhum acabamento cadastrado — adicione em Configurações.</span>
               ) : opcoes.map((o) => (
-                <OptionChip key={o.id} onClick={() => setAcabamentoId(o.id)} active={acabamentoId === o.id} variant="neutral">
-                  {o.label} — {formatCurrency(o.price)}/m²
+                <OptionChip key={o.id} onClick={() => setAcabamentoId(o.id)} active={acabamentoId === o.id} variant="indigo">
+                  <ChipProduto label={o.label} descricao={o.description} preco={formatCurrency(o.price)} unidade="/m²" />
                 </OptionChip>
               ))}
             </div>

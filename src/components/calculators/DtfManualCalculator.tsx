@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Copy, PlusCircle } from 'lucide-react';
 import { formatCurrency, ALIQUOTA_NF, DtfConfig, ProductVariation } from '../../types/pricing';
 import { useCotacao } from '../../contexts/CotacaoContext';
-import { CalcCheckbox, OptionChip } from './CalcControls';
+import { CalcCheckbox, OptionChip, ChipProduto } from './CalcControls';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 import { toast } from 'sonner';
@@ -95,13 +95,12 @@ Valor: ${formatCurrency(calc.final)}`;
         <div className="space-y-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-3">Tipo de DTF</label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-2">
               {opcoes.length === 0 ? (
                 <span className="text-sm text-gray-500">Nenhum tipo cadastrado — adicione em Configurações.</span>
               ) : opcoes.map((o) => (
                 <OptionChip key={o.id} onClick={() => setTipo(o.id)} active={tipo === o.id} variant="indigo">
-                  <div>{o.label}</div>
-                  <div className="text-xs opacity-70 mt-0.5">{o.description ? `${o.description} · ` : ''}{formatCurrency(o.price)}/m</div>
+                  <ChipProduto label={o.label} descricao={o.description} preco={formatCurrency(o.price)} unidade="/m" />
                 </OptionChip>
               ))}
             </div>

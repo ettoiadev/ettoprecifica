@@ -10,7 +10,7 @@ import {
 import { useCotacao } from '../../contexts/CotacaoContext';
 import { useDeslocamentoCep } from '../../hooks/useDeslocamentoCep';
 import DeslocamentoField from './DeslocamentoField';
-import { CalcCheckbox, OptionChip } from './CalcControls';
+import { CalcCheckbox, OptionChip, ChipProduto } from './CalcControls';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 import { toast } from 'sonner';
@@ -103,25 +103,13 @@ Valor: ${formatCurrency(calc.final)}`;
                 <span className="text-sm text-gray-500">Nenhum tipo cadastrado — adicione em Configurações.</span>
               ) : opcoes.map((o) => (
                 <OptionChip key={o.id} onClick={() => setTipo(o.id)} active={tipo === o.id} variant="indigo">
-                  <div className="flex items-center gap-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium">{o.label}</div>
-                      {o.description && (
-                        <div className="text-xs opacity-70 mt-0.5">{o.description}</div>
-                      )}
-                    </div>
-                    <div className="shrink-0 text-right">
-                      <div className="text-sm font-semibold tabular-nums">
-                        {formatCurrency(o.price)}
-                        <span className="text-xs font-normal opacity-70">/m²</span>
-                      </div>
-                      {o.minPrice != null && o.minPrice > 0 && (
-                        <div className="text-xs opacity-70 tabular-nums">
-                          mín. {formatCurrency(o.minPrice)}
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                  <ChipProduto
+                    label={o.label}
+                    descricao={o.description}
+                    preco={formatCurrency(o.price)}
+                    unidade="/m²"
+                    minimo={o.minPrice ? `mín. ${formatCurrency(o.minPrice)}` : undefined}
+                  />
                 </OptionChip>
               ))}
             </div>

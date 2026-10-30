@@ -69,6 +69,18 @@ Na aba **Letra Caixa**, material **PVC**, existe o seletor **"Como medir o mater
 6. **A chapa tem que ir DEITADA** (X = comprimento): o `placementworker` pesa `width*2 + height`, então comprime no eixo X. Em pé, ele empilha numa coluna estreita e gasta mais chapa.
 - Teste de ponta a ponta: `.playwright/teste-encaixe-ui.mjs <arquivo.svg>` (sobe o arquivo pela interface, encaixa com vão 0 e 10mm, confere que o vão aumenta o consumo, e lê o preço final vindo da Edge Function).
 
+## Auditoria geral de UI (30/10/26)
+Varredura pedida pelo Étto. Medida no navegador, não por impressão — `.playwright/auditoria-ui.mjs` percorre as 11 abas e conta campo sem nome acessível, `<label>` sem alvo e chip com preço embutido na descrição.
+- **Achado 1 — metade dos campos não tinha rótulo ligado**: 15 de 30. Clicar no rótulo não focava o campo e leitor de tela não anunciava nada; era também por isso que os testes de interface falhavam no `getByLabel`. Hoje **0 de 30**. Afetava Adesivos, Lona, Placas, Letra Caixa, Vidro, Luminoso, Etiquetas, Recorte e o `DeslocamentoField` (compartilhado por 12 calculadoras).
+  - **Armadilha do codemod**: onde o `<Input` abre sozinho na linha (atributos multi-linha), o replace de `'<Input '` não casa — o `<label>` ganhava `htmlFor` e o campo ficava sem `id`, ou seja, **apontando para nada, pior que antes**. Eram 10 casos. Pegar isso exige comparar os `htmlFor` contra os `id` do mesmo arquivo, não só rodar o codemod.
+- **Achado 2 — `ChipProduto`** (`CalcControls.tsx`): 5 calculadoras repetiam quase a mesma marcação de chip, com tamanhos de rótulo diferentes entre si, e o preço no fim da descrição (`"Estrutura em metalon + ACM · R$ 450,00/m²"`), em 12px e 70% de opacidade. Virou um componente só, com o padrão do `reference-ui/orbynadmin` (checkout → delivery method): nome e descrição à esquerda, **preço à direita com `tabular-nums`**, mínimo embaixo quando houver. Adotado em Adesivos, Lona, Placa PS, Placa ACM, Fachada, Laser e DTF.
+  - Lista curta (≤8) foi para **uma coluna**, para os preços formarem uma coluna única de leitura. **Laser fica em 2 colunas** de propósito: são 16 materiais em 5 categorias e numa coluna passaria de 900px.
+  - Lona saiu de `variant="neutral"` em uma linha para a mesma caixa índigo dos outros produtos — era a única lista de produto com visual diferente.
+  - Verificação: `.playwright/verifica-chips.mjs` lê o preço que o CHIP anuncia, digita uma medida e confere contra `área × preço × NF` em 5 abas.
+- **Achado 3 — descartado de propósito**: ~51 `<label>` são cabeçalhos de grupo ("Material", "Dimensões") e não apontam campo nenhum. Tentei trocar por `<span>`; o casamento do `</label>` pelo "primeiro que aparecer" **quebrou `AdesivoRecorteCalculator.tsx`** (label aninhado de `CalcCheckbox` fechando no lugar errado). Revertido. **Ganho é zero visual e o risco é real** — se for feito algum dia, tem que ser com casamento por profundidade de tag, não por regex.
+- **Não-achado útil**: as 24 caixas (`CalcCheckbox`) **alternam ao clicar no texto** nas 11 abas, apesar de o controle do shadcn ser `<button role="checkbox">` dentro de `<label>` sem `for` (`.playwright/teste-clique-caixa.mjs`). Suspeitei de bug, medi, não era.
+- **Nada de gradiente, sombra pesada ou blur decorativo** sobrou nos componentes vivos — a etapa 1 de 23/09/26 resolveu e continua resolvido.
+
 ## Versionamento (23/09/26)
 SemVer formalizado — processo completo em **`docs/VERSIONING.md`**, histórico em **`CHANGELOG.md`**.
 - **Fonte única da versão: `package.json`** (`"version"`). Nunca escrever número de versão em outro arquivo — `vite.config.ts` lê o package.json no build e injeta `__APP_VERSION__`/`__BUILD_COMMIT__`/`__BUILD_ENV__`, consumidos via `src/lib/version.ts`.

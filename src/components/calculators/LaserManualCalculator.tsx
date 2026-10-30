@@ -4,7 +4,7 @@ import { formatCurrency, ALIQUOTA_NF, LaserConfig, ProductVariation } from '../.
 import { useCotacao } from '../../contexts/CotacaoContext';
 import { useDeslocamentoCep } from '../../hooks/useDeslocamentoCep';
 import DeslocamentoField from './DeslocamentoField';
-import { CalcCheckbox, OptionChip } from './CalcControls';
+import { CalcCheckbox, OptionChip, ChipProduto } from './CalcControls';
 import EncaixeControles from './EncaixeControles';
 import EncaixeVisual from './EncaixeVisual';
 import { useEncaixeSvg, PERFIL_LASER } from '../../hooks/useEncaixeSvg';
@@ -170,8 +170,7 @@ Valor: ${formatCurrency(calc.final)}`;
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {itens.map((o) => (
                         <OptionChip key={o.id} onClick={() => setMaterial(o.id)} active={material === o.id} variant="indigo">
-                          <div>{o.label}</div>
-                          <div className="text-xs opacity-70 mt-0.5">{o.description ? `${o.description} · ` : ''}{formatCurrency(o.price)}/m²</div>
+                          <ChipProduto label={o.label} descricao={o.description} preco={formatCurrency(o.price)} unidade="/m²" />
                         </OptionChip>
                       ))}
                     </div>

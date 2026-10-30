@@ -76,6 +76,51 @@ interface CalcCheckboxProps {
  * deslocamento"…). Mantém a UX atual (a caixa inteira é clicável) usando o
  * `Checkbox` do shadcn/Radix no lugar do `<input type="checkbox">` cru.
  */
+/*
+ * Conteúdo padrão de um chip de produto: nome e descrição à esquerda, PREÇO
+ * fixado à direita.
+ *
+ * Existe porque o preço é o número que o vendedor compara entre as opções, e
+ * ele estava no fim da descrição ("Estrutura em metalon + ACM · R$ 450,00/m²"),
+ * em 12px e 70% de opacidade. Alinhado à direita com `tabular-nums`, os valores
+ * da lista formam uma coluna que se lê de cima a baixo. Estrutura tirada do
+ * `reference-ui/orbynadmin` (escolha de método de entrega do checkout).
+ *
+ * Use dentro de um <OptionChip variant="indigo">.
+ */
+interface ChipProdutoProps {
+  label: string;
+  descricao?: string;
+  /** já formatado: "R$ 450,00" — ou um texto, quando o preço não é um número */
+  preco: React.ReactNode;
+  /** sufixo em cinza ao lado do preço: "/m²", "/m" */
+  unidade?: string;
+  /** piso deste item, quando houver: "mín. R$ 300,00" */
+  minimo?: string;
+}
+
+export const ChipProduto: React.FC<ChipProdutoProps> = ({
+  label,
+  descricao,
+  preco,
+  unidade,
+  minimo,
+}) => (
+  <div className="flex items-center gap-3">
+    <div className="min-w-0 flex-1">
+      <div className="text-sm font-medium">{label}</div>
+      {descricao && <div className="text-xs opacity-70 mt-0.5">{descricao}</div>}
+    </div>
+    <div className="shrink-0 text-right">
+      <div className="text-sm font-semibold tabular-nums">
+        {preco}
+        {unidade && <span className="text-xs font-normal opacity-70">{unidade}</span>}
+      </div>
+      {minimo && <div className="text-xs opacity-70 tabular-nums">{minimo}</div>}
+    </div>
+  </div>
+);
+
 export const CalcCheckbox: React.FC<CalcCheckboxProps> = ({
   checked,
   onCheckedChange,
@@ -96,7 +141,7 @@ export const CalcCheckbox: React.FC<CalcCheckboxProps> = ({
       className={description ? 'mt-0.5' : undefined}
     />
     <span>
-      <span className="block text-sm font-medium text-gray-700">{children}</span>
+      <label className="block text-sm font-medium text-gray-700">{children}</label>
       {description && <span className="block text-xs text-gray-500">{description}</span>}
     </span>
   </label>

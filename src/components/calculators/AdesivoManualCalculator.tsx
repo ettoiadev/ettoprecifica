@@ -5,7 +5,7 @@ import { useCotacao } from '../../contexts/CotacaoContext';
 import { useDeslocamentoCep } from '../../hooks/useDeslocamentoCep';
 import DeslocamentoField from './DeslocamentoField';
 import AdesivoRecorteEngineCalculator from './AdesivoRecorteEngineCalculator';
-import { CalcCheckbox, OptionChip } from './CalcControls';
+import { CalcCheckbox, OptionChip, ChipProduto } from './CalcControls';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 import { toast } from 'sonner';
@@ -124,14 +124,15 @@ Valor: ${formatCurrency(calc.final)}`;
         {opcoes.length === 0 ? (
           <span className="text-sm text-gray-500">Nenhum tipo cadastrado — adicione em Configurações.</span>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 gap-2">
             {opcoes.map((o) => (
               <OptionChip key={o.id} onClick={() => setMaterialId(o.id)} active={materialId === o.id} variant="indigo">
-                <div className="text-base font-semibold">{o.label}</div>
-                <div className="text-xs opacity-70 mt-0.5">
-                  {o.description ? `${o.description} · ` : ''}
-                  {RECORTE_ENGINE_CORES[o.id] ? 'cálculo pelo motor' : `${formatCurrency(o.price)}/m²`}
-                </div>
+                <ChipProduto
+                  label={o.label}
+                  descricao={o.description}
+                  preco={RECORTE_ENGINE_CORES[o.id] ? 'pelo motor' : formatCurrency(o.price)}
+                  unidade={RECORTE_ENGINE_CORES[o.id] ? undefined : '/m²'}
+                />
               </OptionChip>
             ))}
           </div>
