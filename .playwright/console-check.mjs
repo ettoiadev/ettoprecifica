@@ -1,0 +1,12 @@
+import { chromium } from 'playwright';
+const browser = await chromium.launch();
+const page = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
+const msgs = [];
+page.on('pageerror', (e) => msgs.push('PAGEERROR: ' + e.message.split('\n')[0]));
+page.on('console', (m) => { if (m.type() !== 'log' && m.type() !== 'debug') msgs.push(m.type().toUpperCase() + ': ' + m.text().split('\n')[0].slice(0, 200)); });
+await page.goto('http://localhost:8080/dev-preview.html?tab=placas', { waitUntil: 'networkidle' });
+await page.waitForTimeout(800);
+await page.locator('label:has-text("Emitir com nota fiscal")').click();
+await page.waitForTimeout(300);
+console.log(msgs.length ? [...new Set(msgs)].join('\n') : 'NENHUMA mensagem de console (warning/erro)');
+await browser.close();

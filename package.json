@@ -12,7 +12,9 @@
     "preview": "vite preview",
     "release:patch": "npm version patch --no-git-tag-version",
     "release:minor": "npm version minor --no-git-tag-version",
-    "release:major": "npm version major --no-git-tag-version"
+    "release:major": "npm version major --no-git-tag-version",
+    "test": "node .playwright/executar.mjs",
+    "test:tudo": "node .playwright/executar.mjs --tudo"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",

@@ -30,9 +30,14 @@ vite.config.ts.timestamp-*.mjs
 # Preview de UI só para desenvolvimento (renderiza as calculadoras sem login,
 # para conferir mudanças visuais no navegador). Nunca entra em produção —
 # `index.html` continua sendo o único entry real.
-/dev-preview.html
-/src/dev-preview.tsx
-/.playwright/
+# dev-preview e a suite de verificacao SAO versionados: sem eles, nenhuma das
+# garantias de preco pode ser reconferida num checkout novo. Ver .playwright/README.md.
+# Fora do versionamento ficam so os artefatos que cada rodada gera.
+/.playwright/**/*.png
+/.playwright/**/*.json
+/.playwright/_*.mjs
+/.playwright/antes/
+/.playwright/depois/
 
 # Editor directories and files
 .vscode/*

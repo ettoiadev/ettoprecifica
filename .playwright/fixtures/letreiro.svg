@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Simula um export do Corel: medida em mm com viewBox em decimos,
+     grupo com transform, letras em curvas, e letras COM VAZADO (O, A, R)
+     onde o contorno interno vem num segundo subpath com 'm' RELATIVO. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="500mm" height="150mm"
+     viewBox="0 0 5000 1500">
+  <g transform="translate(150,250) scale(1.1)">
+    <!-- O: circulo externo + circulo interno (subpath relativo) -->
+    <path id="letra-O" d="M 400,0 A 400,400 0 1 0 400,800 A 400,400 0 1 0 400,0 Z m 0,150 a 250,250 0 1 1 0,500 a 250,250 0 1 1 0,-500 z"/>
+    <!-- R: haste + barriga vazada -->
+    <path id="letra-R" transform="translate(950,0)" d="M 0,0 L 420,0 C 620,0 700,120 700,260 C 700,380 630,470 500,500 L 720,800 L 530,800 L 340,520 L 150,520 L 150,800 L 0,800 Z M 150,150 L 150,380 L 400,380 C 490,380 540,330 540,265 C 540,200 490,150 400,150 Z"/>
+    <!-- C: aberta, sem vazado -->
+    <path id="letra-C" transform="translate(1800,0)" d="M 650,120 C 540,20 380,-20 250,60 C 80,160 50,420 120,610 C 190,790 390,860 560,770 L 490,640 C 390,690 280,650 250,540 C 215,415 240,230 340,180 C 430,135 520,180 570,240 Z"/>
+    <!-- A: triangulo com vazado triangular -->
+    <path id="letra-A" transform="translate(2600,0)" d="M 350,0 L 700,800 L 530,800 L 460,620 L 240,620 L 170,800 L 0,800 Z M 350,250 L 290,470 L 410,470 Z"/>
+    <!-- L: poligono simples, testa elemento que nao e path -->
+    <polygon id="letra-L" transform="translate(3400,0)" points="0,0 150,0 150,650 520,650 520,800 0,800"/>
+    <!-- traco decorativo aberto: area ~zero, deve ser descartado -->
+    <polyline points="0,900 3900,900" fill="none" stroke="#000" stroke-width="4"/>
+  </g>
+</svg>

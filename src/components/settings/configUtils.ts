@@ -34,10 +34,18 @@ const isMeasurementField = (section: string, field: string) => {
   return false;
 };
 
+/*
+ * As duas funções abaixo percorrem a config por nome de seção/campo para
+ * converter número <-> texto de moeda. O `any` é deliberado: o percurso é
+ * dinâmico por natureza e tipá-lo exigiria casts em cada passo, num caminho
+ * load-bearing (é o que a tela de Configurações salva) e sem teste próprio.
+ */
 export const convertConfigToCurrency = (config: PricingConfig) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const result: any = {};
   Object.keys(config).forEach(section => {
     result[section] = {};
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const sectionData = config[section as keyof PricingConfig] as any;
     Object.keys(sectionData).forEach(field => {
       const value = sectionData[field];
@@ -89,7 +97,9 @@ export const convertConfigToCurrency = (config: PricingConfig) => {
   return result;
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const convertCurrencyToNumbers = (currencyConfig: any): PricingConfig => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const result: any = {};
   Object.keys(currencyConfig).forEach(section => {
     result[section] = {};

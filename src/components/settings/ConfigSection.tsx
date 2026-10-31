@@ -48,7 +48,17 @@ interface ConfigSectionProps {
   title: string;
   section: string;
   fields: Array<{key: string, label: string, unit?: string}>;
+  /*
+   * `any` é deliberado aqui: a tela de Configurações percorre a config por
+   * NOME de seção e de campo, vindos de `settingsConfig.ts`, inclusive com
+   * caminho aninhado ("pai.filho"). Não há tipo estático que descreva isso sem
+   * encher o percurso de casts — e esta é a mesma família de código do
+   * `deepMergeConfig`, que é load-bearing e não tem teste. Tipar por tipar aqui
+   * trocaria risco real por um aviso de lint.
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   editConfig: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   updateConfig: (section: string, field: string, value: any) => void;
 }
 

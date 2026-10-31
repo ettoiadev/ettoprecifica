@@ -73,8 +73,22 @@ interface CalcCheckboxProps {
 
 /**
  * Caixa de opção das calculadoras ("Emitir com nota fiscal", "Incluir
- * deslocamento"…). Mantém a UX atual (a caixa inteira é clicável) usando o
- * `Checkbox` do shadcn/Radix no lugar do `<input type="checkbox">` cru.
+ * deslocamento"…), usando o `Checkbox` do shadcn/Radix no lugar do
+ * `<input type="checkbox">` cru.
+ *
+ * **Não é um `<label>`, e isso é a correção de um defeito real** (31/10/26):
+ * era `<label>` envolvendo o controle e, dentro, OUTRO `<label>` com o texto.
+ * Duas coisas davam errado. HTML não permite label dentro de label. E o
+ * `Checkbox` do Radix é um `<button role="checkbox">`, que **não é um elemento
+ * rotulável** — a ativação nativa do `<label>` simplesmente não se aplica a
+ * botão. Resultado: clicar no texto não fazia nada, e o único alvo de toque
+ * era o quadradinho de 16×16px. Num tablet de balcão isso é quase impossível
+ * de acertar.
+ *
+ * Agora a linha inteira alterna por `onClick`, e o clique que vem do próprio
+ * controle é ignorado para não alternar duas vezes. O nome acessível vem do
+ * `aria-labelledby`, já que `htmlFor` não alcançaria um botão. O teclado
+ * continua pelo controle, que é focável e responde a espaço.
  */
 /*
  * Conteúdo padrão de um chip de produto: nome e descrição à esquerda, PREÇO
@@ -127,22 +141,34 @@ export const CalcCheckbox: React.FC<CalcCheckboxProps> = ({
   children,
   description,
   className,
-}) => (
-  <label
-    className={cn(
-      'flex gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer',
-      description ? 'items-start' : 'items-center',
-      className
-    )}
-  >
-    <Checkbox
-      checked={checked}
-      onCheckedChange={(v) => onCheckedChange(v === true)}
-      className={description ? 'mt-0.5' : undefined}
-    />
-    <span>
-      <label className="block text-sm font-medium text-gray-700">{children}</label>
-      {description && <span className="block text-xs text-gray-500">{description}</span>}
-    </span>
-  </label>
-);
+}) => {
+  const id = React.useId();
+  return (
+    <div
+      onClick={(e) => {
+        // o próprio controle já alterna quando é ele que recebe o clique;
+        // sem esta saída, a caixa alternaria duas vezes e ficaria como estava
+        if ((e.target as HTMLElement).closest('button')) return;
+        onCheckedChange(!checked);
+      }}
+      className={cn(
+        'flex gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer',
+        description ? 'items-start' : 'items-center',
+        className
+      )}
+    >
+      <Checkbox
+        aria-labelledby={id}
+        checked={checked}
+        onCheckedChange={(v) => onCheckedChange(v === true)}
+        className={description ? 'mt-0.5' : undefined}
+      />
+      <span>
+        <span id={id} className="block text-sm font-medium text-gray-700">
+          {children}
+        </span>
+        {description && <span className="block text-xs text-gray-500">{description}</span>}
+      </span>
+    </div>
+  );
+};

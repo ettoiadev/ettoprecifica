@@ -34,24 +34,39 @@ const Index = () => {
     const loadConfig = async () => {
       if (!user) return;
 
+      /*
+       * Mescla UMA seção. Existe como função genérica só por causa do tipo:
+       * escrito direto no laço, `merged[key] = ... as PricingConfig[typeof key]`
+       * não compila, porque `key` ali é a UNIÃO de todas as chaves e o destino
+       * passa a exigir a interseção de todos os tipos de seção. Com `K` fixado
+       * pelo genérico, a chave é uma só e a atribuição fecha.
+       *
+       * Eram 3 dos 3 erros de tipo que o projeto carregava. Ficaram escondidos
+       * enquanto o comando de typecheck era `tsc --noEmit` puro, que não
+       * compila arquivo nenhum neste repo. O comportamento em execução é o
+       * mesmo de antes: mesmas duas condições, mesmo espalhamento.
+       */
+      const mesclarSecao = <K extends keyof PricingConfig>(
+        destino: PricingConfig,
+        chave: K,
+        padrao: PricingConfig,
+        carregado: unknown
+      ): void => {
+        if (carregado && typeof carregado === 'object' && !Array.isArray(carregado)) {
+          destino[chave] = { ...padrao[chave], ...(carregado as object) } as PricingConfig[K];
+        } else if (carregado !== undefined) {
+          destino[chave] = carregado as PricingConfig[K];
+        }
+      };
+
       // Função para fazer deep merge de configurações
-      const deepMergeConfig = (
-        defaultCfg: PricingConfig,
-        loadedCfg: Record<string, unknown>
-      ): PricingConfig => {
+      const deepMergeConfig = (defaultCfg: PricingConfig, loadedCfg: unknown): PricingConfig => {
         const merged = { ...defaultCfg };
+        const carregado = (loadedCfg || {}) as Record<string, unknown>;
 
         // Para cada seção, fazer merge profundo
         (Object.keys(defaultCfg) as (keyof PricingConfig)[]).forEach((key) => {
-          const loadedValue = loadedCfg[key];
-          if (loadedValue && typeof loadedValue === 'object' && !Array.isArray(loadedValue)) {
-            merged[key] = {
-              ...defaultCfg[key],
-              ...(loadedValue as object),
-            } as PricingConfig[typeof key];
-          } else if (loadedValue !== undefined) {
-            merged[key] = loadedValue as PricingConfig[typeof key];
-          }
+          mesclarSecao(merged, key, defaultCfg, carregado[key]);
         });
 
         return merged;

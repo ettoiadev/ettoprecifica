@@ -1,0 +1,29 @@
+# Portao minimo: tipos, lint e build em todo push e PR.
+#
+# A suite do navegador (`npm test`) NAO roda aqui de proposito: ela sobe o
+# vite, abre o Chromium e os testes de encaixe levam minutos. Rodar isso em
+# cada push custaria caro e daria falha intermitente por tempo. Ela e o portao
+# ANTES de commitar, na maquina de quem mexeu — ver .playwright/README.md.
+name: verificacao
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  checar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: tipos
+        run: npm run typecheck
+      - name: lint
+        run: npm run lint
+      - name: build
+        run: npm run build
