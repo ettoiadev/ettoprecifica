@@ -62,6 +62,34 @@ export interface OpcoesEncaixe {
 
 type Estado = 'ocioso' | 'rodando' | 'pronto' | 'erro';
 
+/*
+ * Identidade do conjunto, para reaproveitar os no-fit-polygon de uma
+ * organização para a seguinte.
+ *
+ * **Tem que ser a GEOMETRIA, não o índice da forma.** O `forma` é só a posição
+ * da peça na lista do arquivo atual: em outro arquivo, a forma 0 é outra letra.
+ * Reaproveitar NFP pelo índice colocaria peças em cima das outras e o preço
+ * sairia menor que o real, em silêncio — o pior tipo de defeito que este
+ * sistema pode ter.
+ *
+ * Entra também o vão e a tolerância, porque a base é calculada sobre o contorno
+ * JÁ INFLADO (ver inflarPoligono no worker), e `useHoles`, que mudaria o que o
+ * NFP representa. Não entram chapa, margem, giro nem quantidade de jogos:
+ * nenhum deles altera o NFP entre duas peças, só quais deles são necessários —
+ * e é justamente por isso que trocar o giro reaproveita o que já foi calculado.
+ */
+const assinaturaFormas = (pecas: PecaVetorial[], espacamento: number): string => {
+  const porForma = new Map<number, Ponto[]>();
+  for (const p of pecas) if (!porForma.has(p.forma)) porForma.set(p.forma, p.contorno);
+  const partes: string[] = [];
+  for (const forma of [...porForma.keys()].sort((a, b) => a - b)) {
+    const pts = porForma.get(forma) as Ponto[];
+    partes.push(forma + ':' + pts.map((q) => `${q.x.toFixed(3)},${q.y.toFixed(3)}`).join(';'));
+  }
+  // string inteira, sem hash: colisão aqui seria encaixe errado virando preço
+  return partes.join('|') + `#vao=${espacamento}#tol=0.3#furos=nao`;
+};
+
 export function useNesting() {
   const [estado, setEstado] = useState<Estado>('ocioso');
   const [progresso, setProgresso] = useState(0);
@@ -70,6 +98,15 @@ export function useNesting() {
   // quanto demorou: é o que deixa o vendedor entender o custo de cada ângulo
   const [duracaoMs, setDuracaoMs] = useState<number | null>(null);
   const workersRef = useRef<Worker[]>([]);
+  /*
+   * Guarda as bases de NFP da última organização enquanto a tela estiver
+   * aberta. Serve para o caso que a própria interface convida a fazer: trocar
+   * o giro e organizar de novo para comparar área. As bases de giro relativo 0°
+   * e 180° valem para os dois conjuntos, então a segunda vez só calcula o que
+   * falta. Uma entrada só — a assinatura nova substitui a velha, então a
+   * memória fica limitada ao conjunto atual.
+   */
+  const cacheBasesRef = useRef<{ assinatura: string; bases: Record<string, unknown> } | null>(null);
 
   const encerrar = useCallback(() => {
     for (const w of workersRef.current) w.terminate();
@@ -163,12 +200,20 @@ export function useNesting() {
        *   fase 2         — todas as bases voltam para todos, e aí as
        *                    tentativas são repartidas como antes
        *
-       * Com um worker só não há o que compartilhar: vai direto para a fase 2.
+       * Roda sempre, mesmo com um worker só: aí não há o que repartir, mas é a
+       * fase 1 que devolve as bases para quem chamou, e sem isso não haveria o
+       * que guardar no cache entre organizações.
        */
-      const duasFases = quantos > 1;
-      let fase: 'bases' | 'encaixe' = duasFases ? 'bases' : 'encaixe';
-      const bases: Record<string, unknown> = {};
+      let fase: 'bases' | 'encaixe' = 'bases';
       let basesRecebidas = 0;
+      // o que já foi calculado para estas mesmas formas e este mesmo vão
+      const assinatura = assinaturaFormas(pecas, espacamento);
+      const reaproveitadas =
+        cacheBasesRef.current && cacheBasesRef.current.assinatura === assinatura
+          ? cacheBasesRef.current.bases
+          : {};
+      const bases: Record<string, unknown> = { ...reaproveitadas };
+      const conhecidas = Object.keys(reaproveitadas);
 
       const falhar = (mensagem: string) => {
         if (encerrado) return;
@@ -233,6 +278,7 @@ export function useNesting() {
       const comecarEncaixe = () => {
         fase = 'encaixe';
         progressos.fill(0);
+        cacheBasesRef.current = { assinatura, bases };
         workersRef.current.forEach((w, k) =>
           w.postMessage({
             ...payload,
@@ -251,7 +297,7 @@ export function useNesting() {
             progressos[k] = d.valor;
             const media = progressos.reduce((a, b) => a + b, 0) / quantos;
             // a fase 1 ocupa a primeira metade da barra, a 2 a segunda
-            setProgresso(duasFases ? (fase === 'bases' ? media / 2 : 0.5 + media / 2) : media);
+            setProgresso(fase === 'bases' ? media / 2 : 0.5 + media / 2);
           } else if (d?.tipo === 'bases') {
             for (const [chave, nfp] of d.entradas as [string, unknown][]) bases[chave] = nfp;
             basesRecebidas++;
@@ -271,7 +317,8 @@ export function useNesting() {
           config: {
             ...payload.config,
             fatia: { indice: k, total: quantos },
-            ...(duasFases ? { fase: 'bases' } : {}),
+            fase: 'bases',
+            conhecidas,
           },
         });
       }

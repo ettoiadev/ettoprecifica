@@ -768,9 +768,14 @@ function executar(dados) {
       var pendentes = enumerarBases(parts, viaveisPorId);
       var entradas = [];
       var qual = config.fatia || { indice: 0, total: 1 };
+      // bases que quem chamou já tem de uma organização anterior (mesmas formas
+      // e mesmo vão): não recalcula nem devolve, ele já as possui
+      var jaTem = {};
+      if (config.conhecidas) for (var ci = 0; ci < config.conhecidas.length; ci++) jaTem[config.conhecidas[ci]] = true;
       for (var bi = 0; bi < pendentes.length; bi++) {
         if (bi % qual.total !== qual.indice) continue;
         var alvoBase = pendentes[bi];
+        if (jaTem[alvoBase.chave]) continue;
         var t0b = Date.now();
         var nfpBase = generateNfp(
           { A: alvoBase.A, B: alvoBase.B, key: { inside: false, Arotation: 0, Brotation: alvoBase.delta } },
