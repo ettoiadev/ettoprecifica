@@ -366,7 +366,7 @@ Valor: ${formatCurrency(precos.final)}`;
       </div>
 
       {/* Resultado */}
-      <div className="bg-gray-50 rounded-xl border border-gray-200 p-6">
+      <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 sm:p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Orçamento</h3>
 
         {!(produto && entradaValida) ? (

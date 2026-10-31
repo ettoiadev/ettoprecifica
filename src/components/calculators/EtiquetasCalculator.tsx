@@ -90,7 +90,7 @@ Valor: ${formatCurrency(calc.final)}`;
     larguraCm === t.largura && alturaCm === t.altura;
 
   return (
-    <div className="p-6">
+    <div className="p-4 sm:p-6">
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Calculadora de Etiquetas / Rótulos</h2>
         <p className="text-gray-600">
@@ -103,7 +103,7 @@ Valor: ${formatCurrency(calc.final)}`;
         <div className="space-y-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-3">Medida e quantidade</label>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
               <div>
                 <label htmlFor="etiqueta-largura" className="block text-xs text-gray-500 mb-1">Largura (cm)</label>
                 <Input id="etiqueta-largura" type="number" min="0" step="0.1" value={largura} onChange={(e) => setLargura(e.target.value)} placeholder="0.0" />
@@ -146,7 +146,7 @@ Valor: ${formatCurrency(calc.final)}`;
           </CalcCheckbox>
         </div>
 
-        <div className="bg-gray-50 rounded-xl border border-gray-200 p-6">
+        <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 sm:p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Orçamento</h3>
 
           {!entradaValida ? (

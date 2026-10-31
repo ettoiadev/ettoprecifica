@@ -24,6 +24,7 @@ const TESTES = [
   ['teste-dxf.mjs', [], true],
   ['teste-ordem-fachada.mjs', [], true],
   ['teste-toldo.mjs', [], true],
+  ['teste-celular.mjs', [], true],
   ['teste-folgas.mjs', [], false],
   ['teste-sobreposicao.mjs', [], false],
   ['teste-encaixe-ui.mjs', [], false],

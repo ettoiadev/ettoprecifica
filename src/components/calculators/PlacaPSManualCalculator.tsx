@@ -88,7 +88,7 @@ Valor: ${formatCurrency(calc.final)}`;
   };
 
   return (
-    <div className="p-6">
+    <div className="p-4 sm:p-6">
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Placa em PS</h2>
         <p className="text-gray-600">
@@ -100,7 +100,7 @@ Valor: ${formatCurrency(calc.final)}`;
         <div className="space-y-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-3">Dimensões e quantidade</label>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
               <div>
                 <label htmlFor="placa-ps-largura" className="block text-xs text-gray-500 mb-1">Largura (m)</label>
                 <Input id="placa-ps-largura" type="number" min="0" step="0.01" value={largura} onChange={(e) => setLargura(e.target.value)} placeholder="0.00" />
@@ -138,7 +138,7 @@ Valor: ${formatCurrency(calc.final)}`;
           </CalcCheckbox>
         </div>
 
-        <div className="bg-gray-50 rounded-xl border border-gray-200 p-6">
+        <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 sm:p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Orçamento</h3>
 
           {!entradaValida ? (

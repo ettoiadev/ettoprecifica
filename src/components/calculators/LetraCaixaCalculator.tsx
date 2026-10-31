@@ -257,7 +257,7 @@ Valor: ${formatCurrency(precos.final)}`;
   };
 
   return (
-    <div className="p-6">
+    <div className="p-4 sm:p-6">
       <div className="mb-6">
         <p className="text-gray-600">
           Escolha o material. PVC é por m² da placa; ACM, galvanizado, inox e impressão 3D são por
@@ -448,7 +448,7 @@ Valor: ${formatCurrency(precos.final)}`;
         <div className="space-y-6">
           {usaArquivo && <EncaixeVisual enc={enc} />}
 
-          <div className="bg-gray-50 rounded-xl border border-gray-200 p-6">
+          <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 sm:p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Orçamento</h3>
 
           {!entradaValida ? (

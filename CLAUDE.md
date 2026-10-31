@@ -112,6 +112,12 @@ Pedida pelo Étto ("existe alguma melhoria que precisa ser feita?"). Medida, nã
 
 **Código morto removido**: 8 calculadoras que ninguém importava (`Acm3dCalculator`, `AdesivoImpressoCalculator`, `AdesivoRecorteCalculator`, `DtfCalculator`, `FachadaCalculator`, `LaserCalculator`, `PlacaACMCalculator`, `PlacaPSCalculator`) mais `useCurrencyInput` — ~2.970 linhas. O tree-shaking já as tirava do bundle, então **não custavam tamanho**; custavam confusão: apareciam em toda busca e faziam 7 Edge Functions parecerem em uso. **As funções da skill e as Edge Functions não foram tocadas** — reativar qualquer uma é recriar o componente no padrão atual, e o histórico do git tem o original.
 
+**Layout de celular — três defeitos, todos medidos** (`.playwright/teste-celular.mjs`, que agora confere 390/768/1440px nas 11 abas):
+- **Os rótulos das abas sumiam abaixo de 640px** (`hidden sm:inline` em `ModernTabs`): no celular eram 11 ícones sem nome nenhum. Agora o rótulo aparece sempre e a faixa rola de lado. De quebra saiu o `justify-center` (com `overflow-x-auto`, centralizar **corta as primeiras abas**) e o `px-[22px]` cravado dentro de um contêiner que já tinha `px-4 sm:px-6 lg:px-8`.
+- **Os campos de medida tinham 76px.** O padding empilhava 128px dos 390px da tela: página `px-4` (32) + `Card p-6` (48) + raiz da calculadora `p-6` (48). Os dois `p-6` viraram `p-4 sm:p-6` e as trincas Largura/Altura/Quantidade viraram `grid-cols-2 sm:grid-cols-3`. **76px → 138px.** Desktop não mudou.
+- **A página rolava 22px de lado em todas as abas** — e era **só o selo de ambiente** ("Local"/"Preview"), que não aparece em produção. O bloco do título não tinha `min-w-0`, então não encolhia e empurrava os botões para fora. Invisível no site publicado, atrapalhando justamente quem confere um Preview Deploy.
+- A troca em lote (17 arquivos) foi conferida **contando elementos antes e depois** em cada arquivo (`<div`, `</div>`, `<Input`, `CalcCheckbox`): iguais em 22 de 22. É a regra que CLAUDE.md já mandava seguir — compilar não prova nada sobre JSX.
+
 **Medições que deram certo e não viraram tarefa:** 0 de 30 campos sem nome acessível; 0 erros de console nas 11 abas em 390/768/1440px; nenhum segredo no bundle (só a chave `anon`); desktop e tablet sem rolagem horizontal.
 
 **Pendências conhecidas, não feitas:**

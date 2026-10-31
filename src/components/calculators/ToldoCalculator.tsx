@@ -223,7 +223,7 @@ Valor: ${formatCurrency(calc.final)}`;
     : `${formatCurrency(isCortina ? config.cortinaMetroLinear : config.articuladoMetroLinear)}/m linear`;
 
   return (
-    <div className="p-6">
+    <div className="p-4 sm:p-6">
       <div className="mb-6">
         <p className="text-gray-600">
           Cortina e articulado são cobrados por metro linear da largura; o fixo, por metro
@@ -255,7 +255,7 @@ Valor: ${formatCurrency(calc.final)}`;
             <label className="block text-sm font-medium text-gray-700 mb-3">
               Medidas e quantidade
             </label>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
               <div>
                 <label htmlFor="toldo-largura" className="block text-xs text-gray-500 mb-1">
                   Largura (m)
@@ -371,7 +371,7 @@ Valor: ${formatCurrency(calc.final)}`;
           <DeslocamentoField {...deslocamento} />
         </div>
 
-        <div className="bg-gray-50 rounded-xl border border-gray-200 p-6">
+        <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 sm:p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Orçamento</h3>
 
           {!entradaValida ? (

@@ -119,7 +119,7 @@ const EncaixeVisual: React.FC<{ enc: EncaixeSvg }> = ({ enc }) => {
 
   if (!enc.leitura) {
     return (
-      <div className="bg-gray-50 rounded-xl border border-gray-200 p-6">
+      <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 sm:p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-2">Pré-visualização</h3>
         <p className="text-sm text-gray-500">
           Envie um arquivo SVG ou DXF para ver o desenho e organizar as peças na chapa.
@@ -131,7 +131,7 @@ const EncaixeVisual: React.FC<{ enc: EncaixeSvg }> = ({ enc }) => {
   const rodando = enc.estado === 'rodando';
 
   return (
-    <div className="bg-gray-50 rounded-xl border border-gray-200 p-6 space-y-4">
+    <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 sm:p-6 space-y-4">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <h3 className="text-lg font-semibold text-gray-900">
           {aba === 'arquivo' ? 'Desenho do arquivo' : 'Encaixe na chapa'}

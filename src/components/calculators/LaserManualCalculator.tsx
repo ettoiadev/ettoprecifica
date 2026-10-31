@@ -114,7 +114,7 @@ Valor: ${formatCurrency(calc.final)}`;
   };
 
   return (
-    <div className="p-6">
+    <div className="p-4 sm:p-6">
       <div className="mb-6">
         <p className="text-gray-600">
           Corte a laser por m², conforme o material. Informe a medida da peça ou envie o arquivo
@@ -141,7 +141,7 @@ Valor: ${formatCurrency(calc.final)}`;
           ) : (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-3">Dimensões e quantidade</label>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                 <div>
                   <label htmlFor="laser-largura" className="block text-xs text-gray-500 mb-1">Largura (m)</label>
                   <Input id="laser-largura" type="number" min="0" step="0.01" value={largura} onChange={(e) => setLargura(e.target.value)} placeholder="0.00" />
@@ -190,7 +190,7 @@ Valor: ${formatCurrency(calc.final)}`;
         <div className="space-y-6">
           {usaArquivo && <EncaixeVisual enc={enc} />}
 
-          <div className="bg-gray-50 rounded-xl border border-gray-200 p-6">
+          <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 sm:p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Orçamento</h3>
 
           {!entradaValida ? (
