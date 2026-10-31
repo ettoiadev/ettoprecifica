@@ -240,7 +240,7 @@ function espelharNfp(fonte, delta, P, Q) {
 }
 
 /** Avalia uma ordem/rotação candidata: gera os NFPs necessários e posiciona. */
-var diagnostico = { pares: 0, nfpOk: 0, nfpNulo: 0, placeNulo: 0, reaproveitados: 0, derivados: 0, espelhados: 0, calculados: 0, msNfp: 0, exemplos: [] };
+var diagnostico = { pares: 0, nfpOk: 0, nfpNulo: 0, placeNulo: 0, reaproveitados: 0, derivados: 0, espelhados: 0, recebidos: 0, calculados: 0, msNfp: 0, exemplos: [] };
 
 /*
  * `nfpCache` é indexado por ID de peça porque é assim que o placementworker
@@ -594,8 +594,55 @@ function prngComSemente(semente) {
   };
 }
 
-self.onmessage = function (e) {
-  var dados = e.data;
+/*
+ * Lista as bases de no-fit-polygon que o encaixe vai precisar, de forma
+ * DETERMINÍSTICA e canônica — a mesma lista, na mesma ordem, em qualquer
+ * worker. É o que permite repartir o cálculo entre eles.
+ *
+ * Canônica = só um lado de cada par simétrico. (B,A,δ) sai de (A,B,360−δ) por
+ * espelhamento (ver espelharNfp), então só o par com a forma de índice menor é
+ * calculado. Para A = B, δ e 360−δ também são o mesmo par espelhado.
+ */
+function enumerarBases(parts, viaveisPorId) {
+  var porForma = {};
+  var fontes = [];
+  for (var i = 0; i < parts.length; i++) {
+    var f = parts[i].source;
+    if (porForma[f]) continue;
+    porForma[f] = { poly: parts[i], giros: viaveisPorId[parts[i].id] };
+    fontes.push(f);
+  }
+  fontes.sort(function (a, b) {
+    return a - b;
+  });
+
+  var lista = [];
+  for (var a = 0; a < fontes.length; a++) {
+    for (var b = a; b < fontes.length; b++) {
+      var fa = porForma[fontes[a]];
+      var fb = porForma[fontes[b]];
+      var vistos = {};
+      for (var ra = 0; ra < fa.giros.length; ra++) {
+        for (var rb = 0; rb < fb.giros.length; rb++) {
+          var delta = (((fb.giros[rb] - fa.giros[ra]) % 360) + 360) % 360;
+          if (vistos[delta]) continue;
+          // mesma forma: δ e 360−δ são o mesmo par espelhado, fica um só
+          if (a === b && vistos[(360 - delta) % 360]) continue;
+          vistos[delta] = true;
+          lista.push({
+            chave: JSON.stringify({ A: fontes[a], B: fontes[b], delta: delta }),
+            A: fa.poly,
+            B: fb.poly,
+            delta: delta,
+          });
+        }
+      }
+    }
+  }
+  return lista;
+}
+
+function executar(dados) {
   // Defaults do SVGnest. clipperScale é obrigatório: o placementworker usa
   // self.config.clipperScale para escalar os polígonos antes do Clipper — sem
   // ele vira NaN, nenhuma peça é unida à anterior e cada peça abre uma folha.
@@ -658,13 +705,21 @@ self.onmessage = function (e) {
   var rotacoesPermitidas = config.rotations || [0, 90, 180, 270];
 
   try {
-    diagnostico = { pares: 0, nfpOk: 0, nfpNulo: 0, placeNulo: 0, reaproveitados: 0, derivados: 0, espelhados: 0, calculados: 0, msNfp: 0, exemplos: [] };
+    diagnostico = { pares: 0, nfpOk: 0, nfpNulo: 0, placeNulo: 0, reaproveitados: 0, derivados: 0, espelhados: 0, recebidos: 0, calculados: 0, msNfp: 0, exemplos: [] };
     var rnd = prngComSemente(config.semente || 20261021);
     var nfpCache = {};
     // indexado por FORMA (source), compartilhado entre as tentativas
     var formaCache = {};
     // indexado por (formaA, formaB, giro RELATIVO) — ver a identidade em avaliar
     var baseCache = {};
+    // bases já calculadas por outro worker na fase 1 (ver enumerarBases)
+    if (dados.bases) {
+      for (var bk in dados.bases)
+        if (Object.prototype.hasOwnProperty.call(dados.bases, bk)) {
+          baseCache[bk] = dados.bases[bk];
+          diagnostico.recebidos++;
+        }
+    }
 
     // Ordem inicial: maior área primeiro — heurística clássica, costuma ser a
     // melhor semente para o encaixe.
@@ -700,6 +755,36 @@ self.onmessage = function (e) {
             : ', em nenhum giro. Reduza o tamanho do conjunto ou use uma chapa maior.'),
         pecasFora: foraDaChapa.length,
       });
+      return;
+    }
+
+    /*
+     * Fase 1: este worker calcula só a fatia dele das bases e devolve. Quem
+     * chamou junta tudo e manda de volta para todos — assim o no-fit-polygon,
+     * que é o grosso do tempo quando há muitas formas distintas, é calculado
+     * UMA vez no total em vez de uma vez por worker.
+     */
+    if (config.fase === 'bases') {
+      var pendentes = enumerarBases(parts, viaveisPorId);
+      var entradas = [];
+      var qual = config.fatia || { indice: 0, total: 1 };
+      for (var bi = 0; bi < pendentes.length; bi++) {
+        if (bi % qual.total !== qual.indice) continue;
+        var alvoBase = pendentes[bi];
+        var t0b = Date.now();
+        var nfpBase = generateNfp(
+          { A: alvoBase.A, B: alvoBase.B, key: { inside: false, Arotation: 0, Brotation: alvoBase.delta } },
+          config.exploreConcave,
+          config.useHoles
+        );
+        diagnostico.msNfp += Date.now() - t0b;
+        diagnostico.calculados++;
+        entradas.push([alvoBase.chave, nfpBase]);
+        // a fase 1 pode levar a maior parte do tempo: sem isto a barra fica
+        // parada em 0% justamente no trecho mais demorado
+        self.postMessage({ tipo: 'progresso', valor: (bi + 1) / pendentes.length, fase: 'bases' });
+      }
+      self.postMessage({ tipo: 'bases', entradas: entradas, diagnostico: diagnostico });
       return;
     }
 
@@ -781,4 +866,15 @@ self.onmessage = function (e) {
   } catch (err) {
     self.postMessage({ tipo: 'erro', mensagem: (err && err.message) || String(err) });
   }
+};
+
+/*
+ * Duas fases, para o no-fit-polygon não ser recalculado em cada worker:
+ *   fase 'bases'  → calcula a fatia das bases e devolve
+ *   (sem fase)    → encaixa, usando as bases que vierem em `dados.bases`
+ * Rodar sem fase nenhuma e sem bases continua funcionando (calcula tudo
+ * sozinho), que é como os testes e o modo de um worker só funcionam.
+ */
+self.onmessage = function (e) {
+  executar(e.data);
 };

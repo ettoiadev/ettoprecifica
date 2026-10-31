@@ -130,28 +130,45 @@ export function useNesting() {
        */
       const nucleos = navigator.hardwareConcurrency || 4;
       /*
-       * Só vale dividir quando o posicionamento pesa, ou seja, com muitas
-       * peças. Com poucas, o no-fit-polygon é quase todo o tempo e cada worker
-       * refaz os mesmos — medido, 5 peças ficavam ~18% MAIS lentas repartidas.
-       * Entre 15 e 25 peças a diferença some no ruído de medição; de 30 para
-       * cima o ganho é consistente (45 peças: 1,4× a 2,0× em 6 medições). Daí
-       * o limiar, deliberadamente alto: não trocar um ganho duvidoso por uma
-       * perda certa nos letreiros pequenos, que são a maioria.
+       * Deixa um núcleo livre para a interface não travar, e não passa de 8.
+       * O teto era 4 quando dividir duplicava o no-fit-polygon; com as duas
+       * fases o ganho continua subindo (frase de 36 peças em 13 formas, numa
+       * máquina de 16 núcleos: 4 workers 20,6s · 6 workers 14,7s · 8 workers
+       * 12,8s · 10 workers 10,9s). Parou em 8 porque daí para cima o retorno
+       * cai e não vale somar worker num tablet de balcão — o `núcleos − 1` já
+       * cuida das máquinas pequenas.
+       *
+       * Houve um limiar de 26 peças aqui: enquanto cada worker recalculava os
+       * mesmos no-fit-polygons, dividir deixava letreiro pequeno MAIS lento.
+       * Com as duas fases (abaixo) o NFP é calculado uma vez no total, então
+       * dividir passou a ganhar em tudo — 5 peças inclusive, 2,3×. O limiar
+       * saiu.
        *
        * Isto muda só o TEMPO, nunca o resultado: `.playwright/teste-paralelo.mjs`
        * mostra área igual até a sexta casa e o mesmo desenho peça a peça com 1,
-       * 3 e 4 workers. É por isso que pode depender do número de peças, ao
-       * contrário do giro (ver "não existe modo Automático" no CLAUDE.md).
+       * 3 e 4 workers.
        */
-      const PECAS_PARA_DIVIDIR = 26;
-      const quantos =
-        pecas.length >= PECAS_PARA_DIVIDIR
-          ? Math.max(1, Math.min(4, nucleos - 1, tentativas))
-          : 1;
+      const quantos = Math.max(1, Math.min(8, nucleos - 1, tentativas));
 
       const parciais: { resultado: ResultadoEncaixe | null; tentativa: number }[] = [];
       const progressos = new Array(quantos).fill(0);
       let encerrado = false;
+      /*
+       * Com vários workers o encaixe roda em DUAS fases. Sem isso cada worker
+       * recalculava os mesmos no-fit-polygons, que é o grosso do tempo quando o
+       * letreiro tem muitas letras diferentes — numa frase de 36 peças em 13
+       * formas, 74% do tempo. Repartir só as tentativas não ajudava nada ali.
+       *
+       *   fase 1 'bases' — cada worker calcula a fatia dele das bases de NFP
+       *   fase 2         — todas as bases voltam para todos, e aí as
+       *                    tentativas são repartidas como antes
+       *
+       * Com um worker só não há o que compartilhar: vai direto para a fase 2.
+       */
+      const duasFases = quantos > 1;
+      let fase: 'bases' | 'encaixe' = duasFases ? 'bases' : 'encaixe';
+      const bases: Record<string, unknown> = {};
+      let basesRecebidas = 0;
 
       const falhar = (mensagem: string) => {
         if (encerrado) return;
@@ -213,6 +230,18 @@ export function useNesting() {
         },
       };
 
+      const comecarEncaixe = () => {
+        fase = 'encaixe';
+        progressos.fill(0);
+        workersRef.current.forEach((w, k) =>
+          w.postMessage({
+            ...payload,
+            bases,
+            config: { ...payload.config, fatia: { indice: k, total: quantos } },
+          })
+        );
+      };
+
       for (let k = 0; k < quantos; k++) {
         const w = new Worker('/nesting/nest-worker.js');
         workersRef.current.push(w);
@@ -220,7 +249,13 @@ export function useNesting() {
           const d = e.data;
           if (d?.tipo === 'progresso') {
             progressos[k] = d.valor;
-            setProgresso(progressos.reduce((a, b) => a + b, 0) / quantos);
+            const media = progressos.reduce((a, b) => a + b, 0) / quantos;
+            // a fase 1 ocupa a primeira metade da barra, a 2 a segunda
+            setProgresso(duasFases ? (fase === 'bases' ? media / 2 : 0.5 + media / 2) : media);
+          } else if (d?.tipo === 'bases') {
+            for (const [chave, nfp] of d.entradas as [string, unknown][]) bases[chave] = nfp;
+            basesRecebidas++;
+            if (basesRecebidas === quantos && !encerrado) comecarEncaixe();
           } else if (d?.tipo === 'resultado') {
             parciais.push({ resultado: d.resultado ?? null, tentativa: d.tentativa ?? -1 });
             juntar();
@@ -231,7 +266,14 @@ export function useNesting() {
           }
         };
         w.onerror = (ev) => falhar(ev.message || 'Falha ao carregar o encaixe.');
-        w.postMessage({ ...payload, config: { ...payload.config, fatia: { indice: k, total: quantos } } });
+        w.postMessage({
+          ...payload,
+          config: {
+            ...payload.config,
+            fatia: { indice: k, total: quantos },
+            ...(duasFases ? { fase: 'bases' } : {}),
+          },
+        });
       }
     },
     [encerrar]
