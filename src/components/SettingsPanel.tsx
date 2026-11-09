@@ -24,6 +24,7 @@ const GERAL = '__geral__';
 // seção "Geral" traz status do banco + observações de orçamento.
 const SECTION_GROUPS: { label: string; sections: string[] }[] = [
   { label: 'Produtos', sections: ['adesivo', 'lona', 'placaPS', 'placaACM', 'fachada', 'toldo', 'laser', 'dtf', 'etiquetas'] },
+  { label: 'Pagamento', sections: ['cartaoCredito'] },
   { label: 'Geral', sections: [GERAL] },
 ];
 

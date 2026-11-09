@@ -88,4 +88,34 @@ export const settingsConfig: ConfigSectionData[] = [
       { key: 'lacaProtecaoM2', label: 'Laca de proteção', unit: 'm²' },
     ],
   },
+  {
+    /*
+     * Taxas do cartão, usadas pelo simulador de parcelamento que aparece no
+     * painel "Orçamento" de todas as calculadoras.
+     *
+     * Os padrões são a tabela do **InfinitePay, plano "1 dia útil", faixa até
+     * R$20 mil, Visa/Mastercard** — que é o plano do Étto. Conferida em
+     * 09/11/26 contra a página de taxas da InfinitePay e dois comparadores, e
+     * contra o print dele (6x = 8,28%).
+     *
+     * São editáveis porque a operadora muda a tabela, e porque a taxa cai
+     * quando o volume mensal sobe (acima de R$20 mil o 6x vai para 6,64%).
+     */
+    title: 'Cartão de crédito',
+    section: 'cartaoCredito',
+    fields: [
+      { key: 'creditoVista', label: 'Crédito à vista' },
+      { key: 'taxa2x', label: 'Crédito 2x' },
+      { key: 'taxa3x', label: 'Crédito 3x' },
+      { key: 'taxa4x', label: 'Crédito 4x' },
+      { key: 'taxa5x', label: 'Crédito 5x' },
+      { key: 'taxa6x', label: 'Crédito 6x' },
+      { key: 'taxa7x', label: 'Crédito 7x' },
+      { key: 'taxa8x', label: 'Crédito 8x' },
+      { key: 'taxa9x', label: 'Crédito 9x' },
+      { key: 'taxa10x', label: 'Crédito 10x' },
+      { key: 'taxa11x', label: 'Crédito 11x' },
+      { key: 'taxa12x', label: 'Crédito 12x' },
+    ],
+  },
 ];

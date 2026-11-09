@@ -7,6 +7,7 @@ import { useDeslocamentoCep } from '../../hooks/useDeslocamentoCep';
 import DeslocamentoField from './DeslocamentoField';
 import { CalcCheckbox, OptionChip, selectClass } from './CalcControls';
 import { Button } from '../ui/button';
+import { useParcelamento, ParcelamentoBox } from './Parcelamento';
 import { toast } from 'sonner';
 
 // Calculadora de Cavaletes — preço do motor da skill (Edge Function
@@ -147,10 +148,13 @@ const CavaletesCalculator: React.FC = () => {
     return `Cavalete metalon+lona ${tamanho}`;
   }, [isMadeira, tamanho, opcaoPainel]);
 
+  const parc = useParcelamento(precos?.final ?? 0);
+
   const handleCopy = () => {
     if (!precos) return;
     const texto = `${descricao}
-Valor: ${formatCurrency(precos.final)}`;
+Valor: ${formatCurrency(precos.final)}${parc.linhaCopia ? `
+${parc.linhaCopia}` : ''}`;
     navigator.clipboard.writeText(texto).then(
       () => toast.success('Orçamento copiado!'),
       () => toast.error('Não foi possível copiar.')
@@ -299,7 +303,9 @@ Valor: ${formatCurrency(precos.final)}`;
                     )}
                   </div>
 
-                  <div className="space-y-2">
+                  <ParcelamentoBox parc={parc} />
+
+              <div className="space-y-2">
                     <Button type="button" variant="outline" onClick={handleAddCotacao} className="w-full">
                       <PlusCircle className="w-4 h-4" /> Adicionar à cotação
                     </Button>

@@ -5,6 +5,7 @@ import { useCotacao } from '../../contexts/CotacaoContext';
 import { Input } from '../ui/input';
 import { CalcCheckbox, OptionChip, ChipProduto } from './CalcControls';
 import { Button } from '../ui/button';
+import { useParcelamento, ParcelamentoBox } from './Parcelamento';
 import { toast } from 'sonner';
 
 // Placa em PS com preço MANUAL, definido em Configurações (config.placaPS), NÃO
@@ -70,11 +71,14 @@ const PlacaPSManualCalculator: React.FC<Props> = ({ config }) => {
     [opcaoSel, laminacao, larguraNum, alturaNum, qtd]
   );
 
+  const parc = useParcelamento(calc?.final ?? 0);
+
   const handleCopy = () => {
     if (!temPreco || !calc) return;
     const texto = `${opcaoSel?.label ?? 'Placa PS'}${laminacao ? ' + Laminação' : ''}
 Medida: ${larguraNum.toFixed(2)} x ${alturaNum.toFixed(2)} m — ${qtd} un
-Valor: ${formatCurrency(calc.final)}`;
+Valor: ${formatCurrency(calc.final)}${parc.linhaCopia ? `
+${parc.linhaCopia}` : ''}`;
     navigator.clipboard.writeText(texto).then(
       () => toast.success('Orçamento copiado!'),
       () => toast.error('Não foi possível copiar.')
@@ -183,6 +187,8 @@ Valor: ${formatCurrency(calc.final)}`;
                   <div className="flex justify-between text-sm text-gray-600"><span>Laminação:</span><span>{formatCurrency(calc.adicionalLaminacao)}</span></div>
                 )}
               </div>
+
+              <ParcelamentoBox parc={parc} />
 
               <div className="space-y-2">
                 <Button type="button" variant="outline" onClick={handleAddCotacao} className="w-full">

@@ -10,6 +10,7 @@ import EncaixeVisual from './EncaixeVisual';
 import { useEncaixeSvg, PERFIL_LASER } from '../../hooks/useEncaixeSvg';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
+import { useParcelamento, ParcelamentoBox } from './Parcelamento';
 import { toast } from 'sonner';
 
 // Laser com preço MANUAL, definido em Configurações (config.laser), NÃO pelo motor
@@ -92,6 +93,8 @@ const LaserManualCalculator: React.FC<Props> = ({ config }) => {
     return `Laser ${opcaoSel?.label ?? ''} ${medida}`;
   }, [opcaoSel, usaArquivo, areaArquivo, enc.areaOcupada, larguraNum, alturaNum, qtd]);
 
+  const parc = useParcelamento(calc?.final ?? 0);
+
   const handleCopy = () => {
     if (!temPreco || !calc) return;
     // Cópia limpa (vai para o cliente): medida e valor, sem a conta por trás.
@@ -100,7 +103,8 @@ const LaserManualCalculator: React.FC<Props> = ({ config }) => {
       : `Medida: ${larguraNum.toFixed(2)} x ${alturaNum.toFixed(2)} m — ${qtd} un`;
     const texto = `${opcaoSel?.label ?? 'Laser'}
 ${medida}
-Valor: ${formatCurrency(calc.final)}`;
+Valor: ${formatCurrency(calc.final)}${parc.linhaCopia ? `
+${parc.linhaCopia}` : ''}`;
     navigator.clipboard.writeText(texto).then(
       () => toast.success('Orçamento copiado!'),
       () => toast.error('Não foi possível copiar.')
@@ -245,6 +249,8 @@ Valor: ${formatCurrency(calc.final)}`;
                   <div className="flex justify-between text-sm text-gray-600"><span>Deslocamento:</span><span>{formatCurrency(calc.desloc)}</span></div>
                 )}
               </div>
+
+              <ParcelamentoBox parc={parc} />
 
               <div className="space-y-2">
                 <Button type="button" variant="outline" onClick={handleAddCotacao} className="w-full">

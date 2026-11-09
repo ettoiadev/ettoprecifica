@@ -91,6 +91,26 @@ Na aba **Letra Caixa**, material **PVC**, existe o seletor **"Como medir o mater
 - **CSS Nesting não tem nada a ver com isto.** O guia da MDN com esse nome é sintaxe de folha de estilo (regra dentro de regra, com `&`). O nosso "nesting" é encaixe de peças em chapa, geometria computacional. Mesmo nome, assuntos sem relação.
 - Teste de ponta a ponta: `.playwright/teste-encaixe-ui.mjs <arquivo.svg>` (sobe o arquivo pela interface, encaixa com vão 0 e 10mm, confere que o vão aumenta o consumo, e lê o preço final vindo da Edge Function).
 
+## Parcelamento no cartão, em todas as calculadoras (09/11/26)
+A pedido do Étto, que usa o **InfinitePay**: o painel "Orçamento" das **14 calculadoras** ganhou um simulador de parcelamento igual ao da maquininha dele. `src/components/calculators/Parcelamento.tsx` (hook `useParcelamento` + `ParcelamentoBox`), taxas por `ParcelamentoContext`.
+
+**São duas contas, e a diferença é o que a maquininha chama de "repassar a taxa":**
+- **sem repasse** — o cliente paga o preço do orçamento e NÓS absorvemos a taxa: `você recebe = valor × (1 − taxa)`
+- **com repasse** — o cliente paga a mais para recebermos o valor inteiro: `o cliente paga = valor ÷ (1 − taxa)`
+
+⚠️ **Repassar NÃO é somar a taxa por cima.** Somar 8,28% a R$100 dá R$108,28, e 8,28% disso são R$8,97 — sobrariam R$99,31, não R$100. É dividir por `(1 − taxa)`. A própria tela do InfinitePay explica assim (`R$100 ÷ (1 − 5,49%) = R$105,81`), e o teste reprova explicitamente se a conta virar soma por cima.
+
+- **A tabela de taxas JÁ EXISTIA e ninguém usava.** `CartaoCreditoConfig` estava em `pricing.ts` com os 12 valores certos, já registrada como campo de porcentagem em `ConfigSection.tsx` e `configUtils.ts` — mas **fora do `settingsConfig.ts`** (sem tela) e **não lida por nenhuma calculadora**. Era infraestrutura dormente de uma iteração anterior; o trabalho foi consumir, não criar.
+- **Os valores conferem com a fonte**: é a tabela do InfinitePay **plano "1 dia útil", faixa até R$20 mil, Visa/Mastercard** (3,15 · 5,39 · 6,12 · 6,85 · 7,57 · **8,28** · 8,99 · 9,69 · 10,38 · 11,06 · 11,74 · 12,40), batida em 09/11/26 contra a página de taxas da InfinitePay e dois comparadores, e contra o print do Étto (6x = 8,28%).
+  - ⚠️ **Confirmar com o Étto qual faixa vale hoje**: acima de R$20 mil/mês as taxas caem bastante (6x vai de 8,28% para 6,64%). E **Link de pagamento tem tabela própria** (1x 4,20% · 6x 9,67% · 12x 16,66%), assim como "na hora" e Elo/Amex. Hoje o app tem **uma tabela só** — se ele cobrar por mais de um meio, vira uma dimensão a mais.
+  - Editável em **Configurações > Pagamento > Cartão de crédito** (seção nova em `settingsConfig.ts` + grupo `'Pagamento'` em `SettingsPanel.tsx`).
+- **O preço do orçamento NÃO muda por causa disto.** O simulador é camada de cima: o que vai para a cotação e para a linha `Valor:` da cópia continua sendo o preço à vista. O parcelamento entra como **uma linha a mais** — `Ou 6x de R$ 109,35`, e com repasse `Ou 6x de R$ 119,22 (total R$ 715,33)`, porque aí o total parcelado é maior que o à vista e o cliente precisa ver isso. Em 1x sem repasse a cópia fica **idêntica à de antes**.
+- **Vai por contexto, não por prop** (`src/contexts/ParcelamentoContext.tsx`): são 14 calculadoras, e passar prop a prop seria 14 assinaturas mais 14 chamadas no `Index.tsx`. Mesmo caminho do `CotacaoContext`. O padrão sem provedor é `defaultConfig.cartaoCredito`, **não um objeto vazio** — no `dev-preview` (onde os testes rodam) taxa zero pareceria um preço certo e não seria.
+- A caixa **só aparece quando já há preço**; sem medida preenchida, não existe.
+- Troca em lote nos 14 arquivos conferida **contando elementos antes e depois** (`<div`, `</div>`, `<Input`, `CalcCheckbox`, `<Button`): iguais em 14 de 14.
+- **Teste**: `.playwright/teste-parcelamento.mjs` — confere a conta nos dois modos contra os valores de referência dos prints, reprova se o repasse virar soma por cima, e verifica que a caixa aparece nas 11 abas (3 delas — Letra Caixa, Vidro, Luminoso — não dão preço no dev-preview porque dependem da Edge Function, que pede login; nessas o teste confirma só que a caixa fica escondida sem preço).
+- **Não feito**: o carrinho de cotação (`CotacaoBar`) soma vários itens e **não** mostra parcelamento do total. É o próximo lugar natural, se ele quiser.
+
 ## Varredura geral de código e layout (31/10/26)
 Pedida pelo Étto ("existe alguma melhoria que precisa ser feita?"). Medida, não opinada.
 

@@ -9,6 +9,7 @@ import EncaixeVisual from './EncaixeVisual';
 import { useEncaixeSvg } from '../../hooks/useEncaixeSvg';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
+import { useParcelamento, ParcelamentoBox } from './Parcelamento';
 import { toast } from 'sonner';
 
 // Resultado da função calc_letra_caixa (via Edge Function calc-letra-caixa).
@@ -229,6 +230,8 @@ const LetraCaixaCalculator: React.FC = () => {
     return { semNota, comNota, descontoNota: comNota - semNota, final: incluirNota ? comNota : semNota };
   }, [temPreco, result, incluirNota]);
 
+  const parc = useParcelamento(precos?.final ?? 0);
+
   const handleCopy = () => {
     if (!precos) return;
     // Cópia limpa (vai para o cliente): medida e valor, sem a conta por trás.
@@ -239,7 +242,8 @@ const LetraCaixaCalculator: React.FC = () => {
       : `Letras: ${nCaracteresNum} × ${alturaCmNum} cm de altura`;
     const texto = `Letra Caixa — ${MATERIAL_LABEL[material]}${ilumSuffix}
 ${detalhe}
-Valor: ${formatCurrency(precos.final)}`;
+Valor: ${formatCurrency(precos.final)}${parc.linhaCopia ? `
+${parc.linhaCopia}` : ''}`;
     navigator.clipboard.writeText(texto).then(
       () => toast.success('Orçamento copiado!'),
       () => toast.error('Não foi possível copiar.')
@@ -561,7 +565,9 @@ Valor: ${formatCurrency(precos.final)}`;
                     )}
                   </div>
 
-                  <div className="space-y-2">
+                  <ParcelamentoBox parc={parc} />
+
+              <div className="space-y-2">
                     <Button type="button" variant="outline" onClick={handleAddCotacao} className="w-full">
                       <PlusCircle className="w-4 h-4" /> Adicionar à cotação
                     </Button>

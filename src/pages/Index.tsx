@@ -17,6 +17,7 @@ import ModernHeader from '../components/ModernHeader';
 import ModernTabs from '../components/ModernTabs';
 import ModernCalculatorWrapper from '../components/ModernCalculatorWrapper';
 import CotacaoBar from '../components/CotacaoBar';
+import { ParcelamentoProvider } from '../contexts/ParcelamentoContext';
 import { PricingConfig, defaultConfig } from '../types/pricing';
 import { migrateConfig } from '../utils/productOptions';
 import { useAuth } from '../contexts/AuthContext';
@@ -182,6 +183,12 @@ const Index = () => {
   }
 
   return (
+    /*
+     * A tabela de taxas do cartão desce por contexto porque TODAS as
+     * calculadoras simulam parcelamento — passar prop a prop seria 14
+     * assinaturas e 14 chamadas aqui, sem ganho.
+     */
+    <ParcelamentoProvider taxas={config.cartaoCredito}>
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <ModernHeader
@@ -202,6 +209,7 @@ const Index = () => {
       {/* Carrinho de cotação (acumula itens de qualquer aba) */}
       <CotacaoBar />
     </div>
+    </ParcelamentoProvider>
   );
 };
 

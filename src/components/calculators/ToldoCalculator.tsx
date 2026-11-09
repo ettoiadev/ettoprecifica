@@ -22,6 +22,7 @@ import DeslocamentoField from './DeslocamentoField';
 import { CalcCheckbox, OptionChip } from './CalcControls';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
+import { useParcelamento, ParcelamentoBox } from './Parcelamento';
 import { toast } from 'sonner';
 
 interface Props {
@@ -197,6 +198,8 @@ const ToldoCalculator: React.FC<Props> = ({ config }) => {
 
   const temPreco = !!calc && calc.final > 0;
 
+  const parc = useParcelamento(calc?.final ?? 0);
+
   const handleCopy = () => {
     if (!temPreco || !calc) return;
     // Cópia limpa (vai para o cliente): produto, medida e valor.
@@ -205,7 +208,8 @@ const ToldoCalculator: React.FC<Props> = ({ config }) => {
       : `Medida: ${larguraNum.toFixed(2)} m de largura x ${verticalNum.toFixed(2)} m de caída`;
     const texto = `${TIPO_LABEL[tipo]}${isCortina && comViseira ? ' com viseira' : ''}
 ${medida}${qtd > 1 ? ` — ${qtd} un` : ''}
-Valor: ${formatCurrency(calc.final)}`;
+Valor: ${formatCurrency(calc.final)}${parc.linhaCopia ? `
+${parc.linhaCopia}` : ''}`;
     navigator.clipboard.writeText(texto).then(
       () => toast.success('Orçamento copiado!'),
       () => toast.error('Não foi possível copiar.')
@@ -461,6 +465,8 @@ Valor: ${formatCurrency(calc.final)}`;
                   </div>
                 )}
               </div>
+
+              <ParcelamentoBox parc={parc} />
 
               <div className="space-y-2">
                 <Button type="button" variant="outline" onClick={handleAddCotacao} className="w-full">

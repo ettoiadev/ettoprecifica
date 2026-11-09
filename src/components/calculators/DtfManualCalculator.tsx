@@ -5,6 +5,7 @@ import { useCotacao } from '../../contexts/CotacaoContext';
 import { CalcCheckbox, OptionChip, ChipProduto } from './CalcControls';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
+import { useParcelamento, ParcelamentoBox } from './Parcelamento';
 import { toast } from 'sonner';
 
 // DTF com preço MANUAL, definido em Configurações (config.dtf), NÃO pelo motor da
@@ -66,11 +67,14 @@ const DtfManualCalculator: React.FC<Props> = ({ config }) => {
     [opcaoSel, metrosNum]
   );
 
+  const parc = useParcelamento(calc?.final ?? 0);
+
   const handleCopy = () => {
     if (!temPreco || !calc) return;
     const texto = `DTF ${opcaoSel?.label ?? ''}
 Medida: ${metrosNum.toFixed(2)} m lineares${opcaoSel?.description ? ` (largura ${opcaoSel.description})` : ''}
-Valor: ${formatCurrency(calc.final)}`;
+Valor: ${formatCurrency(calc.final)}${parc.linhaCopia ? `
+${parc.linhaCopia}` : ''}`;
     navigator.clipboard.writeText(texto).then(
       () => toast.success('Orçamento copiado!'),
       () => toast.error('Não foi possível copiar.')
@@ -164,6 +168,8 @@ Valor: ${formatCurrency(calc.final)}`;
                   <div className="flex justify-between text-sm text-gray-600"><span>Uber (busca):</span><span>{formatCurrency(calc.uber)}</span></div>
                 )}
               </div>
+
+              <ParcelamentoBox parc={parc} />
 
               <div className="space-y-2">
                 <Button type="button" variant="outline" onClick={handleAddCotacao} className="w-full">

@@ -7,6 +7,7 @@ import DeslocamentoField from './DeslocamentoField';
 import { CalcCheckbox, OptionChip, ChipProduto } from './CalcControls';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
+import { useParcelamento, ParcelamentoBox } from './Parcelamento';
 import { toast } from 'sonner';
 
 // Placa em ACM avulsa com preço MANUAL, definido em Configurações (config.placaACM).
@@ -64,11 +65,14 @@ const PlacaACMManualCalculator: React.FC<Props> = ({ config }) => {
     [opcaoSel, larguraNum, alturaNum, qtd]
   );
 
+  const parc = useParcelamento(calc?.final ?? 0);
+
   const handleCopy = () => {
     if (!temPreco || !calc) return;
     const texto = `${opcaoSel?.label ?? 'Placa ACM'}
 Medida: ${larguraNum.toFixed(2)} x ${alturaNum.toFixed(2)} m — ${qtd} un
-Valor: ${formatCurrency(calc.final)}`;
+Valor: ${formatCurrency(calc.final)}${parc.linhaCopia ? `
+${parc.linhaCopia}` : ''}`;
     navigator.clipboard.writeText(texto).then(
       () => toast.success('Orçamento copiado!'),
       () => toast.error('Não foi possível copiar.')
@@ -165,6 +169,8 @@ Valor: ${formatCurrency(calc.final)}`;
                   <div className="flex justify-between text-sm text-gray-600"><span>Deslocamento:</span><span>{formatCurrency(calc.desloc)}</span></div>
                 )}
               </div>
+
+              <ParcelamentoBox parc={parc} />
 
               <div className="space-y-2">
                 <Button type="button" variant="outline" onClick={handleAddCotacao} className="w-full">

@@ -5,6 +5,7 @@ import { useCotacao } from '../../contexts/CotacaoContext';
 import { CalcCheckbox, OptionChip } from './CalcControls';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
+import { useParcelamento, ParcelamentoBox } from './Parcelamento';
 import { toast } from 'sonner';
 
 // Calculadora de Etiquetas/Rótulos — preço MANUAL, definido em Configurações
@@ -69,11 +70,14 @@ const EtiquetasCalculator: React.FC<Props> = ({ config }) => {
     [larguraCm, alturaCm, qtd]
   );
 
+  const parc = useParcelamento(calc?.final ?? 0);
+
   const handleCopy = () => {
     if (!temPreco || !calc) return;
     const texto = `Etiquetas/Rótulos
 Medida: ${larguraCm}×${alturaCm} cm — ${qtd} un
-Valor: ${formatCurrency(calc.final)}`;
+Valor: ${formatCurrency(calc.final)}${parc.linhaCopia ? `
+${parc.linhaCopia}` : ''}`;
     navigator.clipboard.writeText(texto).then(
       () => toast.success('Orçamento copiado!'),
       () => toast.error('Não foi possível copiar.')
@@ -185,6 +189,8 @@ Valor: ${formatCurrency(calc.final)}`;
                 )}
                 <div className="flex justify-between text-sm text-gray-600"><span>Quantidade:</span><span>{qtd} un</span></div>
               </div>
+
+              <ParcelamentoBox parc={parc} />
 
               <div className="space-y-2">
                 <Button type="button" variant="outline" onClick={handleAddCotacao} className="w-full">

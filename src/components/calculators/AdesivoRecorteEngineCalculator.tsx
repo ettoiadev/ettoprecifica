@@ -8,6 +8,7 @@ import DeslocamentoField from './DeslocamentoField';
 import { CalcCheckbox, OptionChip, selectClass } from './CalcControls';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
+import { useParcelamento, ParcelamentoBox } from './Parcelamento';
 import { toast } from 'sonner';
 
 // Painel de Adesivo de RECORTE precificado pelo MOTOR da skill (calc_adesivo_recorte
@@ -193,11 +194,14 @@ const AdesivoRecorteEngineCalculator: React.FC<Props> = ({ cores, titulo }) => {
   const qtdPrefixo = qtd > 1 ? `${qtd}x ` : '';
   const medidaTexto = `${qtdPrefixo}${unidadeTexto}`;
 
+  const parc = useParcelamento(precos?.final ?? 0);
+
   const handleCopy = () => {
     if (!result || !precos || !result.produto_encontrado) return;
     const texto = `${titulo}
 Medida: ${medidaTexto}
-Valor: ${formatCurrency(precos.final)}`;
+Valor: ${formatCurrency(precos.final)}${parc.linhaCopia ? `
+${parc.linhaCopia}` : ''}`;
     navigator.clipboard.writeText(texto).then(
       () => toast.success('Orçamento copiado!'),
       () => toast.error('Não foi possível copiar.')
@@ -442,6 +446,8 @@ Valor: ${formatCurrency(precos.final)}`;
                   </div>
                 )}
               </div>
+
+              <ParcelamentoBox parc={parc} />
 
               <div className="space-y-2">
                 <Button type="button" variant="outline" onClick={handleAddCotacao} className="w-full">

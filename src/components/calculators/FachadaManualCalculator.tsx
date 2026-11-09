@@ -13,6 +13,7 @@ import DeslocamentoField from './DeslocamentoField';
 import { CalcCheckbox, OptionChip, ChipProduto } from './CalcControls';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
+import { useParcelamento, ParcelamentoBox } from './Parcelamento';
 import { toast } from 'sonner';
 
 // Fachada com preço MANUAL por m², definido em Configurações (config.fachada), NÃO
@@ -69,11 +70,14 @@ const FachadaManualCalculator: React.FC<Props> = ({ config }) => {
     [opcaoSel, larguraNum, alturaNum]
   );
 
+  const parc = useParcelamento(calc?.final ?? 0);
+
   const handleCopy = () => {
     if (!temPreco || !calc || !opcaoSel) return;
     const texto = `${opcaoSel.label}
 Medida: ${larguraNum.toFixed(2)} x ${alturaNum.toFixed(2)} m
-Valor: ${formatCurrency(calc.final)}`;
+Valor: ${formatCurrency(calc.final)}${parc.linhaCopia ? `
+${parc.linhaCopia}` : ''}`;
     navigator.clipboard.writeText(texto).then(
       () => toast.success('Orçamento copiado!'),
       () => toast.error('Não foi possível copiar.')
@@ -177,6 +181,8 @@ Valor: ${formatCurrency(calc.final)}`;
                   <div className="flex justify-between text-sm text-gray-600"><span>Deslocamento:</span><span>{formatCurrency(calc.desloc)}</span></div>
                 )}
               </div>
+
+              <ParcelamentoBox parc={parc} />
 
               <div className="space-y-2">
                 <Button type="button" variant="outline" onClick={handleAddCotacao} className="w-full">

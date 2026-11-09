@@ -8,6 +8,7 @@ import DeslocamentoField from './DeslocamentoField';
 import { CalcCheckbox, OptionChip } from './CalcControls';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
+import { useParcelamento, ParcelamentoBox } from './Parcelamento';
 import { toast } from 'sonner';
 
 interface Props {
@@ -156,11 +157,14 @@ const LuminosoCalculator: React.FC<Props> = () => {
       ? `Ø${larguraNum.toFixed(2)}m`
       : `${larguraNum.toFixed(2)}×${alturaNum.toFixed(2)}m`;
 
+  const parc = useParcelamento(num(precos?.final));
+
   const handleCopy = () => {
     if (!precos) return;
     const texto = `Luminoso ${MATERIAL_LABEL[material]} (${faces} face${faces > 1 ? 's' : ''})
 Forma: ${forma === 'circular' ? 'Circular' : 'Retangular'} (${dimTexto})
-Valor: ${formatCurrency(precos.final)}`;
+Valor: ${formatCurrency(precos.final)}${parc.linhaCopia ? `
+${parc.linhaCopia}` : ''}`;
     navigator.clipboard.writeText(texto).then(
       () => toast.success('Orçamento copiado!'),
       () => toast.error('Não foi possível copiar.')
@@ -377,6 +381,8 @@ Valor: ${formatCurrency(precos.final)}`;
                   <span>{formatCurrency(num(result.custo_total))}</span>
                 </div>
               </div>
+
+              <ParcelamentoBox parc={parc} />
 
               <div className="space-y-2">
                 <Button type="button" variant="outline" onClick={handleAddCotacao} className="w-full">

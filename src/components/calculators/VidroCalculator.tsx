@@ -8,6 +8,7 @@ import DeslocamentoField from './DeslocamentoField';
 import { CalcCheckbox, selectClass } from './CalcControls';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
+import { useParcelamento, ParcelamentoBox } from './Parcelamento';
 import { toast } from 'sonner';
 
 // Resultado da função calc_vidro (via Edge Function calc-vidro).
@@ -134,11 +135,14 @@ const VidroCalculator: React.FC = () => {
 
   const qtdPrefixo = qtd > 1 ? `${qtd}x ` : '';
 
+  const parc = useParcelamento(precos?.final ?? 0);
+
   const handleCopy = () => {
     if (!result || !precos) return;
     const texto = `Vidro — ${result.material_encontrado}
 Medida: ${larguraNum.toFixed(2)} x ${alturaNum.toFixed(2)} m${qtd > 1 ? ` — ${qtd} peças` : ''}
-Valor: ${formatCurrency(precos.final)}`;
+Valor: ${formatCurrency(precos.final)}${parc.linhaCopia ? `
+${parc.linhaCopia}` : ''}`;
     navigator.clipboard.writeText(texto).then(
       () => toast.success('Orçamento copiado!'),
       () => toast.error('Não foi possível copiar.')
@@ -362,7 +366,9 @@ Valor: ${formatCurrency(precos.final)}`;
                     </div>
                   </div>
 
-                  <div className="space-y-2">
+                  <ParcelamentoBox parc={parc} />
+
+              <div className="space-y-2">
                     <Button type="button" variant="outline" onClick={handleAddCotacao} className="w-full">
                       <PlusCircle className="w-4 h-4" /> Adicionar à cotação
                     </Button>
