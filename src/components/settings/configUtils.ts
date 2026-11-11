@@ -36,6 +36,19 @@ const isMeasurementField = (section: string, field: string) => {
   if (section === 'toldo' && field === 'lonaLarguraUtil') {
     return true;
   }
+  /*
+   * Pintura da Letra Caixa: litros da lata, rendimento (m²/L), demãos e
+   * multiplicador são número puro — só o preço da lata é dinheiro. A mesma
+   * lista existe em `ConfigSection.tsx`, que é quem escolhe o campo da tela.
+   */
+  if (
+    section === 'letraCaixa' &&
+    ['pinturaVolumeLataL', 'pinturaRendimentoM2L', 'pinturaDemaos', 'pinturaMultiplicador'].includes(
+      field
+    )
+  ) {
+    return true;
+  }
   return false;
 };
 

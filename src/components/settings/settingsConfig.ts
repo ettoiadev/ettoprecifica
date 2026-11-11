@@ -132,6 +132,16 @@ export const settingsConfig: ConfigSectionData[] = [
     fields: [
       { key: 'pvcPisoProjeto', label: 'Piso de projeto do PVC' },
       { key: 'retroPercentual', label: 'Adicional da retroiluminada' },
+      /*
+       * Pintura automotiva (PU). O R$/m² não é digitado: sai destes números
+       * (ver precoM2Pintura). O que o vendedor sabe de cor é o preço da lata.
+       */
+      { key: 'pinturaSimplesLata', label: 'Pintura — lata de 1/4, cor padrão' },
+      { key: 'pinturaEspecialLata', label: 'Pintura — lata de 1/4, cor especial' },
+      { key: 'pinturaVolumeLataL', label: 'Pintura — litros da lata', unit: 'L' },
+      { key: 'pinturaRendimentoM2L', label: 'Pintura — rendimento por demão', unit: 'm²/L' },
+      { key: 'pinturaDemaos', label: 'Pintura — demãos' },
+      { key: 'pinturaMultiplicador', label: 'Pintura — multiplicador sobre a tinta', unit: '×' },
     ],
   },
 ];

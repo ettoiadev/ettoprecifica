@@ -4,14 +4,22 @@ import type { LetraCaixaConfig } from '../../types/pricing';
 import { formatCurrency, ALIQUOTA_NF, ALIQUOTA_NF_MOTOR } from '../../types/pricing';
 import { supabase } from '../../lib/supabase/client';
 import { useCotacao } from '../../contexts/CotacaoContext';
-import { CalcCheckbox, OptionChip, selectClass } from './CalcControls';
+import { CalcCheckbox, ChipProduto, OptionChip, selectClass } from './CalcControls';
 import EncaixeControles from './EncaixeControles';
 import EncaixeVisual from './EncaixeVisual';
 import { useEncaixeSvg } from '../../hooks/useEncaixeSvg';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 import { useParcelamento, ParcelamentoBox } from './Parcelamento';
-import { precoPvc, precoPorAltura, temPrecoManual, temPrecoPvc } from '../../lib/precoLetraCaixa';
+import {
+  precoPvc,
+  precoPorAltura,
+  temPrecoManual,
+  temPrecoPvc,
+  custoPintura,
+  precoM2Pintura,
+} from '../../lib/precoLetraCaixa';
+import type { TipoPintura } from '../../lib/precoLetraCaixa';
 import { toast } from 'sonner';
 
 // Resultado da função calc_letra_caixa (via Edge Function calc-letra-caixa).
@@ -39,6 +47,23 @@ type Ilum = 'sem' | 'retro' | 'frontal';
 // Como a área de PVC é obtida: medida digitada na mão, ou calculada a partir do
 // encaixe das letras de um arquivo SVG na chapa.
 type ModoPvc = 'manual' | 'arquivo';
+
+/*
+ * Pintura automotiva (PU), só no PVC — é onde existe área em m², que é de onde
+ * sai o consumo de tinta. ACM/galvanizado/inox/3D são cobrados por altura da
+ * letra e não têm área nenhuma no cálculo, então não há de onde tirar litro.
+ */
+const PINTURA_LABEL: Record<TipoPintura, string> = {
+  sem: 'Sem pintura',
+  simples: 'Tinta simples',
+  especial: 'Tinta especial',
+};
+
+const PINTURA_AJUDA: Record<TipoPintura, string> = {
+  sem: 'PVC na cor de fábrica',
+  simples: 'cor padrão, pronta na loja',
+  especial: 'cor sob encomenda, perolizado, candy',
+};
 
 const MATERIAL_LABEL: Record<Material, string> = {
   pvc: 'PVC',
@@ -100,6 +125,7 @@ const LetraCaixaCalculator: React.FC<Props> = ({ config }) => {
   const [alturaCm, setAlturaCm] = useState<string>('');
   const [nCaracteres, setNCaracteres] = useState<string>('');
   const [larguraTotalCm, setLarguraTotalCm] = useState<string>('');
+  const [pintura, setPintura] = useState<TipoPintura>('sem');
   const [incluirNota, setIncluirNota] = useState<boolean>(true);
 
   const [result, setResult] = useState<LetraResult | null>(null);
@@ -222,7 +248,8 @@ const LetraCaixaCalculator: React.FC<Props> = ({ config }) => {
       const medida = usaArquivo
         ? `${larguraEnvio.toFixed(3)}m² (${encaixe?.totalPecas ?? 0} peças)`
         : `${larguraPlacaNum.toFixed(2)}×${alturaPlacaNum.toFixed(2)}m`;
-      return `Letra caixa PVC ${espessura}mm ${medida}${ilumSuffix}`;
+      const pinturaSuffix = pintura === 'sem' ? '' : ` + ${PINTURA_LABEL[pintura].toLowerCase()}`;
+      return `Letra caixa PVC ${espessura}mm ${medida}${ilumSuffix}${pinturaSuffix}`;
     }
     return `Letra caixa ${MATERIAL_LABEL[material]} ${alturaCmNum}cm ${nCaracteresNum} letras${ilumSuffix}`;
   }, [
@@ -237,6 +264,7 @@ const LetraCaixaCalculator: React.FC<Props> = ({ config }) => {
     alturaCmNum,
     nCaracteresNum,
     ilumSuffix,
+    pintura,
   ]);
 
   /*
@@ -258,25 +286,53 @@ const LetraCaixaCalculator: React.FC<Props> = ({ config }) => {
     material, alturaCmNum, nCaracteresNum, iluminacao,
   ]);
 
+  /*
+   * Pintura. A área pintada é a MESMA área de material que está sendo cobrada
+   * (ver o comentário em precoLetraCaixa.ts: o retalho não pintado compensa as
+   * laterais da letra, que a área da chapa não vê).
+   */
+  const areaPintavel = isPvc ? larguraEnvio * alturaEnvio : 0;
+  const custoTinta = useMemo(
+    () => (isPvc ? custoPintura(config, pintura, areaPintavel) : null),
+    [isPvc, config, pintura, areaPintavel]
+  );
+  /*
+   * Pintura escolhida que não tem como ser precificada (algum número zerado em
+   * Configurações). Não pode virar pintura de graça: o orçamento sairia mais
+   * barato do que o serviço, em silêncio. Então bloqueia o preço e avisa.
+   */
+  const pinturaIncompleta = isPvc && pintura !== 'sem' && areaPintavel > 0 && custoTinta === null;
+
   // Preço válido: motor pode retornar preco_final nulo quando não há referência
   // de mercado (ex.: altura fora da faixa pesquisada) — nesse caso mostramos o alerta.
-  const temPreco = usaManual
-    ? !!manual && manual.total > 0
-    : !!result && result.preco_final != null && num(result.preco_final) > 0;
+  const temPreco =
+    !pinturaIncompleta &&
+    (usaManual
+      ? !!manual && manual.total > 0
+      : !!result && result.preco_final != null && num(result.preco_final) > 0);
 
   const precos = useMemo(() => {
     if (!temPreco) return null;
+    /*
+     * A pintura entra DEPOIS do piso de projeto. Se entrasse antes, um letreiro
+     * pequeno teria a pintura engolida pelo piso — material R$100 + pintura R$50
+     * continuaria dando os R$300 do piso, e a tinta sairia de graça.
+     *
+     * No caminho do motor ela leva a NF do motor, e no manual a dos manuais, para
+     * o desconto de "sem nota" continuar sendo exatamente a alíquota do total.
+     */
+    const tinta = custoTinta?.total ?? 0;
     if (usaManual && manual) {
       // manual: a NF é a dos produtos de preço local (9,35%), não a do motor
-      const semNota = manual.total;
+      const semNota = manual.total + tinta;
       const comNota = semNota * (1 + ALIQUOTA_NF / 100);
       return { semNota, comNota, descontoNota: comNota - semNota, final: incluirNota ? comNota : semNota };
     }
     if (!result) return null;
-    const semNota = num(result.preco_final);
-    const comNota = num(result.preco_com_nota);
+    const semNota = num(result.preco_final) + tinta;
+    const comNota = num(result.preco_com_nota) + tinta * (1 + ALIQUOTA_NF_MOTOR / 100);
     return { semNota, comNota, descontoNota: comNota - semNota, final: incluirNota ? comNota : semNota };
-  }, [temPreco, usaManual, manual, result, incluirNota]);
+  }, [temPreco, usaManual, manual, result, incluirNota, custoTinta]);
 
   const parc = useParcelamento(precos?.final ?? 0);
 
@@ -288,8 +344,10 @@ const LetraCaixaCalculator: React.FC<Props> = ({ config }) => {
         ? `Material: ${larguraEnvio.toFixed(2)} m² de PVC ${espessura}mm`
         : `Placa: ${larguraPlacaNum.toFixed(2)} x ${alturaPlacaNum.toFixed(2)} m (${espessura}mm)`
       : `Letras: ${nCaracteresNum} × ${alturaCmNum} cm de altura`;
+    const linhaPintura = custoTinta ? `
+Pintura automotiva (PU) — ${PINTURA_LABEL[custoTinta.tipo].toLowerCase()}` : '';
     const texto = `Letra Caixa — ${MATERIAL_LABEL[material]}${ilumSuffix}
-${detalhe}
+${detalhe}${linhaPintura}
 Valor: ${formatCurrency(precos.final)}${parc.linhaCopia ? `
 ${parc.linhaCopia}` : ''}`;
     navigator.clipboard.writeText(texto).then(
@@ -491,8 +549,74 @@ ${parc.linhaCopia}` : ''}`;
             )}
           </div>
 
+          {/*
+            * Pintura automotiva — só no PVC. É o único material da aba com área
+            * em m², e é da área que sai o consumo de tinta. Nos outros (por
+            * altura da letra) não há área nenhuma na conta, então não haveria de
+            * onde tirar litro sem inventar número.
+            */}
+          {isPvc && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                Pintura automotiva (PU)
+              </label>
+              <div className="grid grid-cols-1 gap-3">
+                {(['sem', 'simples', 'especial'] as const).map((t) => {
+                  const m2 = precoM2Pintura(config, t);
+                  return (
+                    <OptionChip
+                      key={t}
+                      onClick={() => setPintura(t)}
+                      active={pintura === t}
+                      variant="indigo"
+                    >
+                      <ChipProduto
+                        label={PINTURA_LABEL[t]}
+                        descricao={PINTURA_AJUDA[t]}
+                        preco={
+                          t === 'sem'
+                            ? '—'
+                            : m2 === null
+                              ? 'preço não definido'
+                              : formatCurrency(m2)
+                        }
+                        unidade={t !== 'sem' && m2 !== null ? '/m²' : undefined}
+                      />
+                    </OptionChip>
+                  );
+                })}
+              </div>
+              {custoTinta && (
+                <p className="text-xs text-gray-500 mt-2">
+                  {areaPintavel.toFixed(2)} m² ×{' '}
+                  {config.pinturaDemaos.toLocaleString('pt-BR')} demãos a{' '}
+                  {config.pinturaRendimentoM2L.toLocaleString('pt-BR')} m²/L ={' '}
+                  {custoTinta.litros.toFixed(2)} L (
+                  {custoTinta.latas.toFixed(1)} latas de 1/4) ={' '}
+                  {formatCurrency(custoTinta.custoTinta)} de tinta ×{' '}
+                  {config.pinturaMultiplicador.toLocaleString('pt-BR')} ={' '}
+                  {formatCurrency(custoTinta.total)}
+                </p>
+              )}
+              {pinturaIncompleta && (
+                <div className="flex items-start gap-2 mt-2 p-3 rounded-lg bg-amber-50 border border-amber-200 text-sm text-amber-800">
+                  <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+                  <span>
+                    Falta um número da pintura em Configurações &gt; Produtos &gt; Letra Caixa
+                    (preço da lata, litros, rendimento, demãos ou multiplicador). Enquanto estiver
+                    zerado, este orçamento não sai — a tinta não pode entrar de graça.
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* a alíquota muda com a origem do preço: 9,35% no manual, 9,31% no
+              motor. A caixa dizia 9,31% fixo e o painel ao lado dizia 9,35% no
+              mesmo instante — dois números para a mesma nota, na mesma tela. */}
           <CalcCheckbox checked={incluirNota} onCheckedChange={setIncluirNota}>
-            Emitir com nota fiscal ({ALIQUOTA_NF_MOTOR.toLocaleString('pt-BR')}%)
+            Emitir com nota fiscal (
+            {(usaManual ? ALIQUOTA_NF : ALIQUOTA_NF_MOTOR).toLocaleString('pt-BR')}%)
           </CalcCheckbox>
         </div>
 
@@ -526,6 +650,16 @@ ${parc.linhaCopia}` : ''}`;
                 <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200 text-sm text-amber-800">
                   <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
                   <span>{result.alerta}</span>
+                </div>
+              )}
+
+              {pinturaIncompleta && (
+                <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200 text-sm text-amber-800">
+                  <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+                  <span>
+                    Pintura escolhida sem preço definido — veja o aviso ao lado. O orçamento fica
+                    retido até os números da pintura serem preenchidos em Configurações.
+                  </span>
                 </div>
               )}
 
@@ -663,6 +797,15 @@ ${parc.linhaCopia}` : ''}`;
                       <div className="flex justify-between text-sm text-amber-600 font-medium pt-1 border-t border-gray-200">
                         <span>Piso de projeto aplicado:</span>
                         <span>{formatCurrency(config.pvcPisoProjeto)}</span>
+                      </div>
+                    )}
+                    {custoTinta && (
+                      <div className="flex justify-between text-sm text-gray-600 pt-1 border-t border-gray-200">
+                        <span>
+                          Pintura PU — {PINTURA_LABEL[custoTinta.tipo].toLowerCase()} (
+                          {formatCurrency(custoTinta.precoM2)}/m²):
+                        </span>
+                        <span>{formatCurrency(custoTinta.total)}</span>
                       </div>
                     )}
                     <div className="flex justify-between text-xs text-gray-400 pt-1">

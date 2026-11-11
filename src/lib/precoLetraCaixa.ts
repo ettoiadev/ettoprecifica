@@ -124,3 +124,81 @@ export function precoPorAltura(
     faixaUsada: `até ${faixa.ateCm} cm`,
   };
 }
+
+/* ---------------------------------------------------------------------------
+ * Pintura automotiva (PU)
+ *
+ * O vendedor não digita R$/m² de pintura: ele sabe o preço da LATA. Então o
+ * R$/m² é derivado, e a tela mostra o caminho inteiro para ele conferir:
+ *
+ *   R$/litro = preço da lata ÷ litros da lata        (1/4 de galão = 0,9 L)
+ *   L/m²     = demãos ÷ rendimento por demão        (ficha de PU: 8–10 m²/L)
+ *   R$/m²    = R$/litro × L/m² × multiplicador      (mão de obra, perda, margem)
+ *
+ * A ÁREA PINTADA é a mesma área de material que já está sendo cobrada, e isso
+ * é aproximação deliberada: a área da chapa inclui o retalho entre as letras,
+ * que não é pintado (aproveitamento ~60%), e esse retalho compensa de perto as
+ * LATERAIS da letra, que são pintadas e não aparecem na área da chapa (num
+ * letreiro de 20mm as laterais dão ~metade da face). Face 60% + laterais 30% ≈
+ * 90% da área da chapa. Se ele vir que falta tinta na prática, o caminho é
+ * subir o multiplicador ou as demãos — não mexer numa área que ninguém mede.
+ * --------------------------------------------------------------------------- */
+
+export type TipoPintura = 'sem' | 'simples' | 'especial';
+
+export interface CustoPintura {
+  tipo: 'simples' | 'especial';
+  /** R$ por m² de área pintada, derivado da lata */
+  precoM2: number;
+  /** R$ por litro de tinta pronta */
+  precoLitro: number;
+  /** litros estimados para a área, já com as demãos */
+  litros: number;
+  /** quantas latas de 1/4 isso representa (fracionário: a sobra serve o próximo) */
+  latas: number;
+  /** custo só da tinta, sem o multiplicador — é o número que ele confere na loja */
+  custoTinta: number;
+  /** o que entra no orçamento */
+  total: number;
+}
+
+/**
+ * R$/m² de pintura, derivado do preço da lata. `null` quando o tipo é 'sem'
+ * (não há pintura) **ou** quando falta número para a conta — e nesse segundo
+ * caso quem chama tem que recusar o orçamento, não cobrar pintura de graça.
+ */
+export function precoM2Pintura(config: LetraCaixaConfig, tipo: TipoPintura): number | null {
+  if (tipo === 'sem') return null;
+  const lata = tipo === 'simples' ? config.pinturaSimplesLata : config.pinturaEspecialLata;
+  const vol = config.pinturaVolumeLataL;
+  const rend = config.pinturaRendimentoM2L;
+  const demaos = config.pinturaDemaos;
+  const mult = config.pinturaMultiplicador;
+  if (!(lata > 0) || !(vol > 0) || !(rend > 0) || !(demaos > 0) || !(mult > 0)) return null;
+  return (lata / vol) * (demaos / rend) * mult;
+}
+
+/** Custo da pintura para uma área, com os números intermediários para a tela. */
+export function custoPintura(
+  config: LetraCaixaConfig,
+  tipo: TipoPintura,
+  areaM2: number
+): CustoPintura | null {
+  if (tipo === 'sem' || areaM2 <= 0) return null;
+  const precoM2 = precoM2Pintura(config, tipo);
+  if (precoM2 === null) return null;
+
+  const precoLitro =
+    (tipo === 'simples' ? config.pinturaSimplesLata : config.pinturaEspecialLata) /
+    config.pinturaVolumeLataL;
+  const litros = areaM2 * (config.pinturaDemaos / config.pinturaRendimentoM2L);
+  return {
+    tipo,
+    precoM2,
+    precoLitro,
+    litros,
+    latas: litros / config.pinturaVolumeLataL,
+    custoTinta: litros * precoLitro,
+    total: precoM2 * areaM2,
+  };
+}

@@ -48,6 +48,18 @@ const LIST_MANAGERS: Record<string, ListManagerDef[]> = {
   ],
 };
 
+/*
+ * Campos da pintura da Letra Caixa que são NÚMERO, não dinheiro: o preço da
+ * lata é moeda, mas litros, rendimento, demãos e multiplicador não. A mesma
+ * lista existe em `configUtils.ts`, que é quem converte config <-> texto.
+ */
+const PINTURA_NUMEROS = new Set([
+  'pinturaVolumeLataL',
+  'pinturaRendimentoM2L',
+  'pinturaDemaos',
+  'pinturaMultiplicador',
+]);
+
 interface ConfigSectionProps {
   title: string;
   section: string;
@@ -115,6 +127,11 @@ const ConfigSection = React.memo<ConfigSectionProps>(({ title, section, fields, 
     // Campos de comprimento da estrutura metálica em Fachada e Luminoso
     if ((sectionName === 'fachada' || sectionName === 'luminoso') && 
         fieldKey.includes('comprimentoBarra')) {
+      return true;
+    }
+    // Pintura da Letra Caixa: litros, m²/L, demãos e multiplicador são número
+    // puro. Sem isto apareceriam como "R$ 0,90", "R$ 9,00", "R$ 2,50".
+    if (sectionName === 'letraCaixa' && PINTURA_NUMEROS.has(fieldKey)) {
       return true;
     }
     return false;

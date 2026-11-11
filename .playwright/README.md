@@ -42,6 +42,10 @@ build de produção (o `vite build` gera só `index.html`).
 | `teste-dxf.mjs` | parser de DXF: área lida ≠ área exata da figura |
 | `teste-ordem-fachada.mjs` | reordenar a lista mexendo na escolha do vendedor |
 | `teste-toldo.mjs` | contas de solda, viseira e laterais do toldo |
+| `teste-celular.mjs` | rolagem de lado e campo estreito em 390/768/1440px |
+| `teste-parcelamento.mjs` | repasse de taxa virando soma por cima |
+| `teste-letra-caixa-preco.mjs` | tabela em branco virando R$ 0,00 em vez de recusar |
+| `teste-pintura-letra-caixa.mjs` | pintura somada antes do piso (tinta de graça) |
 | `teste-folgas.mjs` | folga real entre peças/borda menor que a pedida |
 | `teste-sobreposicao.mjs` | peça em cima de peça (preço menor que o real) |
 | `teste-encaixe-ui.mjs` | fluxo de arquivo → encaixe → preço, ponta a ponta |

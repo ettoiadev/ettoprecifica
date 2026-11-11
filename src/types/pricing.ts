@@ -144,6 +144,25 @@ export interface LetraCaixaConfig {
   materiais: MaterialLetraCaixa[];
   /** acréscimo da retroiluminada, em % sobre o preço padrão */
   retroPercentual: number;
+
+  /*
+   * Pintura automotiva (PU). O R$/m² NÃO é digitado: é DERIVADO destes seis
+   * números (ver `precoM2Pintura`), porque o que o Étto sabe de cor é o preço
+   * da lata, não o preço do metro quadrado. A conta aparece na tela para ele
+   * conferir o caminho inteiro: lata -> litro -> m² -> multiplicador.
+   */
+  /** R$ da lata de 1/4 de tinta PU de cor PADRÃO (pronta na prateleira) */
+  pinturaSimplesLata: number;
+  /** R$ da lata de 1/4 de cor ESPECIAL (fórmula feita na loja, perolizado, candy) */
+  pinturaEspecialLata: number;
+  /** litros da lata: 1/4 de galão = 0,9 L (há fabricante com 0,8 L) */
+  pinturaVolumeLataL: number;
+  /** m² cobertos por litro em UMA demão (ficha técnica de PU: 8 a 10) */
+  pinturaRendimentoM2L: number;
+  /** demãos aplicadas */
+  pinturaDemaos: number;
+  /** multiplicador sobre o custo da tinta: preparação, mão de obra, perda e margem */
+  pinturaMultiplicador: number;
 }
 
 export interface VidroConfig {
@@ -372,6 +391,21 @@ export const defaultConfig: PricingConfig = {
       { id: 'impressao_3d', label: 'Impressão 3D', faixas: [], faixasFrontal: [] },
     ],
     retroPercentual: 45.0,
+    /*
+     * Pintura automotiva (PU). Os dois primeiros sao os precos que o Etto paga
+     * na cidade dele (lata de 1/4). O rendimento de 9 m²/L por demao e o meio
+     * da faixa das fichas tecnicas de PU (8 a 10 m²/L por demao), e 0,9 L e o
+     * 1/4 de galao. O multiplicador de 2,5 e a mesma convencao de custo->venda
+     * que o DTF e o Laser ja usam neste app.
+     *
+     * Resultado: cor padrao R$ 49,38/m² · cor especial R$ 123,46/m².
+     */
+    pinturaSimplesLata: 80.0,
+    pinturaEspecialLata: 200.0,
+    pinturaVolumeLataL: 0.9,
+    pinturaRendimentoM2L: 9.0,
+    pinturaDemaos: 2.0,
+    pinturaMultiplicador: 2.5,
   },
   vidro: {
     espessura6mm: 60.0,

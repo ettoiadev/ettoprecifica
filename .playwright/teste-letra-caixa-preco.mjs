@@ -33,6 +33,13 @@ const cfg = {
     { id: 'inox', label: 'Inox', faixas: [] },
   ],
   retroPercentual: 45,
+  // pintura automotiva: os numeros do Etto (lata de 1/4 a R$80 / R$200)
+  pinturaSimplesLata: 80,
+  pinturaEspecialLata: 200,
+  pinturaVolumeLataL: 0.9,
+  pinturaRendimentoM2L: 9,
+  pinturaDemaos: 2,
+  pinturaMultiplicador: 2.5,
 };
 
 let ruim = 0;
@@ -68,6 +75,30 @@ diz('ACM tem preco manual', P.temPrecoManual(cfg.materiais[0]), true);
 diz('Inox nao tem -> cai no motor', P.temPrecoManual(cfg.materiais[1]), false);
 diz('PVC 20mm tem preco', P.temPrecoPvc(cfg.pvcEspessuras[1]), true);
 diz('PVC 10mm nao tem -> cai no motor', P.temPrecoPvc(cfg.pvcEspessuras[0]), false);
+
+console.log('\npintura automotiva (PU) - R$/m2 derivado da lata');
+// R$/litro = 80 / 0,9 = 88,888...  |  L/m2 = 2 demaos / 9 (m2/L) = 0,2222...
+// R$/m2 = 88,888 x 0,2222 x 2,5 = 49,3827
+confere('cor padrao: (80/0,9) x (2/9) x 2,5', P.precoM2Pintura(cfg, 'simples'), 49.3827);
+confere('cor especial: (200/0,9) x (2/9) x 2,5', P.precoM2Pintura(cfg, 'especial'), 123.4568);
+confere("'sem' nao tem preco de pintura", P.precoM2Pintura(cfg, 'sem'), null);
+confere('2 m2 de cor padrao', P.custoPintura(cfg, 'simples', 2)?.total ?? null, 98.7654);
+confere('2 m2 de cor especial', P.custoPintura(cfg, 'especial', 2)?.total ?? null, 246.9136);
+confere('area 0 nao vira pintura', P.custoPintura(cfg, 'simples', 0)?.total ?? null, null);
+// litros: 2 m2 x (2 demaos / 9) = 0,4444 L -> 0,4938 lata de 0,9 L
+confere('litros de 2 m2 em 2 demaos a 9 m2/L', P.custoPintura(cfg, 'simples', 2)?.litros ?? null, 0.4444);
+confere('latas de 1/4 que isso consome', P.custoPintura(cfg, 'simples', 2)?.latas ?? null, 0.4938);
+confere('custo so da tinta (sem o multiplicador)', P.custoPintura(cfg, 'simples', 2)?.custoTinta ?? null, 39.5062);
+// a cada numero zerado a pintura TEM que recusar - zero nao vira tinta de graca
+for (const campo of ['pinturaSimplesLata', 'pinturaVolumeLataL', 'pinturaRendimentoM2L', 'pinturaDemaos', 'pinturaMultiplicador']) {
+  const zerado = { ...cfg, [campo]: 0 };
+  confere(`${campo} zerado -> sem preco`, P.custoPintura(zerado, 'simples', 2)?.total ?? null, null);
+}
+// o especial zerado nao pode cair no preco do simples
+confere('especial zerado nao usa a tabela do simples', P.precoM2Pintura({ ...cfg, pinturaEspecialLata: 0 }, 'especial'), null);
+// dobrar as demaos dobra a tinta; rendimento melhor baixa na mesma proporcao
+confere('4 demaos = o dobro de tinta', P.precoM2Pintura({ ...cfg, pinturaDemaos: 4 }, 'simples'), 98.7654);
+confere('rendimento 18 m2/L = metade do preco', P.precoM2Pintura({ ...cfg, pinturaRendimentoM2L: 18 }, 'simples'), 24.6914);
 
 console.log(ruim === 0 ? '\n== CONTA DA LETRA CAIXA OK ==' : `\n== ${ruim} PROBLEMAS NA CONTA DA LETRA CAIXA ==`);
 process.exit(ruim === 0 ? 0 : 1);
