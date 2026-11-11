@@ -5,6 +5,7 @@ import { CurrencyInput } from '../ui/currency-input';
 import { PercentageInput } from '../ui/percentage-input';
 import { NumberInput } from '../ui/number-input';
 import CustomVariationsManager from './CustomVariationsManager';
+import FaixasAlturaManager from './FaixasAlturaManager';
 
 interface ListManagerDef {
   key: string;
@@ -21,6 +22,9 @@ interface ListManagerDef {
 // Adesivos: lista `itens` (tipos de adesivo) com renomear, reordenar (↑/↓),
 // descrição e preço — a ordem e os nomes refletem na aba Adesivos.
 const LIST_MANAGERS: Record<string, ListManagerDef[]> = {
+  letraCaixa: [
+    { key: 'pvcEspessuras', label: 'Espessuras de PVC (R$/m² da placa)', addLabel: 'Adicionar espessura', unitDefault: 'm²', showReorder: true },
+  ],
   adesivo: [
     { key: 'itens', label: 'Tipos de adesivo', addLabel: 'Adicionar tipo', unitDefault: 'm²', showDescription: true, showReorder: true },
   ],
@@ -91,6 +95,11 @@ const ConfigSection = React.memo<ConfigSectionProps>(({ title, section, fields, 
 
     // Percentual de nota fiscal dos produtos com preço manual (Lona, Adesivos, Placas)
     if (fieldKey === 'notaFiscalPercentual') {
+      return true;
+    }
+
+    // Adicional da retroiluminada é percentual, não R$
+    if (sectionName === 'letraCaixa' && fieldKey === 'retroPercentual') {
       return true;
     }
 
@@ -169,6 +178,15 @@ const ConfigSection = React.memo<ConfigSectionProps>(({ title, section, fields, 
             showReorder={mgr.showReorder}
           />
         ))}
+
+        {/* As faixas de altura têm dois números por linha e não cabem no
+            gerenciador genérico — ver FaixasAlturaManager. */}
+        {section === 'letraCaixa' && (
+          <FaixasAlturaManager
+            materiais={editConfig[section]?.materiais || []}
+            onChange={(lista) => updateConfig(section, 'materiais', lista)}
+          />
+        )}
       </CardContent>
     </Card>
   );

@@ -12,6 +12,11 @@ const isPercentageField = (section: string, field: string) => {
     return true;
   }
 
+  // Adicional da retroiluminada é percentual, não R$
+  if (section === 'letraCaixa' && field === 'retroPercentual') {
+    return true;
+  }
+
   // Todos os campos de Cartão de Crédito são porcentagens
   if (section === 'cartaoCredito') {
     return true;

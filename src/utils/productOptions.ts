@@ -14,7 +14,6 @@ import { PricingConfig, ProductVariation } from '../types/pricing';
  */
 
 export type OptionListSection =
-  | 'letraCaixa'
   | 'vidro'
   | 'instalacao';
 
@@ -39,14 +38,6 @@ interface SectionOptionsDef {
 }
 
 export const SECTION_OPTIONS: Record<OptionListSection, SectionOptionsDef> = {
-  letraCaixa: {
-    baseOptions: [
-      { id: '10mm', label: 'Espessura 10mm', priceKey: 'espessura10mm' },
-      { id: '15mm', label: 'Espessura 15mm', priceKey: 'espessura15mm' },
-      { id: '20mm', label: 'Espessura 20mm', priceKey: 'espessura20mm' },
-    ],
-    foldLegacyCustomVariations: false,
-  },
   vidro: {
     baseOptions: [
       { id: '6mm', label: '6mm', priceKey: 'espessura6mm' },

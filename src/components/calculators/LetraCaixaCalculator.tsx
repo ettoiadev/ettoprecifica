@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Loader2, AlertTriangle, Copy, PlusCircle } from 'lucide-react';
-import { formatCurrency, ALIQUOTA_NF_MOTOR } from '../../types/pricing';
+import type { LetraCaixaConfig } from '../../types/pricing';
+import { formatCurrency, ALIQUOTA_NF, ALIQUOTA_NF_MOTOR } from '../../types/pricing';
 import { supabase } from '../../lib/supabase/client';
 import { useCotacao } from '../../contexts/CotacaoContext';
 import { CalcCheckbox, OptionChip, selectClass } from './CalcControls';
@@ -10,6 +11,7 @@ import { useEncaixeSvg } from '../../hooks/useEncaixeSvg';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 import { useParcelamento, ParcelamentoBox } from './Parcelamento';
+import { precoPvc, precoPorAltura, temPrecoManual, temPrecoPvc } from '../../lib/precoLetraCaixa';
 import { toast } from 'sonner';
 
 // Resultado da função calc_letra_caixa (via Edge Function calc-letra-caixa).
@@ -65,7 +67,23 @@ const ILUM_LABEL: Record<Ilum, string> = {
 
 const num = (v: number | string | undefined | null): number => Number(v ?? 0);
 
-const LetraCaixaCalculator: React.FC = () => {
+/*
+ * Preço MANUAL por material (11/11/26, a pedido do Étto): quando a tabela do
+ * material está preenchida em Configurações, a conta é local; quando não está,
+ * a aba continua usando o motor da skill, como sempre fez.
+ *
+ * A migração é material a material de propósito — preencher as faixas de todos
+ * de uma vez levaria a aba inteira a ficar sem preço até a última linha ser
+ * digitada. O painel diz qual dos dois está valendo, para não haver dúvida.
+ *
+ * ⚠️ A alíquota de NF muda junto: manual usa ALIQUOTA_NF (9,35%), motor usa
+ * ALIQUOTA_NF_MOTOR (9,31%), igual às outras abas que já são manuais.
+ */
+interface Props {
+  config: LetraCaixaConfig;
+}
+
+const LetraCaixaCalculator: React.FC<Props> = ({ config }) => {
   const [material, setMaterial] = useState<Material>('pvc');
   const [iluminacao, setIluminacao] = useState<Ilum>('sem');
   // PVC (por m² da placa)
@@ -141,9 +159,11 @@ const LetraCaixaCalculator: React.FC = () => {
 
   // Recalcula (com debounce) quando as entradas mudam.
   useEffect(() => {
-    if (!entradaValida) {
+    // com preço manual não há o que perguntar ao motor
+    if (!entradaValida || usaManual) {
       setResult(null);
       setError(null);
+      setLoading(false);
       return;
     }
 
@@ -219,16 +239,44 @@ const LetraCaixaCalculator: React.FC = () => {
     ilumSuffix,
   ]);
 
+  /*
+   * Este material já tem preço manual? É o que decide tudo abaixo: com preço
+   * manual a conta é local e o motor nem é chamado; sem, segue como sempre.
+   */
+  const usaManual = useMemo(() => {
+    if (isPvc) return temPrecoPvc(config.pvcEspessuras.find((e) => e.id === String(espessura)));
+    return temPrecoManual(config.materiais.find((m) => m.id === material));
+  }, [isPvc, config, espessura, material]);
+
+  const manual = useMemo(() => {
+    if (!usaManual || !entradaValida) return null;
+    return isPvc
+      ? precoPvc(config, String(espessura), larguraEnvio * alturaEnvio, iluminacao)
+      : precoPorAltura(config, material, alturaCmNum, nCaracteresNum, iluminacao);
+  }, [
+    usaManual, entradaValida, isPvc, config, espessura, larguraEnvio, alturaEnvio,
+    material, alturaCmNum, nCaracteresNum, iluminacao,
+  ]);
+
   // Preço válido: motor pode retornar preco_final nulo quando não há referência
   // de mercado (ex.: altura fora da faixa pesquisada) — nesse caso mostramos o alerta.
-  const temPreco = !!result && result.preco_final != null && num(result.preco_final) > 0;
+  const temPreco = usaManual
+    ? !!manual && manual.total > 0
+    : !!result && result.preco_final != null && num(result.preco_final) > 0;
 
   const precos = useMemo(() => {
-    if (!temPreco || !result) return null;
+    if (!temPreco) return null;
+    if (usaManual && manual) {
+      // manual: a NF é a dos produtos de preço local (9,35%), não a do motor
+      const semNota = manual.total;
+      const comNota = semNota * (1 + ALIQUOTA_NF / 100);
+      return { semNota, comNota, descontoNota: comNota - semNota, final: incluirNota ? comNota : semNota };
+    }
+    if (!result) return null;
     const semNota = num(result.preco_final);
     const comNota = num(result.preco_com_nota);
     return { semNota, comNota, descontoNota: comNota - semNota, final: incluirNota ? comNota : semNota };
-  }, [temPreco, result, incluirNota]);
+  }, [temPreco, usaManual, manual, result, incluirNota]);
 
   const parc = useParcelamento(precos?.final ?? 0);
 
@@ -472,12 +520,22 @@ ${parc.linhaCopia}` : ''}`;
               <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
               <span>{error}</span>
             </div>
-          ) : result ? (
+          ) : result || usaManual ? (
             <div className="space-y-4">
-              {result.alerta && result.alerta.trim() !== '' && (
+              {result?.alerta && result.alerta.trim() !== '' && (
                 <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200 text-sm text-amber-800">
                   <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
                   <span>{result.alerta}</span>
+                </div>
+              )}
+
+              {usaManual && !manual && (
+                <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200 text-sm text-amber-800">
+                  <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+                  <span>
+                    Preço não definido para esta combinação. Defina em Configurações &gt; Produtos &gt;
+                    Letra Caixa — enquanto estiver em branco, este orçamento não sai.
+                  </span>
                 </div>
               )}
 
@@ -489,12 +547,12 @@ ${parc.linhaCopia}` : ''}`;
                     <div className="text-3xl font-bold text-blue-600">{formatCurrency(precos.final)}</div>
                     {incluirNota ? (
                       <div className="mt-1 text-xs text-gray-500">
-                        Nota fiscal ({ALIQUOTA_NF_MOTOR.toLocaleString('pt-BR')}%) incluída
+                        Nota fiscal ({(usaManual ? ALIQUOTA_NF : ALIQUOTA_NF_MOTOR).toLocaleString('pt-BR')}%) incluída
                       </div>
                     ) : (
                       <div className="mt-1 text-xs text-amber-600 font-medium">
                         Sem nota fiscal — desconto de {formatCurrency(precos.descontoNota)} (
-                        {ALIQUOTA_NF_MOTOR.toLocaleString('pt-BR')}%)
+                        {(usaManual ? ALIQUOTA_NF : ALIQUOTA_NF_MOTOR).toLocaleString('pt-BR')}%)
                       </div>
                     )}
                   </div>
@@ -508,8 +566,13 @@ ${parc.linhaCopia}` : ''}`;
                     {isPvc ? (
                       <>
                         <div className="flex justify-between text-sm text-gray-600">
-                          <span>Preço de mercado:</span>
-                          <span>{formatCurrency(num(result.preco_cm_ou_m2_medio))}/m²</span>
+                          <span>{usaManual ? 'Preço' : 'Preço de mercado'}:</span>
+                          <span>
+                            {formatCurrency(
+                              usaManual ? (manual?.precoUnitario ?? 0) : num(result?.preco_cm_ou_m2_medio)
+                            )}
+                            /m²
+                          </span>
                         </div>
                         {usaArquivo && encaixe && (
                           <>
@@ -534,16 +597,36 @@ ${parc.linhaCopia}` : ''}`;
                     ) : (
                       <>
                         <div className="flex justify-between text-sm text-gray-600">
-                          <span>Preço médio:</span>
-                          <span>{formatCurrency(num(result.preco_cm_ou_m2_medio))}/cm</span>
+                          <span>{usaManual ? 'Preço da faixa' : 'Preço médio'}:</span>
+                          <span>
+                            {formatCurrency(
+                              usaManual ? (manual?.precoUnitario ?? 0) : num(result?.preco_cm_ou_m2_medio)
+                            )}
+                            /cm
+                          </span>
                         </div>
-                        <div className="flex justify-between text-sm text-gray-600">
-                          <span>Fator de largura:</span>
-                          <span>×{num(result.fator_largura_aplicado).toFixed(2)}</span>
-                        </div>
+                        {usaManual ? (
+                          manual?.faixaUsada && (
+                            <div className="flex justify-between text-sm text-gray-600">
+                              <span>Faixa de altura:</span>
+                              <span>{manual.faixaUsada}</span>
+                            </div>
+                          )
+                        ) : (
+                          <div className="flex justify-between text-sm text-gray-600">
+                            <span>Fator de largura:</span>
+                            <span>×{num(result?.fator_largura_aplicado).toFixed(2)}</span>
+                          </div>
+                        )}
                         <div className="flex justify-between text-sm text-gray-600">
                           <span>Preço por letra:</span>
-                          <span>{formatCurrency(num(result.preco_por_letra))}</span>
+                          <span>
+                            {formatCurrency(
+                              usaManual
+                                ? (manual?.base ?? 0) / Math.max(1, nCaracteresNum)
+                                : num(result?.preco_por_letra)
+                            )}
+                          </span>
                         </div>
                         <div className="flex justify-between text-sm text-gray-600">
                           <span>Caracteres:</span>
@@ -551,18 +634,41 @@ ${parc.linhaCopia}` : ''}`;
                         </div>
                       </>
                     )}
-                    {num(result.adicional_iluminacao) > 0 && (
+                    {(usaManual ? (manual?.adicionalIluminacao ?? 0) : num(result?.adicional_iluminacao)) > 0 && (
                       <>
                         <div className="flex justify-between text-sm text-gray-600 pt-1 border-t border-gray-200">
                           <span>Sem iluminação:</span>
-                          <span>{formatCurrency(num(result.preco_sem_iluminacao))}</span>
+                          <span>
+                            {formatCurrency(
+                              usaManual ? (manual?.base ?? 0) : num(result?.preco_sem_iluminacao)
+                            )}
+                          </span>
                         </div>
                         <div className="flex justify-between text-sm text-gray-600">
-                          <span>Adicional iluminação (+45%):</span>
-                          <span>{formatCurrency(num(result.adicional_iluminacao))}</span>
+                          <span>
+                            Adicional iluminação (+
+                            {usaManual ? config.retroPercentual.toLocaleString('pt-BR') : '45'}%):
+                          </span>
+                          <span>
+                            {formatCurrency(
+                              usaManual
+                                ? (manual?.adicionalIluminacao ?? 0)
+                                : num(result?.adicional_iluminacao)
+                            )}
+                          </span>
                         </div>
                       </>
                     )}
+                    {usaManual && manual?.pisoAplicado && (
+                      <div className="flex justify-between text-sm text-amber-600 font-medium pt-1 border-t border-gray-200">
+                        <span>Piso de projeto aplicado:</span>
+                        <span>{formatCurrency(config.pvcPisoProjeto)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between text-xs text-gray-400 pt-1">
+                      <span>Origem do preço:</span>
+                      <span>{usaManual ? 'tabela em Configurações' : 'motor de precificação'}</span>
+                    </div>
                   </div>
 
                   <ParcelamentoBox parc={parc} />

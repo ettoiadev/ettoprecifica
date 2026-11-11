@@ -118,4 +118,20 @@ export const settingsConfig: ConfigSectionData[] = [
       { key: 'taxa12x', label: 'Crédito 12x' },
     ],
   },
+  {
+    /*
+     * Letra Caixa com preço MANUAL (11/11/26). Dois modelos na mesma aba:
+     * PVC por m² da placa (lista de espessuras abaixo) e os demais materiais
+     * por cm de altura, em faixas (editor próprio, FaixasAlturaManager).
+     *
+     * A migração é material a material: enquanto a tabela de um material está
+     * em branco, aquele material continua sendo calculado pelo motor da skill.
+     */
+    title: 'Letra Caixa',
+    section: 'letraCaixa',
+    fields: [
+      { key: 'pvcPisoProjeto', label: 'Piso de projeto do PVC' },
+      { key: 'retroPercentual', label: 'Adicional da retroiluminada' },
+    ],
+  },
 ];

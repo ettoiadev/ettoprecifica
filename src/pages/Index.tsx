@@ -152,7 +152,7 @@ const Index = () => {
       case 'toldo':
         return <ToldoCalculator config={config.toldo} />;
       case 'letra-caixa':
-        return <LetraCaixaCalculator />;
+        return <LetraCaixaCalculator config={config.letraCaixa} />;
       case 'vidro':
         return <VidroCalculator />;
       case 'luminoso':

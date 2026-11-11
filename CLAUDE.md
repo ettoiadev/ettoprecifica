@@ -91,6 +91,28 @@ Na aba **Letra Caixa**, material **PVC**, existe o seletor **"Como medir o mater
 - **CSS Nesting não tem nada a ver com isto.** O guia da MDN com esse nome é sintaxe de folha de estilo (regra dentro de regra, com `&`). O nosso "nesting" é encaixe de peças em chapa, geometria computacional. Mesmo nome, assuntos sem relação.
 - Teste de ponta a ponta: `.playwright/teste-encaixe-ui.mjs <arquivo.svg>` (sobe o arquivo pela interface, encaixa com vão 0 e 10mm, confere que o vão aumenta o consumo, e lê o preço final vindo da Edge Function).
 
+## Letra Caixa com preço MANUAL, migrando material a material (11/11/26)
+A pedido do Étto ("preciso definir os preços na página de configurações"). **Configurações > Produtos > Letra Caixa.** A conta fica em `src/lib/precoLetraCaixa.ts`, fora do componente de propósito: é a parte que vira dinheiro, então precisa ser testável sem navegador.
+
+**Dois modelos na mesma aba, como no motor:**
+- **PVC** → R$/m² da placa, por espessura, com **piso de projeto** (lista `pvcEspessuras`, reaproveita o `CustomVariationsManager`).
+- **ACM, Galvanizado, Inox, 3D** → R$/cm de altura × nº de caracteres, por **faixa de altura** (`FaixasAlturaManager`, editor próprio).
+
+**A migração é material a material, e isso é o ponto principal.** Enquanto a tabela de um material está em branco, **aquele material continua no motor**. Preencher tudo de uma vez deixaria a aba inteira sem preço até a última linha ser digitada. O painel mostra **"Origem do preço: tabela em Configurações / motor de precificação"** — sem isso, o vendedor não teria como saber qual dos dois valeu.
+
+- **`LetraCaixaConfig` foi reescrita.** Os campos antigos (`espessura10mm: 50`, `pinturaAutomotiva`, `fitaDuplaFace`) eram resíduo de um esquema que **nunca bateu com o motor** — o PVC real é R$524/m², não R$70. Dados velhos salvos são inofensivos (deep-merge preserva; a calculadora lê só as chaves novas). `letraCaixa` também saiu de `SECTION_OPTIONS` em `productOptions.ts`, que semeava aquela lista morta.
+- **Zero NÃO vira preço.** Toda função devolve `null` quando a tabela está vazia ou zerada, e a tela mostra aviso âmbar em vez de R$ 0,00 — um zero pareceria orçamento válido e sairia como proposta.
+- **A faixa de maior `ateCm` cobre tudo acima dela.** Senão uma letra de 2m ficaria sem preço justamente no orçamento grande, que é o que menos pode falhar.
+- **O frontal acrílico tem tabela própria** (LED já no preço) e **não** leva o +45% da retro por cima. Sem a tabela dele preenchida, devolve `null` em vez de cair na tabela padrão — que daria um preço mais barato e errado.
+- **O piso de projeto incide DEPOIS da iluminação.** Antes, um letreiro pequeno retroiluminado pagaria piso + 45% sobre o piso.
+- ⚠️ **A alíquota de NF muda junto**: manual usa `ALIQUOTA_NF` (9,35%), motor usa `ALIQUOTA_NF_MOTOR` (9,31%) — mesmo comportamento das outras abas manuais. Conferido: PVC 20mm, 1 m² → 524 × 1,0935 = **R$ 572,99**.
+- **O encaixe por arquivo segue funcionando**: em modo arquivo a área entra como `largura = área, altura = 1`, então `área × R$/m²` dá o mesmo que a convenção do motor (gotcha 2).
+- **Perdeu-se o fator de largura** que o motor aplicava quando a largura total era informada (`fator_largura_aplicado`). A regra dele não é conhecida fora da skill, e reproduzi-la por chute sairia como preço errado. No modo manual o campo não entra na conta.
+- **Defeito pego e corrigido na hora**: o painel lia `result.alerta`, `result.preco_por_letra` etc. **sem guarda**, e no modo manual `result` é `null` — a aba quebraria ao abrir. O `tsc` não pegou. Hoje todas as leituras são `result?.`.
+- **Testes**: `.playwright/teste-letra-caixa-preco.mjs` roda a conta **sem navegador** (compila o módulo com esbuild) em 17 casos — piso, limites de faixa, altura acima da última faixa, frontal sem tabela, retro, e os quatro casos de "cai no motor".
+
+**O que falta, e é dado que só o Étto tem:** as faixas e os R$/cm de ACM, Galvanizado, Inox e 3D, as espessuras de PVC **10mm e 30mm**, e a tabela do frontal acrílico. Do motor só está confirmado **PVC 20mm = R$524/m² e piso R$300**. Enquanto não forem preenchidos, esses materiais seguem no motor — nada quebra, nada muda de preço.
+
 ## Parcelamento no cartão, em todas as calculadoras (09/11/26)
 A pedido do Étto, que usa o **InfinitePay**: o painel "Orçamento" das **14 calculadoras** ganhou um simulador de parcelamento igual ao da maquininha dele. `src/components/calculators/Parcelamento.tsx` (hook `useParcelamento` + `ParcelamentoBox`), taxas por `ParcelamentoContext`.
 

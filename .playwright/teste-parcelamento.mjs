@@ -58,23 +58,39 @@ console.log('conta do parcelamento (referencia: prints do InfinitePay)');
   await p.close();
 }
 
-// 2) a caixa aparece em todas as abas, e so depois de haver preco
+/*
+ * 2) a regra de verdade e: a caixa existe SE E SOMENTE SE ha preco na tela.
+ *
+ * A primeira versao exigia que ela estivesse escondida antes de digitar
+ * qualquer medida -- e reprovou em Cavaletes, que e produto de preco fechado e
+ * mostra valor sem entrada nenhuma assim que o motor responde. Era corrida:
+ * passava ou nao conforme a resposta chegasse antes ou depois da medicao. O
+ * codigo estava certo; a regra e que estava. Amarrar ao PRECO, e nao a "ja
+ * digitou alguma coisa", tira a corrida e diz o que realmente importa.
+ */
 console.log('\na caixa aparece em todas as abas');
 for (const tab of TABS) {
   const p = await b.newPage({ viewport: { width: 1440, height: 1200 } });
   await p.goto(`http://localhost:8080/dev-preview.html?tab=${tab}`, { waitUntil: 'networkidle' });
   await p.waitForTimeout(250);
-  const antes = await p.locator('#parcelas-cartao').count();
+  const estado = async () => ({
+    caixa: await p.locator('#parcelas-cartao').count(),
+    preco: await p.locator('.text-3xl').count(),
+  });
+  const antes = await estado();
   // preenche o que houver de medida para fazer aparecer preco
   const campos = await p.locator('input[type=number]').all();
   for (const c of campos.slice(0, 2)) await c.fill('2').catch(() => {});
-  await p.waitForTimeout(700);
-  const depois = await p.locator('#parcelas-cartao').count();
-  const temPreco = (await p.locator('.text-3xl').count()) > 0;
-  // regra: sem preco nao ha simulador; com preco, ha
-  const ok = antes === 0 && (!temPreco || depois === 1);
+  await p.waitForTimeout(900);
+  const depois = await estado();
+  const casa = (e) => (e.preco > 0 ? e.caixa === 1 : e.caixa === 0);
+  const ok = casa(antes) && casa(depois);
   if (!ok) ruim++;
-  console.log(`  ${tab.padEnd(13)} sem preco: ${antes === 0 ? 'escondida' : 'VISIVEL (erro)'} · com preco: ${temPreco ? (depois ? 'aparece' : 'NAO APARECE') : 'sem preco nesta aba'} ${ok ? '' : 'ERRO'}`);
+  const diz = (e) =>
+    e.preco > 0
+      ? e.caixa ? 'preco e caixa' : 'preco SEM CAIXA'
+      : e.caixa ? 'sem preco mas COM CAIXA' : 'sem preco, sem caixa';
+  console.log(`  ${tab.padEnd(13)} inicio: ${diz(antes).padEnd(24)} depois: ${diz(depois).padEnd(24)} ${ok ? '' : 'ERRO'}`);
   await p.close();
 }
 

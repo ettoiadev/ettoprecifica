@@ -97,14 +97,53 @@ export interface FachadaConfig {
   itens?: ProductVariation[];
 }
 
+/**
+ * Uma faixa de altura de letra. Vale para letras de até `ateCm` (inclusive).
+ * A faixa de MAIOR `ateCm` da lista é também a de cima: altura acima dela usa
+ * o preço dela. Sem isso, uma letra fora de todas as faixas ficaria sem preço.
+ */
+export interface FaixaAlturaLetra {
+  id: string;
+  ateCm: number;
+  /** R$ por cm de altura, por letra */
+  precoCm: number;
+}
+
+/** Material cobrado por altura da letra (ACM, galvanizado, inox, impressão 3D). */
+export interface MaterialLetraCaixa {
+  id: string;
+  label: string;
+  /** preço padrão, sem iluminação */
+  faixas: FaixaAlturaLetra[];
+  /** tabela própria do frontal acrílico (LED já incluso); vazia = não oferece */
+  faixasFrontal?: FaixaAlturaLetra[];
+}
+
+/**
+ * Espessura de PVC, cobrada por m² de placa. É um `ProductVariation` (id,
+ * label, price) de propósito: assim a lista usa o mesmo `CustomVariationsManager`
+ * das outras seções, em vez de um editor só para ela. `price` é o R$/m².
+ */
+export type EspessuraPvcLetra = ProductVariation;
+
+/*
+ * Letra Caixa com preço MANUAL (11/11/26). Reescrita: os campos antigos
+ * (`espessura10mm: 50`, `pinturaAutomotiva`, `fitaDuplaFace`) eram resíduo de um
+ * esquema que nunca bateu com o motor — o PVC real é R$524/m², não R$70. Dados
+ * velhos salvos são inofensivos: o deep-merge preserva, e a calculadora lê só
+ * as chaves novas.
+ *
+ * São DOIS modelos de cobrança na mesma aba, como no motor:
+ *   PVC    → R$/m² da placa, por espessura, com piso de projeto
+ *   outros → R$/cm de altura × nº de caracteres, por faixa de altura
+ */
 export interface LetraCaixaConfig {
-  espessura10mm: number;
-  espessura15mm: number;
-  espessura20mm: number;
-  pinturaAutomotiva: number;
-  fitaDuplaFace: number;
-  customVariations?: ProductVariation[];
-  variations?: ProductVariation[];
+  pvcEspessuras: EspessuraPvcLetra[];
+  /** piso de projeto do PVC: orçamento nenhum sai abaixo disto */
+  pvcPisoProjeto: number;
+  materiais: MaterialLetraCaixa[];
+  /** acréscimo da retroiluminada, em % sobre o preço padrão */
+  retroPercentual: number;
 }
 
 export interface VidroConfig {
@@ -313,11 +352,26 @@ export const defaultConfig: PricingConfig = {
     lonaIluminada: 600.0,
   },
   letraCaixa: {
-    espessura10mm: 50.0,
-    espessura15mm: 60.0,
-    espessura20mm: 70.0,
-    pinturaAutomotiva: 15.0,
-    fitaDuplaFace: 5.0,
+    /*
+     * PVC 20mm e o piso vêm do motor, conferidos por SQL (ver CLAUDE.md). As
+     * outras espessuras entram em 0, e 0 NÃO vira preço: a calculadora recusa
+     * e manda definir em Configurações. Mostrar R$0,00 pareceria um orçamento
+     * válido e não seria.
+     */
+    pvcEspessuras: [
+      { id: '10', label: 'PVC 10mm', price: 0 },
+      { id: '20', label: 'PVC 20mm', price: 524.0 },
+      { id: '30', label: 'PVC 30mm', price: 0 },
+    ],
+    pvcPisoProjeto: 300.0,
+    // sem faixas preenchidas, cada material cai no motor (ver LetraCaixaCalculator)
+    materiais: [
+      { id: 'acm', label: 'ACM', faixas: [], faixasFrontal: [] },
+      { id: 'galvanizado', label: 'Galvanizado', faixas: [], faixasFrontal: [] },
+      { id: 'inox', label: 'Inox', faixas: [] },
+      { id: 'impressao_3d', label: 'Impressão 3D', faixas: [], faixasFrontal: [] },
+    ],
+    retroPercentual: 45.0,
   },
   vidro: {
     espessura6mm: 60.0,
